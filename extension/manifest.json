@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "ZenAI – Check My Fit",
+  "version": "0.1.0",
+  "description": "Detects job listings and sends them to ZenAI for fit analysis.",
+  "action": {
+    "default_title": "ZenAI",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": [
+    "*://*.linkedin.com/*",
+    "*://*.indeed.com/*",
+    "*://*.glassdoor.com/*",
+    "*://*.greenhouse.io/*",
+    "*://*.lever.co/*",
+    "*://*.workday.com/*",
+    "*://*.ziprecruiter.com/*",
+    "*://*.jobs.*/*",
+    "*://*.careers.*/*",
+    "https://myapp.com/*",
+    "http://localhost/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.linkedin.com/*",
+        "*://*.indeed.com/*",
+        "*://*.glassdoor.com/*",
+        "*://*.greenhouse.io/*",
+        "*://*.lever.co/*",
+        "*://*.workday.com/*",
+        "*://*.ziprecruiter.com/*",
+        "*://*.jobs.*/*",
+        "*://*.careers.*/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["styles.css"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

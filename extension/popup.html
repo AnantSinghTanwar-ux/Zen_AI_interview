@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ZenAI</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="zenai-popup">
+    <main class="zenai-popup__wrap">
+      <header class="zenai-popup__header">
+        <div class="zenai-popup__title">ZenAI</div>
+        <div id="status" class="zenai-pill zenai-pill--unknown">Checking…</div>
+      </header>
+
+      <section class="zenai-card">
+        <label class="zenai-label" for="token">Auth token</label>
+        <input id="token" class="zenai-input" type="password" placeholder="Paste token" autocomplete="off" />
+        <div class="zenai-row">
+          <button id="save" class="zenai-btn zenai-btn--primary" type="button">Save</button>
+          <button id="clear" class="zenai-btn" type="button">Clear</button>
+        </div>
+      </section>
+
+      <section class="zenai-card">
+        <button id="dashboard" class="zenai-btn zenai-btn--ghost" type="button">Go to Dashboard</button>
+      </section>
+
+      <footer class="zenai-footer">
+        <span class="zenai-muted">Token stays in this browser.</span>
+      </footer>
+
+      <script src="popup.js"></script>
+    </main>
+  </body>
+</html>
