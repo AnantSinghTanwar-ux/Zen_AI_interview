@@ -1,0 +1,32 @@
+# Advanced Emotion Detection Requirements
+# Install with: pip install -r requirements-emotion.txt
+
+# Core ML libraries
+torch>=2.0.0
+transformers>=4.30.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+
+# Audio processing
+librosa>=0.10.0
+soundfile>=0.12.0
+pyaudio>=0.2.11
+
+# Google AI integration
+google-generativeai>=0.3.0
+
+# HTTP and async
+aiohttp>=3.8.0
+requests>=2.31.0
+
+# Data processing
+pandas>=2.0.0
+
+# Optional: For better performance
+# accelerate>=0.20.0  # For faster model loading
+# bitsandbytes>=0.41.0  # For model quantization
+
+# Development tools (optional)
+# jupyter>=1.0.0
+# matplotlib>=3.7.0
+# seaborn>=0.12.0
