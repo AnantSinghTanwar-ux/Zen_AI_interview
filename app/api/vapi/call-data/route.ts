@@ -6,6 +6,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "20");
 
+    if (!process.env.VAPI_PRIVATE_API_KEY) {
+      return NextResponse.json([], { status: 200 });
+    }
+
     console.log(`Fetching ${limit} recent calls...`);
     
     // Check if API key is available
