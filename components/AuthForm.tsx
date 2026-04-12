@@ -22,7 +22,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { auth } from "@/services/firebase/client";
+import { getClientAuth } from "@/services/firebase/client";
 import { signIn, signUp } from "@/lib/actions/auth.actions";
 
 type FormType = "sign-in" | "sign-up";
@@ -61,6 +61,8 @@ function AuthForm({ type }: { type: FormType }) {
   // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
+      const auth = getClientAuth();
+
       if (isSignIn) {
         const { email, password } = values;
 
