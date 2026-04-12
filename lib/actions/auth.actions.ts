@@ -93,9 +93,8 @@ export const signIn = async (params: SignInParams) => {
 
     return { success: true, message: "User signed in successfully" };
   } catch (error) {
-    console.error(
-      `Error signing up user ${email}: ${(error as Error)?.message}`
-    );
+    const errorMessage = (error as Error)?.message || "Something went wrong";
+    console.error(`Error signing in user ${email}: ${errorMessage}`);
 
     if (error instanceof FirebaseError) {
       if (error.code === "auth/invalid-credential") {
@@ -103,8 +102,14 @@ export const signIn = async (params: SignInParams) => {
       }
     }
 
-    // Return the actual error message to help debugging
-    return { success: false, message: (error as Error)?.message || "Something went wrong" };
+    if (errorMessage.includes("initialization failed")) {
+      return {
+        success: false,
+        message: "Authentication service is temporarily unavailable. Please try again shortly.",
+      };
+    }
+
+    return { success: false, message: "Unable to sign in right now. Please try again." };
   }
 };
 
@@ -126,9 +131,20 @@ export const setSessionCookie = async (idToken: string) => {
 
     return { success: true, message: "Session cookie set successfully" };
   } catch (error) {
-    console.error(`Error setting session cookie: ${(error as Error)?.message}`);
-    // Include specific error in message
-    return { success: false, message: `Error setting session cookie: ${(error as Error)?.message}` };
+    const errorMessage = (error as Error)?.message || "unknown error";
+    console.error(`Error setting session cookie: ${errorMessage}`);
+
+    if (errorMessage.includes("initialization failed")) {
+      return {
+        success: false,
+        message: "Authentication service is temporarily unavailable. Please try again shortly.",
+      };
+    }
+
+    return {
+      success: false,
+      message: "Unable to start session right now. Please try again.",
+    };
   }
 };
 
