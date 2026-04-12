@@ -20,7 +20,6 @@ import { useRouter } from "next/navigation";
 import { Input } from "./ui/input";
 import {
   createUserWithEmailAndPassword,
-  type AuthError,
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { getClientAuth } from "@/services/firebase/client";
@@ -63,14 +62,13 @@ function AuthForm({ type }: { type: FormType }) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       const auth = getClientAuth();
-      const normalizedEmail = values.email.trim().toLowerCase();
 
       if (isSignIn) {
-        const { password } = values;
+        const { email, password } = values;
 
         const userCreds = await signInWithEmailAndPassword(
           auth,
-          normalizedEmail,
+          email,
           password
         );
 
@@ -81,7 +79,7 @@ function AuthForm({ type }: { type: FormType }) {
           return;
         }
 
-        const res = await signIn({ email: normalizedEmail, idToken: token });
+        const res = await signIn({ email, idToken: token });
 
         if (!res.success) {
           toast.error(res.message);
@@ -94,18 +92,18 @@ function AuthForm({ type }: { type: FormType }) {
         router.push("/");
         form.reset();
       } else {
-        const { name, password } = values;
+        const { name, email, password } = values;
 
         const userCreds = await createUserWithEmailAndPassword(
           auth,
-          normalizedEmail,
+          email,
           password
         );
 
         const { success, message } = await signUp({
           uid: userCreds.user.uid,
           name: name!,
-          email: normalizedEmail,
+          email,
           password,
         });
 
@@ -120,31 +118,6 @@ function AuthForm({ type }: { type: FormType }) {
       }
     } catch (error) {
       console.log(error);
-
-      const authError = error as Partial<AuthError>;
-      const code = authError?.code || "";
-
-      if (code === "auth/invalid-credential" || code === "auth/wrong-password") {
-        toast.error("Invalid email or password.");
-        return;
-      }
-
-      if (code === "auth/user-not-found") {
-        toast.error("No account found for this email.");
-        return;
-      }
-
-      if (code === "auth/email-already-in-use") {
-        toast.error("Account already exists. Please sign in.");
-        router.push("/sign-in");
-        return;
-      }
-
-      if (code === "auth/too-many-requests") {
-        toast.error("Too many attempts. Please try again later.");
-        return;
-      }
-
       toast.error(`There was Error ${(error as Error).message}`);
     }
   }
