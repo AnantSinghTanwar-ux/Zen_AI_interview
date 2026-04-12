@@ -134,6 +134,12 @@ function AuthForm({ type }: { type: FormType }) {
         return;
       }
 
+      if (code === "auth/email-already-in-use") {
+        toast.error("Account already exists. Please sign in.");
+        router.push("/sign-in");
+        return;
+      }
+
       if (code === "auth/too-many-requests") {
         toast.error("Too many attempts. Please try again later.");
         return;
