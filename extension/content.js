@@ -9,15 +9,13 @@ const JOBYT_JOB_URL_REGEX = /^\/jobs\/([a-z0-9-]{8,})$/i;
 const TRUSTED_AUTH_SYNC_HOSTS = new Set([
   "localhost",
   "127.0.0.1",
-  "myapp.com",
-  "www.myapp.com"
+  "zen-ai-zeta.vercel.app"
 ]);
 
 const SKIP_JOB_INJECTION_HOSTS = new Set([
   "localhost",
   "127.0.0.1",
-  "myapp.com",
-  "www.myapp.com"
+  "zen-ai-zeta.vercel.app"
 ]);
 
 const SELECTORS = {

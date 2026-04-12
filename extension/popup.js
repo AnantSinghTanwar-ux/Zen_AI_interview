@@ -1,4 +1,4 @@
-const APP_BASE_URL = "http://localhost:3000";
+const APP_BASE_URL = "https://zen-ai-zeta.vercel.app";
 const DASHBOARD_URL = `${APP_BASE_URL}/dashboard`;
 const STORAGE_KEY = "authToken";
 

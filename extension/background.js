@@ -1,4 +1,4 @@
-const APP_BASE_URL = "http://localhost:3000";
+const APP_BASE_URL = "https://zen-ai-zeta.vercel.app";
 const LOGIN_URL = `${APP_BASE_URL}/login`;
 const ANALYZE_URL = `${APP_BASE_URL}/analyze`;
 const INTERVIEW_URL = `${APP_BASE_URL}/interview`;
