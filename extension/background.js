@@ -6,7 +6,8 @@ const ANALYZE_API_URL = `${APP_BASE_URL}/api/extension/analyze`;
 const STORAGE_KEYS = {
   AUTH_TOKEN: "authToken",
   RESUME_TEXT: "resumeText",
-  RESUME_ID: "resumeId"
+  RESUME_ID: "resumeId",
+  EXTENSION_ENABLED: "extensionEnabled"
 };
 
 const log = (...args) => {
@@ -82,7 +83,14 @@ const buildInterviewLoginRedirectUrl = (currentPageUrl) => {
 };
 
 const handleStartZScoreInterview = async (message) => {
-  const { authToken } = await getFromStorage([STORAGE_KEYS.AUTH_TOKEN]);
+  const { authToken, extensionEnabled } = await getFromStorage([
+    STORAGE_KEYS.AUTH_TOKEN,
+    STORAGE_KEYS.EXTENSION_ENABLED
+  ]);
+
+  if (extensionEnabled === false) {
+    return { ok: false, disabled: true, action: "disabled" };
+  }
 
   if (!authToken) {
     log("No auth token, redirecting to login for interview flow");
@@ -136,11 +144,16 @@ const analyzeWithBackend = async (token, payload, resumePayload) => {
 };
 
 const handleCheckMyFit = async (message) => {
-  const { authToken, resumeText, resumeId } = await getFromStorage([
+  const { authToken, resumeText, resumeId, extensionEnabled } = await getFromStorage([
     STORAGE_KEYS.AUTH_TOKEN,
     STORAGE_KEYS.RESUME_TEXT,
-    STORAGE_KEYS.RESUME_ID
+    STORAGE_KEYS.RESUME_ID,
+    STORAGE_KEYS.EXTENSION_ENABLED
   ]);
+
+  if (extensionEnabled === false) {
+    return { ok: false, disabled: true, action: "disabled" };
+  }
 
   if (!authToken) {
     log("No auth token, redirecting to login");
@@ -200,7 +213,8 @@ chrome.runtime.onInstalled.addListener(async () => {
   await setToStorage({
     [STORAGE_KEYS.AUTH_TOKEN]: "",
     [STORAGE_KEYS.RESUME_TEXT]: "",
-    [STORAGE_KEYS.RESUME_ID]: ""
+    [STORAGE_KEYS.RESUME_ID]: "",
+    [STORAGE_KEYS.EXTENSION_ENABLED]: true
   });
 });
 
@@ -241,6 +255,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const resumeText = sanitizeString(message?.payload?.resumeText, 30000);
     setToStorage({ [STORAGE_KEYS.RESUME_TEXT]: resumeText })
       .then(() => sendResponse({ ok: true }))
+      .catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+
+  if (message.type === "SET_EXTENSION_ENABLED") {
+    const enabled = Boolean(message?.payload?.enabled);
+    setToStorage({ [STORAGE_KEYS.EXTENSION_ENABLED]: enabled })
+      .then(() => sendResponse({ ok: true, enabled }))
       .catch(() => sendResponse({ ok: false }));
     return true;
   }

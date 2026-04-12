@@ -1,8 +1,13 @@
 const ZENAI = {
   buttonId: "zenai-check-fit-button",
   mountedAttr: "data-zenai-mounted",
-  logPrefix: "[ZenAI Content]"
+  logPrefix: "[ZenAI Content]",
+  storageKeys: {
+    extensionEnabled: "extensionEnabled"
+  }
 };
+
+let extensionEnabled = true;
 
 const JOBYT_JOB_URL_REGEX = /^\/jobs\/([a-z0-9-]{8,})$/i;
 
@@ -71,6 +76,17 @@ const isTrustedAuthSyncHost = () => {
 const shouldSkipJobInjection = () => {
   const host = window.location.hostname.toLowerCase();
   return SKIP_JOB_INJECTION_HOSTS.has(host);
+};
+
+const getStorageValue = (key) =>
+  new Promise((resolve) => {
+    chrome.storage.local.get([key], (result) => resolve(result[key]));
+  });
+
+const loadExtensionEnabled = async () => {
+  const stored = await getStorageValue(ZENAI.storageKeys.extensionEnabled);
+  extensionEnabled = stored === undefined ? true : Boolean(stored);
+  return extensionEnabled;
 };
 
 const sanitizeText = (value, maxLen = 12000) => {
@@ -340,6 +356,11 @@ const isLikelyJobPage = () => {
 };
 
 const sendJobForAnalysis = () => {
+  if (!extensionEnabled) {
+    log("Extension disabled, skipping analysis message");
+    return;
+  }
+
   const job = extractJobDetails();
   const payload = {
     sourceUrl: window.location.href,
@@ -458,6 +479,11 @@ const unmountButton = () => {
 };
 
 const checkAndRender = () => {
+  if (!extensionEnabled) {
+    unmountButton();
+    return;
+  }
+
   if (isLikelyJobPage()) {
     mountButton();
   } else {
@@ -486,7 +512,24 @@ const observePageChanges = () => {
   });
 };
 
-(() => {
+const observeExtensionEnabledSetting = () => {
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "local") {
+      return;
+    }
+
+    const changed = changes[ZENAI.storageKeys.extensionEnabled];
+    if (!changed) {
+      return;
+    }
+
+    extensionEnabled = changed.newValue === undefined ? true : Boolean(changed.newValue);
+    log("Extension enabled changed:", extensionEnabled);
+    checkAndRender();
+  });
+};
+
+const init = async () => {
   log("Content script booted", window.location.href);
   setupWebAppAuthBridge();
 
@@ -495,6 +538,16 @@ const observePageChanges = () => {
     return;
   }
 
-  checkAndRender();
+  await loadExtensionEnabled();
+  observeExtensionEnabledSetting();
   observePageChanges();
-})();
+
+  if (!extensionEnabled) {
+    log("Extension disabled, skipping injection");
+    return;
+  }
+
+  checkAndRender();
+};
+
+init();
