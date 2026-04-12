@@ -52,7 +52,7 @@ interface DSAQuestion {
 
 const ASSISTANT = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID;
 
-function Agent({ userName, userId, type }: AgentProps) {
+function Agent({ userName, userId, type, jobContextJson }: AgentProps & { jobContextJson?: string }) {
   const router = useRouter();
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
@@ -68,6 +68,7 @@ function Agent({ userName, userId, type }: AgentProps) {
   const [fullAssistantMessage, setFullAssistantMessage] = useState<string>("");
   const [isSavingCall, setIsSavingCall] = useState(false);
   const [resumeText, setResumeText] = useState("");
+  const [isJobContextInjected, setIsJobContextInjected] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
@@ -333,6 +334,24 @@ function Agent({ userName, userId, type }: AgentProps) {
     const onCallStart = () => {
       setCallStatus(CallStatus.ACTIVE);
       console.log("Call started - will try to get call ID from Vapi");
+
+      if (jobContextJson && !isJobContextInjected) {
+        try {
+          vapi.send({
+            type: "add-message",
+            message: {
+              role: "system",
+              content:
+                `Use this job details JSON to tailor the interview questions, follow-up depth, and evaluation rubric. ` +
+                `Prioritize role requirements and missing skills while interviewing.\n\nJOB_DETAILS_JSON:\n${jobContextJson}`,
+            },
+          });
+          setIsJobContextInjected(true);
+          toast.success("Job context shared with interviewer");
+        } catch (error) {
+          console.warn("Failed to inject job context at call start", error);
+        }
+      }
     };
 
     const onCallEnd = async () => {
@@ -340,6 +359,7 @@ function Agent({ userName, userId, type }: AgentProps) {
       setShowChat(false);
       setChatMessages([]);
       setFullAssistantMessage("");
+      setIsJobContextInjected(false);
 
       // Use the stored call ID from when the call started
       let callId = currentCallId;
@@ -489,7 +509,7 @@ function Agent({ userName, userId, type }: AgentProps) {
       vapi.off("speech-end", onSpeechEnd);
       vapi.off("error", onErr);
     };
-  }, [saveCallLog, userId, router, currentCallId]);
+  }, [saveCallLog, userId, router, currentCallId, jobContextJson, isJobContextInjected]);
 
   useEffect(() => {
     if (callStatus === CallStatus.FINISHED && !isSavingCall) {
@@ -537,6 +557,7 @@ function Agent({ userName, userId, type }: AgentProps) {
           userId: userId,
           dsaChatEnabled: "true",
           resumeContent: resumeText,
+          jobDetailsJson: jobContextJson || "",
         },
       });
 

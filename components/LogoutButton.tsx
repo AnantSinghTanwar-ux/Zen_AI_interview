@@ -18,6 +18,13 @@ export default function LogoutButton() {
       
       // Call server action
       await logout();
+
+      window.postMessage(
+        {
+          type: "ZENAI_EXTENSION_CLEAR_TOKEN",
+        },
+        window.location.origin
+      );
       
       // Navigate directly
       window.location.href = "/sign-in";

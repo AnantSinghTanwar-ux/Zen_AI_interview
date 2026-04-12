@@ -6,6 +6,42 @@ import { cookies } from "next/headers";
 
 const SESSION_COOKIE_EXPIRES_IN = 60 * 60 * 24 * 7 * 1000; // 7 days
 
+const ensureUserProfile = async (params: {
+  uid: string;
+  email?: string | null;
+  name?: string | null;
+}) => {
+  const { uid, email, name } = params;
+  const userRef = db.collection("users").doc(uid);
+  const userSnap = await userRef.get();
+
+  if (userSnap.exists) {
+    return {
+      ...(userSnap.data() || {}),
+      id: userSnap.id,
+    } as User;
+  }
+
+  const fallbackName = name?.trim() || email?.split("@")[0] || "User";
+  const fallbackEmail = email?.trim() || "";
+
+  await userRef.set(
+    {
+      name: fallbackName,
+      email: fallbackEmail,
+      createdAt: new Date().toISOString(),
+      source: "auto-created-on-signin",
+    },
+    { merge: true }
+  );
+
+  const createdSnap = await userRef.get();
+  return {
+    ...(createdSnap.data() || { name: fallbackName, email: fallbackEmail }),
+    id: uid,
+  } as User;
+};
+
 export const signUp = async (params: SignUpParams) => {
   const { uid, email, name } = params;
   try {
@@ -48,6 +84,12 @@ export const signIn = async (params: SignInParams) => {
     if (!cookieResult.success) {
       return { success: false, message: cookieResult.message };
     }
+
+    await ensureUserProfile({
+      uid: userRecord.uid,
+      email: userRecord.email,
+      name: userRecord.displayName,
+    });
 
     return { success: true, message: "User signed in successfully" };
   } catch (error) {
@@ -107,17 +149,18 @@ export const getCurrentUser = async () => {
        return null;
     }
 
-    const user = await db.collection("users").doc(token.uid).get();
-
-    if (!user.exists) {
-      console.log("User doc not found for UID:", token.uid);
-      return null;
+    let userRecord = null;
+    try {
+      userRecord = await auth.getUser(token.uid);
+    } catch (error) {
+      console.warn("Could not load firebase auth user for UID:", token.uid, error);
     }
 
-    return {
-      ...user.data(),
-      id: user.id,
-    } as User;
+    return await ensureUserProfile({
+      uid: token.uid,
+      email: token.email || userRecord?.email,
+      name: token.name || userRecord?.displayName,
+    });
   } catch (error) {
     // Log the actual error to help debugging
     console.error("Error verifying session cookie:", error);

@@ -3,34 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ZenAI</title>
+    <title>ZenAI Extension</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body class="zenai-popup">
-    <main class="zenai-popup__wrap">
-      <header class="zenai-popup__header">
-        <div class="zenai-popup__title">ZenAI</div>
-        <div id="status" class="zenai-pill zenai-pill--unknown">Checking…</div>
-      </header>
+  <body class="zenai-popup-body">
+    <main class="zenai-popup-card">
+      <h1 class="zenai-popup-title">ZenAI</h1>
+      <p class="zenai-popup-subtitle">Resume Fit Assistant</p>
 
-      <section class="zenai-card">
-        <label class="zenai-label" for="token">Auth token</label>
-        <input id="token" class="zenai-input" type="password" placeholder="Paste token" autocomplete="off" />
-        <div class="zenai-row">
-          <button id="save" class="zenai-btn zenai-btn--primary" type="button">Save</button>
-          <button id="clear" class="zenai-btn" type="button">Clear</button>
-        </div>
-      </section>
+      <div class="zenai-status-row">
+        <span class="zenai-status-label">Login Status</span>
+        <span id="statusBadge" class="zenai-status-badge">Checking...</span>
+      </div>
 
-      <section class="zenai-card">
-        <button id="dashboard" class="zenai-btn zenai-btn--ghost" type="button">Go to Dashboard</button>
-      </section>
+      <label class="zenai-input-label" for="authTokenInput">Auth Token</label>
+      <input id="authTokenInput" class="zenai-input" type="password" placeholder="Paste your token" autocomplete="off" />
 
-      <footer class="zenai-footer">
-        <span class="zenai-muted">Token stays in this browser.</span>
-      </footer>
+      <div class="zenai-btn-grid">
+        <button id="saveTokenBtn" class="zenai-popup-btn primary" type="button">Save Token</button>
+        <button id="clearTokenBtn" class="zenai-popup-btn subtle" type="button">Clear</button>
+      </div>
 
-      <script src="popup.js"></script>
+      <button id="dashboardBtn" class="zenai-popup-btn full" type="button">Go to Dashboard</button>
+
+      <p id="messageText" class="zenai-message" role="status" aria-live="polite"></p>
     </main>
+
+    <script src="popup.js"></script>
   </body>
 </html>

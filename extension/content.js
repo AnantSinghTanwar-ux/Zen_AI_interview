@@ -1,349 +1,502 @@
-const LOG_PREFIX = "[ZenAI:cs]";
-const ROOT_ID = "zenai-check-fit-root";
-const BUTTON_ID = "zenai-check-fit-button";
-const STYLE_LINK_ID = "zenai-check-fit-style";
+const ZENAI = {
+  buttonId: "zenai-check-fit-button",
+  mountedAttr: "data-zenai-mounted",
+  logPrefix: "[ZenAI Content]"
+};
 
-function log(...args) {
-  // eslint-disable-next-line no-console
-  console.log(LOG_PREFIX, ...args);
-}
+const JOBYT_JOB_URL_REGEX = /^\/jobs\/([a-z0-9-]{8,})$/i;
 
-function sanitizeText(input, { maxLen = 12000 } = {}) {
-  if (typeof input !== "string") return "";
-  const cleaned = input
-    .replace(/[\u200B-\u200D\uFEFF]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!cleaned) return "";
-  return cleaned.length > maxLen ? cleaned.slice(0, maxLen) : cleaned;
-}
+const TRUSTED_AUTH_SYNC_HOSTS = new Set([
+  "localhost",
+  "127.0.0.1",
+  "myapp.com",
+  "www.myapp.com"
+]);
 
-function textFrom(el) {
-  if (!el) return "";
-  const raw = (el.innerText || el.textContent || "").toString();
-  return sanitizeText(raw);
-}
+const SKIP_JOB_INJECTION_HOSTS = new Set([
+  "localhost",
+  "127.0.0.1",
+  "myapp.com",
+  "www.myapp.com"
+]);
 
-function queryFirst(selectors, root = document) {
-  for (const sel of selectors) {
-    const el = root.querySelector(sel);
-    if (el) return el;
+const SELECTORS = {
+  title: [
+    "h1[class*='job']",
+    "h1[class*='title']",
+    "h1[data-test*='job']",
+    "h1",
+    "[data-testid*='job-title']",
+    ".top-card-layout__title",
+    ".job-details-jobs-unified-top-card__job-title"
+  ],
+  company: [
+    "[data-testid*='company']",
+    "a[class*='company']",
+    "span[class*='company']",
+    ".topcard__org-name-link",
+    ".job-details-jobs-unified-top-card__company-name",
+    "[class*='employer']"
+  ],
+  description: [
+    "[data-testid*='job-description']",
+    "[class*='job-description']",
+    "[class*='description']",
+    "article",
+    "main article",
+    "section[aria-label*='Description']"
+  ],
+  requirements: [
+    "[class*='requirement'] li",
+    "[data-testid*='requirement'] li",
+    "section[class*='requirement'] li",
+    "ul[class*='requirement'] li"
+  ],
+  skills: [
+    "[class*='skill']",
+    "[data-testid*='skill']",
+    "li[class*='skill']",
+    "span[class*='skill']",
+    "a[href*='skill']"
+  ]
+};
+
+const log = (...args) => {
+  console.log(ZENAI.logPrefix, ...args);
+};
+
+const isTrustedAuthSyncHost = () => {
+  const host = window.location.hostname.toLowerCase();
+  return TRUSTED_AUTH_SYNC_HOSTS.has(host);
+};
+
+const shouldSkipJobInjection = () => {
+  const host = window.location.hostname.toLowerCase();
+  return SKIP_JOB_INJECTION_HOSTS.has(host);
+};
+
+const sanitizeText = (value, maxLen = 12000) => {
+  if (!value || typeof value !== "string") {
+    return "";
   }
-  return null;
-}
+  return value
+    .replace(/[\u0000-\u001F\u007F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLen);
+};
 
-function queryText(selectors, root = document) {
-  const el = queryFirst(selectors, root);
-  return textFrom(el);
-}
-
-function parseJsonLdJobPosting() {
-  const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
-  for (const s of scripts) {
-    const raw = s.textContent?.trim();
-    if (!raw) continue;
-
-    let data;
-    try {
-      data = JSON.parse(raw);
-    } catch {
+const extractFromSelectors = (selectors, { minLength = 2, maxLen = 5000 } = {}) => {
+  for (const selector of selectors) {
+    const el = document.querySelector(selector);
+    if (!el) {
       continue;
     }
+    const value = sanitizeText(el.textContent || "", maxLen);
+    if (value.length >= minLength) {
+      return value;
+    }
+  }
+  return "";
+};
 
-    const candidates = Array.isArray(data) ? data : [data];
-    for (const item of candidates) {
-      const stack = [item];
-      while (stack.length) {
-        const cur = stack.pop();
-        if (!cur || typeof cur !== "object") continue;
-
-        const type = cur['@type'];
-        const isJobPosting =
-          type === "JobPosting" ||
-          (Array.isArray(type) && type.includes("JobPosting"));
-
-        if (isJobPosting) {
-          const title = sanitizeText(cur.title || cur.name || "", { maxLen: 200 });
-          const company = sanitizeText(
-            cur.hiringOrganization?.name || cur.organization?.name || cur.employmentUnit?.name || "",
-            { maxLen: 200 }
-          );
-          const description = sanitizeText(cur.description || "", { maxLen: 12000 });
-
-          const skills = [];
-          const rawSkills = cur.skills || cur.qualifications || cur.experienceRequirements;
-          if (typeof rawSkills === "string") skills.push(...rawSkills.split(/,|\n|\u2022/));
-          if (Array.isArray(rawSkills)) skills.push(...rawSkills);
-
+const extractJsonLdJobPosting = () => {
+  const scripts = [...document.querySelectorAll("script[type='application/ld+json']")];
+  for (const script of scripts) {
+    try {
+      const parsed = JSON.parse(script.textContent || "{}");
+      const entries = Array.isArray(parsed) ? parsed : [parsed];
+      for (const item of entries) {
+        if (!item || typeof item !== "object") {
+          continue;
+        }
+        const type = Array.isArray(item["@type"]) ? item["@type"].join(" ") : item["@type"];
+        if (String(type || "").toLowerCase().includes("jobposting")) {
+          const company =
+            typeof item.hiringOrganization === "object"
+              ? item.hiringOrganization?.name || ""
+              : "";
           return {
-            title,
-            company,
-            description,
-            skills: skills
-              .map((x) => sanitizeText(String(x), { maxLen: 80 }))
-              .filter(Boolean)
-              .slice(0, 50),
-            source: "jsonld",
+            title: sanitizeText(item.title || "", 400),
+            company: sanitizeText(company, 300),
+            description: sanitizeText(item.description || "", 16000),
+            skills: []
           };
         }
-
-        for (const v of Object.values(cur)) {
-          if (v && typeof v === "object") stack.push(v);
-        }
       }
+    } catch (_error) {
+      // Intentionally swallow malformed JSON-LD blocks from host pages.
     }
   }
   return null;
-}
+};
 
-function looksLikeJobPageHeuristic() {
-  const url = location.href;
-  const urlHints = [/\/jobs?\b/i, /\/job\b/i, /viewjob/i, /careers?/i, /positions?/i, /vacanc/i, /opportunit/i];
-  const urlScore = urlHints.some((r) => r.test(url)) ? 1 : 0;
+const extractSkills = (descriptionText) => {
+  const collected = new Set();
 
-  const hasApplyButton = !!document.querySelector(
-    'a[href*="apply" i], button[aria-label*="apply" i], button:has(span:matches-css(case-insensitive, apply)), button:has(span:matches-css(case-insensitive, easy apply))'
-  );
+  for (const selector of SELECTORS.skills) {
+    document.querySelectorAll(selector).forEach((el) => {
+      const skill = sanitizeText(el.textContent || "", 120);
+      if (skill && skill.length >= 2 && skill.length <= 60) {
+        collected.add(skill);
+      }
+    });
+  }
 
-  const main = document.querySelector("main") || document.body;
-  const h1 = queryText(["h1"], main);
-  const hasJobKeywords = /job description|responsibilities|requirements|qualifications|what you will do|what you\u2019ll do/i.test(
-    main?.innerText || ""
-  );
+  const knownSkillRegex = /\b(JavaScript|TypeScript|Node\.js|React|Next\.js|Python|Java|C\+\+|C#|SQL|NoSQL|AWS|Azure|GCP|Docker|Kubernetes|REST|GraphQL|CI\/CD|Git|Machine Learning|Data Analysis)\b/gi;
+  const matches = descriptionText.match(knownSkillRegex) || [];
+  matches.forEach((s) => collected.add(sanitizeText(s, 60)));
 
-  let score = 0;
-  if (urlScore) score += 2;
-  if (hasApplyButton) score += 2;
-  if (h1 && h1.length >= 6) score += 1;
-  if (hasJobKeywords) score += 2;
+  return [...collected].slice(0, 80);
+};
 
-  return score >= 3;
-}
+const cleanJobDescription = (text) => {
+  if (!text) {
+    return "";
+  }
 
-function detectJobPage() {
-  const jsonLd = parseJsonLdJobPosting();
-  if (jsonLd?.title || jsonLd?.description) return { isJob: true, jsonLd };
+  const normalized = sanitizeText(text, 24000);
 
-  const isJob = looksLikeJobPageHeuristic();
-  return { isJob, jsonLd: null };
-}
-
-function extractSkillsFromText(text) {
-  const t = sanitizeText(text, { maxLen: 20000 });
-  if (!t) return [];
-
-  const known = [
-    "javascript",
-    "typescript",
-    "react",
-    "next.js",
-    "node.js",
-    "express",
-    "python",
-    "java",
-    "c#",
-    "sql",
-    "postgres",
-    "mysql",
-    "mongodb",
-    "redis",
-    "aws",
-    "azure",
-    "gcp",
-    "docker",
-    "kubernetes",
-    "terraform",
-    "git",
-    "linux",
-    "graphql",
-    "rest",
+  const startMarkers = ["job description", "about the role", "role overview"];
+  const endMarkers = [
+    "eligibility",
+    "other requirements",
+    "perks",
+    "number of openings",
+    "apply now",
+    "additional questions",
+    "cover letter",
+    "skill matching",
+    "missing skills",
+    "generate roadmap",
   ];
 
-  const lower = t.toLowerCase();
-  const found = new Set();
-  for (const k of known) {
-    if (lower.includes(k)) found.add(k);
-  }
-  return Array.from(found).slice(0, 30);
-}
-
-function extractJobDetails({ jsonLd } = {}) {
-  if (jsonLd) {
-    return {
-      title: jsonLd.title,
-      company: jsonLd.company,
-      description: jsonLd.description,
-      skills: jsonLd.skills || extractSkillsFromText(jsonLd.description),
-      source: jsonLd.source,
-    };
+  const lower = normalized.toLowerCase();
+  let startIdx = 0;
+  for (const marker of startMarkers) {
+    const idx = lower.indexOf(marker);
+    if (idx >= 0) {
+      startIdx = idx + marker.length;
+      break;
+    }
   }
 
-  const title = queryText(
-    [
-      // LinkedIn
-      "h1.top-card-layout__title",
-      "h1.t-24",
-      // Indeed
-      'h1[data-testid="jobsearch-JobInfoHeader-title"]',
-      // Greenhouse
-      "#header h1",
-      // Generic
-      "main h1",
-      "article h1",
-      "h1",
-    ]
-  );
+  let endIdx = normalized.length;
+  const slicedLower = lower.slice(startIdx);
+  for (const marker of endMarkers) {
+    const idx = slicedLower.indexOf(marker);
+    if (idx >= 0) {
+      endIdx = Math.min(endIdx, startIdx + idx);
+    }
+  }
 
-  const company = queryText(
-    [
-      // LinkedIn
-      "a.topcard__org-name-link",
-      ".topcard__org-name-link",
-      ".top-card-layout__card .topcard__flavor-row a",
-      // Indeed
-      'div[data-testid="inlineHeader-companyName"] a',
-      'div[data-testid="inlineHeader-companyName"]',
-      // Greenhouse
-      "#header .company-name",
-      // Generic
-      "[data-company]",
-      "[class*='company' i] a",
-      "[class*='company' i]",
-    ]
-  );
+  const section = normalized.slice(startIdx, endIdx).trim();
+  return section || normalized;
+};
 
-  const descriptionEl = queryFirst(
-    [
-      // LinkedIn
-      ".show-more-less-html__markup",
-      ".jobs-description__content",
-      // Indeed
-      "#jobDescriptionText",
-      'div[data-testid="jobsearch-JobComponent-description"]',
-      // Greenhouse
-      "#content",
-      // Generic
-      "article",
-      "main",
-    ]
-  );
+const parseCompanyFromText = (text) => {
+  if (!text) {
+    return "";
+  }
 
-  const description = sanitizeText(textFrom(descriptionEl), { maxLen: 12000 });
+  const fromAbout = text.match(/about\s+([a-z0-9&.,\-\s]{2,80})/i);
+  if (fromAbout?.[1]) {
+    return sanitizeText(fromAbout[1], 120);
+  }
 
-  const skillsSection = queryFirst(
-    [
-      "section:has(h2)",
-      "section:has(h3)",
-      "aside",
-      "main",
-      "article",
-    ]
-  );
+  const fromAt = text.match(/(?:at|for)\s+([A-Z][A-Za-z0-9&.,\-\s]{2,80})/);
+  if (fromAt?.[1]) {
+    return sanitizeText(fromAt[1], 120);
+  }
 
-  const skillsText = skillsSection ? textFrom(skillsSection) : "";
-  const skills = extractSkillsFromText(skillsText).slice(0, 30);
+  return "";
+};
+
+const normalizeRequirementLine = (line) =>
+  sanitizeText(line, 260)
+    .replace(/^[-•\d.)\s]+/, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+const extractJobDetails = () => {
+  const fromJsonLd = extractJsonLdJobPosting();
+
+  const title =
+    fromJsonLd?.title ||
+    extractFromSelectors(SELECTORS.title, { minLength: 2, maxLen: 400 }) ||
+    sanitizeText(document.title.replace(/\s*\|.*$/, ""), 300);
+
+  const extractedCompany =
+    fromJsonLd?.company ||
+    extractFromSelectors(SELECTORS.company, { minLength: 2, maxLen: 300 }) ||
+    "";
+
+  const rawDescription =
+    fromJsonLd?.description ||
+    extractFromSelectors(SELECTORS.description, { minLength: 80, maxLen: 20000 }) ||
+    sanitizeText(document.body?.innerText || "", 20000);
+
+  const description = cleanJobDescription(rawDescription);
+  const company = extractedCompany || parseCompanyFromText(rawDescription);
+
+  const skills = extractSkills(description);
+  const requirements = extractRequirements(description);
+  const jobId = extractJobIdFromUrl();
 
   return {
+    jobId,
     title,
     company,
     description,
-    skills,
-    source: "dom",
+    requirements,
+    skills
   };
-}
+};
 
-function ensureStyles() {
-  if (document.getElementById(STYLE_LINK_ID)) return;
+const extractRequirements = (descriptionText) => {
+  const items = new Set();
 
-  const link = document.createElement("link");
-  link.id = STYLE_LINK_ID;
-  link.rel = "stylesheet";
-  link.type = "text/css";
-  link.href = chrome.runtime.getURL("styles.css");
-  document.documentElement.appendChild(link);
-}
-
-function injectButton() {
-  if (document.getElementById(ROOT_ID)) return;
-
-  ensureStyles();
-
-  const root = document.createElement("div");
-  root.id = ROOT_ID;
-
-  const button = document.createElement("button");
-  button.id = BUTTON_ID;
-  button.type = "button";
-  button.textContent = "Check My Fit";
-
-  button.addEventListener("click", async () => {
-    try {
-      button.disabled = true;
-      button.classList.add("zenai-loading");
-
-      const { jsonLd } = detectJobPage();
-      const job = extractJobDetails({ jsonLd });
-
-      const payload = {
-        job: {
-          title: sanitizeText(job.title, { maxLen: 200 }),
-          company: sanitizeText(job.company, { maxLen: 200 }),
-          description: sanitizeText(job.description, { maxLen: 12000 }),
-          skills: Array.isArray(job.skills) ? job.skills.map((s) => sanitizeText(String(s), { maxLen: 80 })).filter(Boolean) : [],
-          pageUrl: location.href,
-          extractedAt: new Date().toISOString(),
-          source: job.source,
-        },
-      };
-
-      log("Sending job payload", payload.job);
-
-      const resp = await chrome.runtime.sendMessage({
-        type: "ZENAI_JOB_DATA",
-        payload,
-      });
-
-      log("Background response", resp);
-    } catch (err) {
-      log("Click handler failed", err);
-    } finally {
-      button.classList.remove("zenai-loading");
-      button.disabled = false;
-    }
-  });
-
-  root.appendChild(button);
-  document.documentElement.appendChild(root);
-}
-
-function removeButton() {
-  const el = document.getElementById(ROOT_ID);
-  if (el) el.remove();
-}
-
-let lastDecision = null;
-function tick() {
-  const decision = detectJobPage();
-  const isJob = !!decision.isJob;
-
-  if (lastDecision !== isJob) {
-    lastDecision = isJob;
-    log("Job page detection:", isJob);
+  for (const selector of SELECTORS.requirements) {
+    document.querySelectorAll(selector).forEach((el) => {
+      const line = sanitizeText(el.textContent || "", 240);
+      if (line.length >= 4) {
+        items.add(normalizeRequirementLine(line));
+      }
+    });
   }
 
-  if (isJob) injectButton();
-  else removeButton();
-}
+  const blockedPhrases = [
+    "apply now",
+    "resume",
+    "additional questions",
+    "cover letter",
+    "skill matching",
+    "missing skills",
+    "generate roadmap",
+    "number of openings",
+    "login",
+    "sign in",
+  ];
 
-function start() {
-  tick();
+  if (descriptionText) {
+    descriptionText
+      .split(/\.|\n|•/)
+      .map((line) => normalizeRequirementLine(line))
+      .filter((line) => line.length >= 20)
+      .filter((line) => {
+        const low = line.toLowerCase();
+        if (blockedPhrases.some((p) => low.includes(p))) {
+          return false;
+        }
 
-  const mo = new MutationObserver(() => {
-    // Debounced-ish: let the DOM settle a bit via microtask
-    queueMicrotask(tick);
+        const requirementSignals = [
+          "experience",
+          "must",
+          "should",
+          "required",
+          "proficient",
+          "knowledge",
+          "familiar",
+          "ability",
+          "develop",
+          "design",
+          "build",
+        ];
+
+        return requirementSignals.some((sig) => low.includes(sig));
+      })
+      .slice(0, 20)
+      .forEach((line) => items.add(line));
+  }
+
+  return [...items].filter(Boolean).slice(0, 25);
+};
+
+const extractJobIdFromUrl = () => {
+  const match = window.location.pathname.match(JOBYT_JOB_URL_REGEX);
+  return match?.[1] || "";
+};
+
+const isJobytJobPage = () => {
+  const host = window.location.hostname.toLowerCase();
+  if (host !== "www.jobyt.in" && host !== "jobyt.in") {
+    return false;
+  }
+  return JOBYT_JOB_URL_REGEX.test(window.location.pathname);
+};
+
+const isLikelyJobPage = () => {
+  if (isJobytJobPage()) {
+    return true;
+  }
+
+  const url = window.location.href.toLowerCase();
+  const urlSignal = /(\/jobs?\/|jobid|job-description|careers?|position|vacancy|opening|myworkdayjobs|greenhouse|lever\.co)/i.test(url);
+
+  const jsonLdSignal = Boolean(extractJsonLdJobPosting());
+  const titleSignal = Boolean(extractFromSelectors(SELECTORS.title, { minLength: 2, maxLen: 250 }));
+  const descSignal = Boolean(extractFromSelectors(SELECTORS.description, { minLength: 120, maxLen: 2000 }));
+
+  const score = [urlSignal, jsonLdSignal, titleSignal, descSignal].filter(Boolean).length;
+  return score >= 2;
+};
+
+const sendJobForAnalysis = () => {
+  const job = extractJobDetails();
+  const payload = {
+    sourceUrl: window.location.href,
+    extractedAt: new Date().toISOString(),
+    job
+  };
+
+  log("Sending job payload", payload);
+
+  const actionType = isJobytJobPage() ? "START_ZSCORE_INTERVIEW" : "CHECK_MY_FIT";
+
+  chrome.runtime.sendMessage(
+    {
+      type: actionType,
+      payload
+    },
+    (response) => {
+      if (chrome.runtime.lastError) {
+        log("Message failed", chrome.runtime.lastError.message);
+        return;
+      }
+      log("Background response", response);
+    }
+  );
+};
+
+const syncAuthTokenToExtension = (token) => {
+  chrome.runtime.sendMessage(
+    {
+      type: "SET_AUTH_TOKEN",
+      payload: { token }
+    },
+    (response) => {
+      if (chrome.runtime.lastError) {
+        log("Auth token sync failed", chrome.runtime.lastError.message);
+        return;
+      }
+      log("Auth token synced", response);
+    }
+  );
+};
+
+const setupWebAppAuthBridge = () => {
+  if (!isTrustedAuthSyncHost()) {
+    return;
+  }
+
+  window.addEventListener("message", (event) => {
+    if (event.source !== window || !event.data || typeof event.data !== "object") {
+      return;
+    }
+
+    if (event.data.type === "ZENAI_EXTENSION_SYNC_TOKEN") {
+      const token = sanitizeText(String(event.data.token || ""), 4000);
+      if (!token) {
+        return;
+      }
+      log("Received token sync event from web app");
+      syncAuthTokenToExtension(token);
+    }
+
+    if (event.data.type === "ZENAI_EXTENSION_CLEAR_TOKEN") {
+      log("Received token clear event from web app");
+      syncAuthTokenToExtension("");
+    }
+  });
+};
+
+const createButton = () => {
+  const button = document.createElement("button");
+  button.id = ZENAI.buttonId;
+  button.className = "zenai-fit-btn";
+  button.type = "button";
+  const label = isJobytJobPage() ? "Z-Score" : "Check My Fit";
+  button.setAttribute("aria-label", label);
+  button.textContent = label;
+
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    sendJobForAnalysis();
   });
 
-  mo.observe(document.documentElement, { childList: true, subtree: true });
-}
+  return button;
+};
 
-start();
+const mountButton = () => {
+  if (document.documentElement.getAttribute(ZENAI.mountedAttr) === "true") {
+    return;
+  }
+
+  if (!isLikelyJobPage()) {
+    log("Not a job page, skipping button injection");
+    return;
+  }
+
+  const existing = document.getElementById(ZENAI.buttonId);
+  if (existing) {
+    document.documentElement.setAttribute(ZENAI.mountedAttr, "true");
+    return;
+  }
+
+  const button = createButton();
+  document.body.appendChild(button);
+  document.documentElement.setAttribute(ZENAI.mountedAttr, "true");
+  log("Button injected");
+};
+
+const unmountButton = () => {
+  const existing = document.getElementById(ZENAI.buttonId);
+  if (existing) {
+    existing.remove();
+    log("Button removed");
+  }
+  document.documentElement.removeAttribute(ZENAI.mountedAttr);
+};
+
+const checkAndRender = () => {
+  if (isLikelyJobPage()) {
+    mountButton();
+  } else {
+    unmountButton();
+  }
+};
+
+const observePageChanges = () => {
+  const observer = new MutationObserver(() => {
+    checkAndRender();
+  });
+
+  observer.observe(document.documentElement || document.body, {
+    childList: true,
+    subtree: true
+  });
+
+  const originalPushState = history.pushState;
+  history.pushState = function pushStatePatched(...args) {
+    originalPushState.apply(this, args);
+    setTimeout(checkAndRender, 150);
+  };
+
+  window.addEventListener("popstate", () => {
+    setTimeout(checkAndRender, 150);
+  });
+};
+
+(() => {
+  log("Content script booted", window.location.href);
+  setupWebAppAuthBridge();
+
+  if (shouldSkipJobInjection()) {
+    log("Skipping job page observer/injection on app host");
+    return;
+  }
+
+  checkAndRender();
+  observePageChanges();
+})();

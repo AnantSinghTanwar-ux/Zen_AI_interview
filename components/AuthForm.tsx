@@ -44,6 +44,20 @@ function AuthForm({ type }: { type: FormType }) {
 
   const isSignIn = type == "sign-in";
 
+  const syncTokenToExtension = (token: string) => {
+    if (!token || typeof window === "undefined") {
+      return;
+    }
+
+    window.postMessage(
+      {
+        type: "ZENAI_EXTENSION_SYNC_TOKEN",
+        token,
+      },
+      window.location.origin
+    );
+  };
+
   // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -69,6 +83,8 @@ function AuthForm({ type }: { type: FormType }) {
           toast.error(res.message);
           return;
         }
+
+        syncTokenToExtension(token);
 
         toast.success("Sign In Success");
         router.push("/");

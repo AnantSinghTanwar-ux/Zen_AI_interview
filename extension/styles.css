@@ -1,172 +1,176 @@
-/* Content script button */
-#zenai-check-fit-root {
+.zenai-fit-btn {
   position: fixed;
-  z-index: 2147483647;
-  bottom: 20px;
   right: 20px;
-  pointer-events: none;
-}
-
-#zenai-check-fit-button {
-  pointer-events: auto;
-  appearance: none;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 9999px;
-  padding: 12px 16px;
-  font: 600 13px/1.1 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  bottom: 20px;
+  z-index: 2147483000;
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 700;
   letter-spacing: 0.2px;
-  color: #0b1f12;
-  background: linear-gradient(180deg, #37e67a 0%, #22c55e 100%);
-  box-shadow:
-    0 10px 25px rgba(0, 0, 0, 0.22),
-    0 2px 6px rgba(0, 0, 0, 0.18);
   cursor: pointer;
-  transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+  color: #ffffff;
+  background: linear-gradient(135deg, #0f9f6e, #16a34a);
+  box-shadow: 0 10px 25px rgba(9, 121, 87, 0.28), 0 2px 8px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(4px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
 
-#zenai-check-fit-button:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.02);
-  box-shadow:
-    0 12px 28px rgba(0, 0, 0, 0.24),
-    0 2px 8px rgba(0, 0, 0, 0.2);
+.zenai-fit-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 14px 28px rgba(10, 130, 90, 0.32), 0 4px 10px rgba(0, 0, 0, 0.2);
+  filter: saturate(1.05);
 }
 
-#zenai-check-fit-button:active {
-  transform: translateY(0px);
-  filter: brightness(0.98);
+.zenai-fit-btn:active {
+  transform: translateY(0) scale(0.99);
 }
 
-#zenai-check-fit-button.zenai-loading,
-#zenai-check-fit-button:disabled {
-  cursor: progress;
-  opacity: 0.92;
-}
-
-/* Popup UI */
-.zenai-popup {
+.zenai-popup-body {
+  width: 320px;
   margin: 0;
-  min-width: 320px;
-  background: #0b1220;
-  color: rgba(255, 255, 255, 0.92);
+  padding: 14px;
+  font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+  background: radial-gradient(circle at 85% 0%, #e8fff4 0%, #f8fbfa 48%, #f1f5f9 100%);
+  color: #0f172a;
 }
 
-.zenai-popup__wrap {
+.zenai-popup-card {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
   padding: 14px;
 }
 
-.zenai-popup__header {
+.zenai-popup-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.zenai-popup-subtitle {
+  margin: 4px 0 12px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.zenai-status-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
   margin-bottom: 12px;
 }
 
-.zenai-popup__title {
-  font: 700 14px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  letter-spacing: 0.2px;
+.zenai-status-label {
+  font-size: 12px;
+  color: #334155;
 }
 
-.zenai-pill {
-  font: 600 11px/1 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  padding: 6px 10px;
-  border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.92);
+.zenai-status-badge {
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-weight: 700;
+  background: #e2e8f0;
+  color: #334155;
 }
 
-.zenai-pill--ok {
-  background: rgba(34, 197, 94, 0.14);
-  border-color: rgba(34, 197, 94, 0.28);
+.zenai-status-badge.is-online {
+  background: #dcfce7;
+  color: #166534;
 }
 
-.zenai-pill--warn {
-  background: rgba(234, 179, 8, 0.14);
-  border-color: rgba(234, 179, 8, 0.28);
+.zenai-status-badge.is-offline {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
-.zenai-pill--unknown {
-  background: rgba(59, 130, 246, 0.14);
-  border-color: rgba(59, 130, 246, 0.28);
-}
-
-.zenai-card {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 10px;
-}
-
-.zenai-label {
+.zenai-input-label {
+  font-size: 12px;
+  color: #334155;
   display: block;
-  font: 600 11px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .zenai-input {
   width: 100%;
   box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(3, 7, 18, 0.55);
-  color: rgba(255, 255, 255, 0.92);
-  padding: 10px 10px;
+  padding: 10px;
   outline: none;
-  font: 500 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  transition: border-color 120ms ease, background 120ms ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .zenai-input:focus {
-  border-color: rgba(34, 197, 94, 0.55);
-  background: rgba(3, 7, 18, 0.72);
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.16);
 }
 
-.zenai-row {
-  display: flex;
-  gap: 8px;
+.zenai-btn-grid {
   margin-top: 10px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr auto;
 }
 
-.zenai-btn {
-  flex: 1;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 255, 255, 0.92);
+.zenai-popup-btn {
+  border: 1px solid transparent;
   border-radius: 10px;
-  padding: 10px 10px;
+  padding: 10px 12px;
   cursor: pointer;
-  font: 700 12px/1 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  letter-spacing: 0.2px;
-  transition: transform 120ms ease, filter 120ms ease, background 120ms ease;
+  font-size: 13px;
+  font-weight: 700;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
 
-.zenai-btn:hover {
-  filter: brightness(1.05);
+.zenai-popup-btn:hover {
   transform: translateY(-1px);
 }
 
-.zenai-btn:active {
-  transform: translateY(0px);
+.zenai-popup-btn.primary {
+  background: linear-gradient(135deg, #0f9f6e, #16a34a);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(10, 130, 90, 0.25);
 }
 
-.zenai-btn--primary {
-  border-color: rgba(34, 197, 94, 0.32);
-  background: rgba(34, 197, 94, 0.2);
+.zenai-popup-btn.subtle {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
 }
 
-.zenai-btn--ghost {
-  background: rgba(3, 7, 18, 0.4);
+.zenai-popup-btn.full {
+  margin-top: 10px;
+  width: 100%;
+  background: #0f172a;
+  color: #ffffff;
 }
 
-.zenai-footer {
-  margin-top: 4px;
+.zenai-message {
+  min-height: 18px;
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #334155;
 }
 
-.zenai-muted {
-  font: 500 11px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  color: rgba(255, 255, 255, 0.72);
+.zenai-message.ok {
+  color: #166534;
+}
+
+.zenai-message.warn {
+  color: #92400e;
+}
+
+@media (max-width: 768px) {
+  .zenai-fit-btn {
+    right: 14px;
+    bottom: 14px;
+    padding: 11px 16px;
+    font-size: 13px;
+  }
 }

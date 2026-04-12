@@ -1,24 +1,23 @@
 {
   "manifest_version": 3,
-  "name": "ZenAI – Check My Fit",
-  "version": "0.1.0",
-  "description": "Detects job listings and sends them to ZenAI for fit analysis.",
-  "action": {
-    "default_title": "ZenAI",
-    "default_popup": "popup.html"
-  },
+  "name": "ZenAI Job Fit Analyzer",
+  "description": "Detect job listings and analyze resume fit instantly with ZenAI.",
+  "version": "1.0.0",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [
-    "*://*/*",
     "*://*.linkedin.com/*",
+    "*://*.jobyt.com/*",
     "*://*.indeed.com/*",
+    "*://*.naukri.com/*",
     "*://*.glassdoor.com/*",
+    "*://*.monster.com/*",
+    "*://*.wellfound.com/*",
     "*://*.greenhouse.io/*",
     "*://*.lever.co/*",
     "*://*.workday.com/*",
-    "*://*.ziprecruiter.com/*",
-    "https://myapp.com/*",
-    "http://localhost/*"
+    "*://*.myworkdayjobs.com/*",
+    "*://*.jobs.*/*",
+    "*://*.careers.*/*"
   ],
   "background": {
     "service_worker": "background.js",
@@ -26,24 +25,14 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "*://*/*",
-        "*://*.linkedin.com/*",
-        "*://*.indeed.com/*",
-        "*://*.glassdoor.com/*",
-        "*://*.greenhouse.io/*",
-        "*://*.lever.co/*",
-        "*://*.workday.com/*",
-        "*://*.ziprecruiter.com/*"
-      ],
+      "matches": ["<all_urls>"],
       "js": ["content.js"],
+      "css": ["styles.css"],
       "run_at": "document_idle"
     }
   ],
-  "web_accessible_resources": [
-    {
-      "resources": ["styles.css"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  "action": {
+    "default_title": "ZenAI",
+    "default_popup": "popup.html"
+  }
 }

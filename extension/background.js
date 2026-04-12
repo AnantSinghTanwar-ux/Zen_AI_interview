@@ -1,110 +1,249 @@
-const LOG_PREFIX = "[ZenAI:bg]";
+const APP_BASE_URL = "http://localhost:3000";
+const LOGIN_URL = `${APP_BASE_URL}/login`;
+const ANALYZE_URL = `${APP_BASE_URL}/analyze`;
+const INTERVIEW_URL = `${APP_BASE_URL}/interview`;
+const ANALYZE_API_URL = `${APP_BASE_URL}/api/extension/analyze`;
+const STORAGE_KEYS = {
+  AUTH_TOKEN: "authToken",
+  RESUME_TEXT: "resumeText",
+  RESUME_ID: "resumeId"
+};
 
-const CONFIG = Object.freeze({
-  APP_BASE_URL: "https://myapp.com",
-  LOGIN_PATH: "/sign-in",
-  DASHBOARD_PATH: "/",
-  ANALYZE_PATH: "/analyze",
-  ANALYZE_API_PATH: "/api/extension/analyze",
-  STORAGE_TOKEN_KEY: "zenaiAuthToken",
-});
+const log = (...args) => {
+  console.log("[ZenAI Background]", ...args);
+};
 
-function log(...args) {
-  // eslint-disable-next-line no-console
-  console.log(LOG_PREFIX, ...args);
-}
+const getFromStorage = (keys) =>
+  new Promise((resolve) => {
+    chrome.storage.local.get(keys, (result) => resolve(result));
+  });
 
-function toBase64Url(utf8String) {
-  const bytes = new TextEncoder().encode(utf8String);
-  let binary = "";
-  for (const b of bytes) binary += String.fromCharCode(b);
-  const base64 = btoa(binary);
-  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
+const setToStorage = (data) =>
+  new Promise((resolve) => {
+    chrome.storage.local.set(data, () => resolve());
+  });
 
-function buildAnalyzeUrl(payload) {
-  const json = JSON.stringify(payload);
-  const encoded = encodeURIComponent(toBase64Url(json));
-  const url = new URL(CONFIG.APP_BASE_URL + CONFIG.ANALYZE_PATH);
-  url.searchParams.set("source", "extension");
-  url.searchParams.set("data", encoded);
-  return url.toString();
-}
+const openTab = (url) => {
+  chrome.tabs.create({ url });
+};
 
-async function getToken() {
-  const result = await chrome.storage.local.get([CONFIG.STORAGE_TOKEN_KEY]);
-  const token = typeof result?.[CONFIG.STORAGE_TOKEN_KEY] === "string" ? result[CONFIG.STORAGE_TOKEN_KEY].trim() : "";
-  return token || null;
-}
+const sanitizeString = (value, max = 8000) => {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value
+    .replace(/[\u0000-\u001F\u007F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
+};
 
-async function openTab(url) {
-  await chrome.tabs.create({ url });
-}
+const sanitizeArray = (items, maxItems = 100) => {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+  return items
+    .map((item) => sanitizeString(item, 100))
+    .filter(Boolean)
+    .slice(0, maxItems);
+};
 
-async function postAnalyze({ token, job }) {
-  const url = CONFIG.APP_BASE_URL + CONFIG.ANALYZE_API_PATH;
+const sanitizeJobPayload = (payload = {}) => {
+  return {
+    sourceUrl: sanitizeString(payload.sourceUrl, 1200),
+    extractedAt: sanitizeString(payload.extractedAt, 100),
+    job: {
+      title: sanitizeString(payload?.job?.title, 300),
+      company: sanitizeString(payload?.job?.company, 300),
+      description: sanitizeString(payload?.job?.description, 16000),
+      skills: sanitizeArray(payload?.job?.skills, 120)
+    }
+  };
+};
 
-  const resp = await fetch(url, {
+const buildAnalyzeUrlWithData = (dataObj) => {
+  const encoded = encodeURIComponent(JSON.stringify(dataObj));
+  return `${ANALYZE_URL}?data=${encoded}`;
+};
+
+const buildInterviewUrlWithData = (dataObj) => {
+  const encoded = encodeURIComponent(JSON.stringify(dataObj));
+  return `${INTERVIEW_URL}?job=${encoded}&source=extension`;
+};
+
+const buildLoginRedirectUrl = (currentPageUrl) => {
+  const redirect = encodeURIComponent(`${ANALYZE_URL}?from=extension&source=${encodeURIComponent(currentPageUrl || "")}`);
+  return `${LOGIN_URL}?redirect=${redirect}`;
+};
+
+const buildInterviewLoginRedirectUrl = (currentPageUrl) => {
+  const redirect = encodeURIComponent(`${INTERVIEW_URL}?from=extension&source=${encodeURIComponent(currentPageUrl || "")}`);
+  return `${LOGIN_URL}?redirect=${redirect}`;
+};
+
+const handleStartZScoreInterview = async (message) => {
+  const { authToken } = await getFromStorage([STORAGE_KEYS.AUTH_TOKEN]);
+
+  if (!authToken) {
+    log("No auth token, redirecting to login for interview flow");
+    openTab(buildInterviewLoginRedirectUrl(message?.payload?.sourceUrl));
+    return { ok: true, action: "redirect_login" };
+  }
+
+  const sanitizedPayload = sanitizeJobPayload(message.payload);
+  const interviewPayload = {
+    source: "zscore-extension",
+    sourceUrl: sanitizedPayload.sourceUrl,
+    extractedAt: sanitizedPayload.extractedAt,
+    job: {
+      jobId: sanitizeString(message?.payload?.job?.jobId || "", 120),
+      title: sanitizedPayload.job.title,
+      company: sanitizedPayload.job.company,
+      description: sanitizedPayload.job.description,
+      requirements: sanitizeArray(message?.payload?.job?.requirements || [], 120),
+      skills: sanitizedPayload.job.skills,
+    },
+  };
+
+  log("Opening interview page with job JSON context", {
+    jobId: interviewPayload.job.jobId,
+    title: interviewPayload.job.title,
+  });
+
+  openTab(buildInterviewUrlWithData(interviewPayload));
+  return { ok: true, action: "opened_interview" };
+};
+
+const analyzeWithBackend = async (token, payload, resumePayload) => {
+  const response = await fetch(ANALYZE_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${token}`
     },
-    body: JSON.stringify({ job, source: "chrome-extension" }),
+    body: JSON.stringify({
+      ...payload,
+      resume: resumePayload
+    })
   });
 
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => "");
-    throw new Error(`Analyze API failed: ${resp.status} ${resp.statusText} ${text}`);
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Analyze API failed (${response.status}): ${errorText.slice(0, 300)}`);
   }
 
-  return resp.json().catch(() => ({}));
-}
+  return response.json();
+};
+
+const handleCheckMyFit = async (message) => {
+  const { authToken, resumeText, resumeId } = await getFromStorage([
+    STORAGE_KEYS.AUTH_TOKEN,
+    STORAGE_KEYS.RESUME_TEXT,
+    STORAGE_KEYS.RESUME_ID
+  ]);
+
+  if (!authToken) {
+    log("No auth token, redirecting to login");
+    openTab(buildLoginRedirectUrl(message?.payload?.sourceUrl));
+    return { ok: true, action: "redirect_login" };
+  }
+
+  const sanitizedPayload = sanitizeJobPayload(message.payload);
+  const resumePayload = {
+    text: sanitizeString(resumeText, 30000),
+    resumeId: sanitizeString(resumeId, 200)
+  };
+
+  try {
+    log("Sending payload to analyze API", {
+      hasResumeText: Boolean(resumePayload.text),
+      hasResumeId: Boolean(resumePayload.resumeId)
+    });
+
+    const apiResult = await analyzeWithBackend(authToken, sanitizedPayload, resumePayload);
+
+    const analyzeTabUrl = buildAnalyzeUrlWithData({
+      source: "extension",
+      job: sanitizedPayload.job,
+      sourceUrl: sanitizedPayload.sourceUrl,
+      analysis: {
+        matchPercentage: apiResult?.matchPercentage,
+        missingSkills: apiResult?.missingSkills || [],
+        suggestions: apiResult?.suggestions || [],
+        interviewReadinessScore: apiResult?.interviewReadinessScore,
+        analysisId: apiResult?.analysisId
+      }
+    });
+
+    openTab(analyzeTabUrl);
+    return { ok: true, action: "opened_analysis" };
+  } catch (error) {
+    log("API analyze failed, opening fallback analysis view", error.message);
+
+    const fallbackAnalyzeUrl = buildAnalyzeUrlWithData({
+      source: "extension-fallback",
+      job: sanitizedPayload.job,
+      sourceUrl: sanitizedPayload.sourceUrl
+    });
+
+    openTab(fallbackAnalyzeUrl);
+    return {
+      ok: false,
+      action: "opened_fallback",
+      error: "Failed to fetch analysis from API"
+    };
+  }
+};
+
+chrome.runtime.onInstalled.addListener(async () => {
+  log("Extension installed");
+  await setToStorage({
+    [STORAGE_KEYS.AUTH_TOKEN]: "",
+    [STORAGE_KEYS.RESUME_TEXT]: "",
+    [STORAGE_KEYS.RESUME_ID]: ""
+  });
+});
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  (async () => {
-    try {
-      if (!message || typeof message !== "object") return;
+  if (!message || typeof message !== "object") {
+    return false;
+  }
 
-      if (message.type === "ZENAI_PING") {
-        sendResponse({ ok: true, version: chrome.runtime.getManifest().version });
-        return;
-      }
+  if (message.type === "CHECK_MY_FIT") {
+    handleCheckMyFit(message)
+      .then((result) => sendResponse(result))
+      .catch((err) => {
+        log("Unexpected error", err);
+        sendResponse({ ok: false, error: "Unexpected background error" });
+      });
+    return true;
+  }
 
-      if (message.type !== "ZENAI_JOB_DATA") return;
+  if (message.type === "START_ZSCORE_INTERVIEW") {
+    handleStartZScoreInterview(message)
+      .then((result) => sendResponse(result))
+      .catch((err) => {
+        log("Unexpected interview flow error", err);
+        sendResponse({ ok: false, error: "Unexpected interview flow error" });
+      });
+    return true;
+  }
 
-      const job = message.payload?.job;
-      if (!job || typeof job !== "object") {
-        sendResponse({ ok: false, error: "Missing job payload" });
-        return;
-      }
+  if (message.type === "SET_AUTH_TOKEN") {
+    const token = sanitizeString(message?.payload?.token, 4000);
+    setToStorage({ [STORAGE_KEYS.AUTH_TOKEN]: token })
+      .then(() => sendResponse({ ok: true }))
+      .catch(() => sendResponse({ ok: false }));
+    return true;
+  }
 
-      const token = await getToken();
-      if (!token) {
-        log("No token found; redirecting to login");
-        const loginUrl = new URL(CONFIG.APP_BASE_URL + CONFIG.LOGIN_PATH);
-        loginUrl.searchParams.set("source", "extension");
-        loginUrl.searchParams.set("next", CONFIG.ANALYZE_PATH);
-        await openTab(loginUrl.toString());
-        sendResponse({ ok: true, action: "login" });
-        return;
-      }
+  if (message.type === "SET_RESUME_TEXT") {
+    const resumeText = sanitizeString(message?.payload?.resumeText, 30000);
+    setToStorage({ [STORAGE_KEYS.RESUME_TEXT]: resumeText })
+      .then(() => sendResponse({ ok: true }))
+      .catch(() => sendResponse({ ok: false }));
+    return true;
+  }
 
-      log("Token found; attempting analyze API");
-      try {
-        await postAnalyze({ token, job });
-      } catch (err) {
-        log("Analyze API failed; falling back to URL payload", err);
-      }
-
-      const analyzeUrl = buildAnalyzeUrl({ job });
-      await openTab(analyzeUrl);
-      sendResponse({ ok: true, action: "analyze" });
-    } catch (err) {
-      log("Unhandled error", err);
-      sendResponse({ ok: false, error: String(err?.message || err) });
-    }
-  })();
-
-  return true;
+  return false;
 });

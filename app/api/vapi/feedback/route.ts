@@ -3,8 +3,12 @@ import { vapiCallDataService } from "@/services/vapi/call-data.service";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || "");
-// Use gemini-2.5-flash for best performance
-const modelName = "gemini-2.5-flash"; 
+const FEEDBACK_MODEL_CANDIDATES = [
+  process.env.GOOGLE_AI_FEEDBACK_MODEL || "gemini-2.0-flash-lite",
+  "gemini-1.5-flash",
+  "gemini-2.0-flash",
+  "gemini-2.5-flash",
+].filter(Boolean);
 
 interface FeedbackAnalysis {
   overallScore: number;
@@ -79,8 +83,6 @@ async function generateFeedbackFromTranscript(transcript: string, callData: any)
     throw new Error("No conversation transcript available for analysis");
   }
 
-  const model = genAI.getGenerativeModel({ model: modelName });
-
   const prompt = `
 You are an expert interview coach analyzing a technical interview session. Please provide detailed feedback based on the following conversation transcript:
 
@@ -113,25 +115,50 @@ Provide realistic scores and constructive feedback that would help the candidate
 `;
 
   try {
-    // Retry logic for rate limits (429) with exponential backoff
-    let result;
-    let retries = 3;
-    let delay = 2000;
-    
-    while (true) {
-      try {
-        result = await model.generateContent(prompt);
-        break;
-      } catch (e: any) {
-        if (retries > 0 && (e.message?.includes('429') || e.message?.includes('quota') || e.message?.includes('Too Many Requests'))) {
-          console.log(`Rate limit hit in feedback generation. Waiting ${delay}ms before retry. Retries left: ${retries}`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          retries--;
+    let result: any = null;
+    let lastError: unknown = null;
+
+    for (const modelName of FEEDBACK_MODEL_CANDIDATES) {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      let retries = 2;
+      let delay = 1500;
+
+      while (retries >= 0) {
+        try {
+          console.log(`[Feedback] Trying model: ${modelName}, retries left: ${retries}`);
+          result = await model.generateContent(prompt);
+          console.log(`[Feedback] Model succeeded: ${modelName}`);
+          break;
+        } catch (e: any) {
+          lastError = e;
+          const message = String(e?.message || "");
+          const shouldRetrySameModel =
+            message.includes("429") ||
+            message.includes("503") ||
+            message.toLowerCase().includes("quota") ||
+            message.toLowerCase().includes("high demand") ||
+            message.toLowerCase().includes("service unavailable") ||
+            message.toLowerCase().includes("too many requests");
+
+          if (!shouldRetrySameModel || retries === 0) {
+            console.warn(`[Feedback] Model failed: ${modelName}. Moving to next model.`, message);
+            break;
+          }
+
+          console.log(`[Feedback] Transient error on ${modelName}, waiting ${delay}ms before retry`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          retries -= 1;
           delay *= 2;
-          continue;
         }
-        throw e;
       }
+
+      if (result) {
+        break;
+      }
+    }
+
+    if (!result) {
+      throw lastError || new Error("All feedback models failed");
     }
 
     const response = await result.response;

@@ -52,6 +52,12 @@ class FeedbackService {
   private readonly COLLECTION = 'interview_feedback';
   private readonly USER_FEEDBACK_COLLECTION = 'user_feedback';
   private genAI: GoogleGenerativeAI | null = null;
+  private readonly modelCandidates = [
+    process.env.GOOGLE_AI_FEEDBACK_MODEL || 'gemini-2.0-flash-lite',
+    'gemini-1.5-flash',
+    'gemini-2.0-flash',
+    'gemini-2.5-flash',
+  ].filter(Boolean);
 
   constructor() {
     const apiKey = process.env.GOOGLE_AI_API_KEY;
@@ -80,8 +86,6 @@ class FeedbackService {
     }
 
     try {
-      const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-      
       const prompt = `
 Analyze this ${interviewType} interview transcript and provide detailed feedback:
 
@@ -107,7 +111,49 @@ Focus on:
 Return only valid JSON.
       `;
 
-      const result = await model.generateContent(prompt);
+      let result: any = null;
+      let lastError: unknown = null;
+
+      for (const modelName of this.modelCandidates) {
+        const model = this.genAI.getGenerativeModel({ model: modelName });
+        let retries = 2;
+        let delay = 1200;
+
+        while (retries >= 0) {
+          try {
+            console.log(`[FeedbackService] Trying model: ${modelName}, retries left: ${retries}`);
+            result = await model.generateContent(prompt);
+            break;
+          } catch (error: any) {
+            lastError = error;
+            const msg = String(error?.message || '').toLowerCase();
+            const transient =
+              msg.includes('503') ||
+              msg.includes('429') ||
+              msg.includes('high demand') ||
+              msg.includes('service unavailable') ||
+              msg.includes('too many requests') ||
+              msg.includes('quota');
+
+            if (!transient || retries === 0) {
+              break;
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            retries -= 1;
+            delay *= 2;
+          }
+        }
+
+        if (result) {
+          break;
+        }
+      }
+
+      if (!result) {
+        throw lastError || new Error('All feedback models failed');
+      }
+
       const response = result.response;
       const text = response.text();
       
@@ -205,7 +251,7 @@ Return only valid JSON.
         .limit(limit)
         .get();
 
-      return snapshot.docs.map(doc => ({
+      return snapshot.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot) => ({
         id: doc.id,
         ...doc.data(),
       })) as InterviewFeedback[];
@@ -256,7 +302,7 @@ Return only valid JSON.
         .orderBy('createdAt', 'desc')
         .get();
 
-      const feedbacks = snapshot.docs.map(doc => doc.data()) as InterviewFeedback[];
+      const feedbacks = snapshot.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot) => doc.data()) as InterviewFeedback[];
 
       if (feedbacks.length === 0) {
         return {

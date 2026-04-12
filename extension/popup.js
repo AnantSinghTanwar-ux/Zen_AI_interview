@@ -1,78 +1,79 @@
-const LOG_PREFIX = "[ZenAI:popup]";
+const APP_BASE_URL = "http://localhost:3000";
+const DASHBOARD_URL = `${APP_BASE_URL}/dashboard`;
+const STORAGE_KEY = "authToken";
 
-const CONFIG = Object.freeze({
-  APP_BASE_URL: "https://myapp.com",
-  DASHBOARD_PATH: "/",
-  STORAGE_TOKEN_KEY: "zenaiAuthToken",
-});
+const els = {
+  statusBadge: document.getElementById("statusBadge"),
+  authTokenInput: document.getElementById("authTokenInput"),
+  saveTokenBtn: document.getElementById("saveTokenBtn"),
+  clearTokenBtn: document.getElementById("clearTokenBtn"),
+  dashboardBtn: document.getElementById("dashboardBtn"),
+  messageText: document.getElementById("messageText")
+};
 
-function log(...args) {
-  // eslint-disable-next-line no-console
-  console.log(LOG_PREFIX, ...args);
-}
-
-function $(id) {
-  return document.getElementById(id);
-}
-
-function setStatus({ loggedIn }) {
-  const el = $("status");
-  if (!el) return;
-
-  if (loggedIn) {
-    el.textContent = "Logged in";
-    el.className = "zenai-pill zenai-pill--ok";
-  } else {
-    el.textContent = "Logged out";
-    el.className = "zenai-pill zenai-pill--warn";
+const sanitizeToken = (token) => {
+  if (typeof token !== "string") {
+    return "";
   }
-}
+  return token.replace(/[\u0000-\u001F\u007F]/g, "").trim().slice(0, 4000);
+};
 
-async function getToken() {
-  const result = await chrome.storage.local.get([CONFIG.STORAGE_TOKEN_KEY]);
-  const token = typeof result?.[CONFIG.STORAGE_TOKEN_KEY] === "string" ? result[CONFIG.STORAGE_TOKEN_KEY].trim() : "";
-  return token || "";
-}
-
-async function setToken(token) {
-  await chrome.storage.local.set({ [CONFIG.STORAGE_TOKEN_KEY]: token });
-}
-
-async function clearToken() {
-  await chrome.storage.local.remove([CONFIG.STORAGE_TOKEN_KEY]);
-}
-
-async function refresh() {
-  const token = await getToken();
-  setStatus({ loggedIn: Boolean(token) });
-}
-
-document.addEventListener("DOMContentLoaded", async () => {
-  const tokenInput = $("token");
-  const saveBtn = $("save");
-  const clearBtn = $("clear");
-  const dashboardBtn = $("dashboard");
-
-  await refresh();
-
-  saveBtn?.addEventListener("click", async () => {
-    const token = (tokenInput?.value || "").trim();
-    if (!token) return;
-
-    await setToken(token);
-    tokenInput.value = "";
-    log("Token saved");
-    await refresh();
+const getStorage = (key) =>
+  new Promise((resolve) => {
+    chrome.storage.local.get([key], (result) => resolve(result[key] || ""));
   });
 
-  clearBtn?.addEventListener("click", async () => {
-    await clearToken();
-    log("Token cleared");
-    await refresh();
+const setStorage = (key, value) =>
+  new Promise((resolve) => {
+    chrome.storage.local.set({ [key]: value }, () => resolve());
   });
 
-  dashboardBtn?.addEventListener("click", async () => {
-    const url = CONFIG.APP_BASE_URL + CONFIG.DASHBOARD_PATH;
-    await chrome.tabs.create({ url });
+const setMessage = (text, type = "") => {
+  els.messageText.textContent = text;
+  els.messageText.className = `zenai-message ${type}`.trim();
+};
+
+const setStatus = (isLoggedIn) => {
+  els.statusBadge.textContent = isLoggedIn ? "Logged In" : "Not Logged In";
+  els.statusBadge.classList.toggle("is-online", isLoggedIn);
+  els.statusBadge.classList.toggle("is-offline", !isLoggedIn);
+};
+
+const refreshUI = async () => {
+  const token = sanitizeToken(await getStorage(STORAGE_KEY));
+  const loggedIn = Boolean(token);
+
+  setStatus(loggedIn);
+  els.authTokenInput.value = token;
+  setMessage("");
+};
+
+els.saveTokenBtn.addEventListener("click", async () => {
+  const token = sanitizeToken(els.authTokenInput.value);
+  await setStorage(STORAGE_KEY, token);
+  setStatus(Boolean(token));
+  setMessage(token ? "Token saved." : "Token is empty.", token ? "ok" : "warn");
+
+  chrome.runtime.sendMessage({
+    type: "SET_AUTH_TOKEN",
+    payload: { token }
   });
 });
+
+els.clearTokenBtn.addEventListener("click", async () => {
+  await setStorage(STORAGE_KEY, "");
+  els.authTokenInput.value = "";
+  setStatus(false);
+  setMessage("Token cleared.", "warn");
+
+  chrome.runtime.sendMessage({
+    type: "SET_AUTH_TOKEN",
+    payload: { token: "" }
+  });
+});
+
+els.dashboardBtn.addEventListener("click", () => {
+  chrome.tabs.create({ url: DASHBOARD_URL });
+});
+
+refreshUI();
