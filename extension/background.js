@@ -1,5 +1,5 @@
 const APP_BASE_URL = "https://zen-ai-zeta.vercel.app";
-const LOGIN_URL = `${APP_BASE_URL}/login`;
+const LOGIN_URL = `${APP_BASE_URL}/sign-in`;
 const ANALYZE_URL = `${APP_BASE_URL}/analyze`;
 const INTERVIEW_URL = `${APP_BASE_URL}/interview`;
 const ANALYZE_API_URL = `${APP_BASE_URL}/api/extension/analyze`;

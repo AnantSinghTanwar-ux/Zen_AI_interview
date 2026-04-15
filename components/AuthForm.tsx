@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/form";
 import Link from "next/link";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "./ui/input";
 import {
   createUserWithEmailAndPassword,
@@ -37,12 +37,32 @@ const getFormSchema = (type: FormType) =>
 function AuthForm({ type }: { type: FormType }) {
   const formSchema = getFormSchema(type);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: { name: "", email: "", password: "" },
   });
 
   const isSignIn = type == "sign-in";
+
+  const getSafeRedirectPath = () => {
+    const redirectParam = searchParams.get("redirect");
+    if (!redirectParam) {
+      return "/";
+    }
+
+    try {
+      // Accept either absolute app URL or an internal path while blocking open redirects.
+      const redirectUrl = new URL(redirectParam, window.location.origin);
+      if (redirectUrl.origin !== window.location.origin) {
+        return "/";
+      }
+
+      return `${redirectUrl.pathname}${redirectUrl.search}${redirectUrl.hash}` || "/";
+    } catch {
+      return redirectParam.startsWith("/") ? redirectParam : "/";
+    }
+  };
 
   const syncTokenToExtension = (token: string) => {
     if (!token || typeof window === "undefined") {
@@ -89,7 +109,7 @@ function AuthForm({ type }: { type: FormType }) {
         syncTokenToExtension(token);
 
         toast.success("Sign In Success");
-        router.push("/");
+        router.push(getSafeRedirectPath());
         form.reset();
       } else {
         const { name, email, password } = values;
