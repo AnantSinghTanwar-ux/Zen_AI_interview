@@ -156,7 +156,9 @@
   }
 
   .btn-get-started {
-    @apply btn-primary text-lg px-10 py-4;
+    @apply relative overflow-hidden text-white backdrop-blur-md rounded-xl text-lg px-10 py-4 font-medium transition-all duration-300 ease-out;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dim) 100%);
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
   }
 
   .card-border {

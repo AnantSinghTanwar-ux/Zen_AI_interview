@@ -62,7 +62,7 @@ function InterviewCard({
         <div className="flex justify-between">
           <DisplayTechIcons techStack={techstack} />
 
-          <Button className="btn-primary">
+          <Button className="bg-primary hover:bg-primary/90 text-white rounded-xl px-6 py-2.5 font-medium shadow-[0_0_15px_rgba(157,125,249,0.3)] transition-all">
             <Link
               href={feedback ? `/Interview/${id}/feedback` : `/Interview/${id}`}
             >

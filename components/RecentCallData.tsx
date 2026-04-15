@@ -170,7 +170,7 @@ export default function RecentCallData() {
 
       <div className="flex justify-center mt-4">
         <Link href="/call-data">
-          <Button className="btn-secondary">View All Interviews</Button>
+          <Button className="bg-white/5 text-foreground backdrop-blur-lg border border-white/10 rounded-full px-8 py-3 font-medium transition-all duration-300 hover:bg-white/10 hover:border-white/20">View All Sessions</Button>
         </Link>
       </div>
     </div>

@@ -171,7 +171,7 @@ export default function FeedbackDisplay({ interviewId, callId, userId, callData 
                 setError(null);
                 fetchFeedback();
               }}
-              className="btn-secondary"
+              className="bg-white/5 text-foreground backdrop-blur-lg border border-white/10 rounded-xl px-8 py-3 font-medium transition-all duration-300 hover:bg-white/10 hover:border-white/20"
             >
               Try Again
             </Button>
@@ -420,7 +420,7 @@ export default function FeedbackDisplay({ interviewId, callId, userId, callData 
             <div className="flex justify-end pt-4 border-t border-white/5">
                <Button 
                  onClick={submitUserFeedback} 
-                 className="btn-primary"
+                 className="bg-primary hover:bg-primary/90 text-white rounded-xl px-8 py-3 font-medium shadow-[0_0_15px_rgba(157,125,249,0.3)] transition-all"
                  disabled={userRating === 0}
                >
                  Submit anonymous rating
