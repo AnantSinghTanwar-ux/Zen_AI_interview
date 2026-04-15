@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { StaggerParent, StaggerItem, ScaleCard, FadeUp } from "@/components/motion";
 
 interface CallData {
   id: string;
@@ -109,7 +110,7 @@ export default function RecentCallData() {
   }
 
   return (
-    <div className="flex flex-col gap-8 mt-12 animate-stagger-2">
+    <FadeUp className="flex flex-col gap-8 mt-12">
       <div className="flex justify-between items-end">
         <div>
            <h2 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent">Recent Sessions</h2>
@@ -122,57 +123,60 @@ export default function RecentCallData() {
         </Link>
       </div>
       
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+      <StaggerParent className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
         {callData.map((call, index, array) => {
           const interviewNumber = array.length - index;
           
           return (
-            <Link
-              key={call.id}
-              href={`/call-data/${call.id}`}
-              className="glass-card p-6 cursor-pointer block hover:bg-white/5 group border-white/5 hover:border-primary/30"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-foreground font-semibold text-lg tracking-wide group-hover:text-primary transition-colors">Session #{interviewNumber}</h3>
-                  <div className="mt-2">
-                    <Badge variant="outline" className={`lowercase font-medium tracking-wider text-xs px-2 py-0.5 border ${call.status === 'ended' ? 'text-green-400 border-green-500/30 bg-green-500/10' : 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10'}`}>
-                      {call.status}
-                    </Badge>
+            <StaggerItem key={call.id}>
+              <ScaleCard>
+                <Link
+                  href={`/call-data/${call.id}`}
+                  className="glass-card p-6 cursor-pointer block hover:bg-white/5 group border-white/5 hover:border-primary/30"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-foreground font-semibold text-lg tracking-wide group-hover:text-primary transition-colors">Session #{interviewNumber}</h3>
+                      <div className="mt-2">
+                        <Badge variant="outline" className={`lowercase font-medium tracking-wider text-xs px-2 py-0.5 border ${call.status === 'ended' ? 'text-green-400 border-green-500/30 bg-green-500/10' : 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10'}`}>
+                          {call.status}
+                        </Badge>
+                      </div>
+                    </div>
+                    {call.cost && (
+                      <div className="text-right">
+                        <p className="text-foreground/50 font-mono text-sm">${call.cost.toFixed(4)}</p>
+                      </div>
+                    )}
                   </div>
-                </div>
-                {call.cost && (
-                  <div className="text-right">
-                    <p className="text-foreground/50 font-mono text-sm">${call.cost.toFixed(4)}</p>
+                  
+                  <div className="space-y-1 mb-4 text-xs">
+                    <p className="text-muted-foreground font-medium flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-primary/50 rounded-full"></div>
+                      {new Date(call.startedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
                   </div>
-                )}
-              </div>
-              
-              <div className="space-y-1 mb-4 text-xs">
-                <p className="text-muted-foreground font-medium flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-primary/50 rounded-full"></div>
-                  {new Date(call.startedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                </p>
-              </div>
 
-              <div className="flex justify-between items-center pt-4 border-t border-white/5">
-                <div className="text-muted-foreground font-medium text-xs bg-white/5 px-2 py-1 rounded-md border border-white/5">
-                  {call.messageCount || 0} messages
-                </div>
-                <div className="text-primary font-medium text-xs flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                  View Analysis →
-                </div>
-              </div>
-            </Link>
+                  <div className="flex justify-between items-center pt-4 border-t border-white/5">
+                    <div className="text-muted-foreground font-medium text-xs bg-white/5 px-2 py-1 rounded-md border border-white/5">
+                      {call.messageCount || 0} messages
+                    </div>
+                    <div className="text-primary font-medium text-xs flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                      View Analysis →
+                    </div>
+                  </div>
+                </Link>
+              </ScaleCard>
+            </StaggerItem>
           );
         })}
-      </div>
+      </StaggerParent>
 
       <div className="flex justify-center mt-4">
         <Link href="/call-data">
           <Button className="bg-white/5 text-foreground backdrop-blur-lg border border-white/10 rounded-full px-8 py-3 font-medium transition-all duration-300 hover:bg-white/10 hover:border-white/20">View All Sessions</Button>
         </Link>
       </div>
-    </div>
+    </FadeUp>
   );
 }

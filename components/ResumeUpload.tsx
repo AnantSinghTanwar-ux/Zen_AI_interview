@@ -108,16 +108,16 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ onUploadSuccess, className 
         onClick={handleButtonClick} 
         disabled={isUploading}
         variant="outline"
-        className="gap-2 bg-[#f5f5f7]  text-foreground text-black border border-none shadow-neo font-bold"
+        className="gap-2 bg-white/5 backdrop-blur-md text-foreground border border-white/15 hover:bg-white/10 hover:border-primary/40 hover:text-white transition-all duration-200 font-medium rounded-full px-5 py-2 text-sm shadow-[0_0_15px_rgba(0,0,0,0.3)]"
       >
         {isUploading ? (
           <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Processing...
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span className="text-primary/80">Processing...</span>
           </>
         ) : (
           <>
-            <Upload className="w-4 h-4" />
+            <Upload className="w-4 h-4 text-primary" />
             Upload Resume
           </>
         )}
