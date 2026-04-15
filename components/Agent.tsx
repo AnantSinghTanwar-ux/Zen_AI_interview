@@ -617,11 +617,12 @@ function Agent({ userName, userId, type, jobContextJson }: AgentProps & { jobCon
     callStatus === CallStatus.FINISHED || callStatus === CallStatus.INACTIVE;
 
   return (
-    <div className="w-full h-[calc(100vh-80px)] flex flex-col lg:flex-row bg-[#f5f5f7]  text-foreground">
+    <div className="w-full h-[calc(100vh-80px)] flex flex-col lg:flex-row bg-background text-foreground relative z-0">
       {/* Interview Area */}
-      <div className="flex-1 flex flex-col items-center justify-center bg-[#f5f5f7]  text-foreground relative overflow-hidden p-6">
-        {/* Background Grid Pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+      <div className="flex-1 flex flex-col items-center justify-center bg-transparent relative overflow-hidden p-6 z-10">
+        {/* Cinematic Background Gradient */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(157,125,249,0.1),transparent_50%),radial-gradient(ellipse_at_bottom_right,rgba(14,14,17,1),transparent_50%)] pointer-events-none"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
         
         {/* Resume Upload */}
         <div className="absolute top-6 right-6 z-20">
@@ -633,75 +634,77 @@ function Agent({ userName, userId, type, jobContextJson }: AgentProps & { jobCon
           <div className="flex flex-col sm:flex-row gap-12 items-center justify-center mb-12">
             <div className="flex flex-col items-center gap-4">
               <div className="relative">
-                <div className="w-32 h-32 bg-[#f5f5f7]  text-foreground border-4 border-black rounded-full flex items-center justify-center overflow-hidden">
-                  <span className="text-5xl font-black text-black tracking-tighter">AI</span>
+                <div className={cn("w-32 h-32 rounded-full flex items-center justify-center overflow-hidden transition-all duration-500", callStatus === CallStatus.ACTIVE ? "glass-card shadow-[0_0_50px_rgba(157,125,249,0.3)] border-primary/50" : "bg-white/5 border border-white/10")}>
+                  <span className="text-4xl font-black bg-gradient-to-br from-foreground to-foreground/50 bg-clip-text text-transparent tracking-tighter z-10">AI</span>
                   {isSpeaking && (
-                    <div className="absolute inset-0 border-[6px] border-primary rounded-full animate-pulse"></div>
+                    <div className="absolute inset-0 border border-primary/50 rounded-full animate-pulse shadow-[inset_0_0_30px_rgba(157,125,249,0.4)]"></div>
+                  )}
+                  {callStatus === CallStatus.ACTIVE && !isSpeaking && (
+                    <div className="absolute inset-0 border border-t-primary/50 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" style={{ animationDuration: '4s' }}></div>
                   )}
                 </div>
               </div>
-              <div className="bg-black text-white px-4 py-1 rounded-full font-bold shadow-neo">
+              <div className="bg-white/10 backdrop-blur-md text-foreground/90 border border-white/10 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider">
                 ZenAI
               </div>
             </div>
 
             <div className="flex flex-col items-center gap-4">
-              <div className="w-32 h-32 bg-cyan-50 border-4 border-black rounded-full flex items-center justify-center overflow-hidden">
-                <User className="w-20 h-20 text-cyan-500" fill="currentColor" />
+              <div className="w-32 h-32 bg-white/5 backdrop-blur-xl border border-white/10 shadow-inner rounded-full flex items-center justify-center overflow-hidden">
+                <User className="w-16 h-16 text-foreground/50" />
               </div>
-              <div className="bg-[#f5f5f7]  text-foreground border border-none text-black px-4 py-1 rounded-full font-bold shadow-neo">
+              <div className="bg-white/5 backdrop-blur-md text-foreground/90 border border-white/10 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider">
                 {userName || "Candidate"}
               </div>
             </div>
           </div>
 
-          {/* Transcript */}
           {messages?.length > 0 && (
-            <div className="w-full max-w-2xl mb-8">
-              <div className="bg-[#f5f5f7]  text-foreground rounded-3xl p-6 border border-none shadow-neo">
-                <p className="text-black font-medium text-lg text-center leading-relaxed">
+            <div className="w-full max-w-2xl mb-8 animate-slideUpFade">
+              <div className="glass-card rounded-3xl p-8 relative overflow-hidden group hover:border-primary/30 transition-all">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-[40px] "></div>
+                <p className="text-foreground/90 font-medium text-xl text-center leading-relaxed italic relative z-10">
                   "{latestMsg}"
                 </p>
               </div>
             </div>
           )}
 
-          {/* Real-time Emotion Overlay */}
           {currentEmotion &&
             showEmotionOverlay &&
             callStatus === CallStatus.ACTIVE && (
               <div className="w-full max-w-2xl mb-6">
-                <div className="bg-[#f5f5f7]  text-foreground rounded-3xl p-4 border border-none shadow-neo">
+                <div className="glass-card rounded-2xl p-5 border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div>
-                        <p className="text-sm font-black text-black capitalize">
+                        <p className="text-sm font-semibold text-foreground/90 capitalize tracking-wide">
                           {currentEmotion.emotion}
                         </p>
-                        <p className="text-xs text-gray-600 font-bold">
+                        <p className="text-xs text-muted-foreground font-medium">
                           Confidence:{" "}
                           {Math.round(currentEmotion.confidence * 100)}%
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-primary" />
+                    <div className="flex items-center gap-3">
+                      <Activity className="w-4 h-4 text-primary animate-pulse" />
                       <span
                         className={cn(
-                          "px-2 py-1 rounded-full text-xs font-bold border border-none",
+                          "px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border",
                           currentEmotion.intensity === "high" &&
-                            "bg-red-100 text-red-700",
+                            "bg-red-500/10 text-red-400 border-red-500/20",
                           currentEmotion.intensity === "medium" &&
-                            "bg-yellow-100 text-yellow-700",
+                            "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
                           currentEmotion.intensity === "low" &&
-                            "bg-green-100 text-green-700"
+                            "bg-green-500/10 text-green-400 border-green-500/20"
                         )}
                       >
                         {currentEmotion.intensity}
                       </span>
                       <button
                         onClick={() => setShowEmotionOverlay(false)}
-                        className="ml-2 text-black hover:bg-black/10 rounded-full w-6 h-6 flex items-center justify-center transition-colors font-bold"
+                        className="ml-1 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-full w-6 h-6 flex items-center justify-center transition-colors"
                       >
                         ×
                       </button>
@@ -709,10 +712,10 @@ function Agent({ userName, userId, type, jobContextJson }: AgentProps & { jobCon
                   </div>
 
                   {/* Emotion metrics bar */}
-                  <div className="mt-3 space-y-2">
-                    <div className="flex justify-between text-xs font-bold">
-                      <span className="text-black">Stress Level</span>
-                      <span className="text-black">
+                  <div className="mt-4 space-y-2">
+                    <div className="flex justify-between text-xs font-medium">
+                      <span className="text-muted-foreground uppercase tracking-wider text-[10px]">Stress Analysis</span>
+                      <span className="text-foreground/80 font-mono">
                         {Math.round(
                           (currentEmotion.additionalMetrics?.stress_level || 0) *
                             100
@@ -720,9 +723,9 @@ function Agent({ userName, userId, type, jobContextJson }: AgentProps & { jobCon
                         %
                       </span>
                     </div>
-                    <div className="w-full bg-[#f5f5f7]  rounded-full h-2 border border-none overflow-hidden">
+                    <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden border border-white/5">
                       <div
-                        className="bg-gradient-to-r from-green-400 to-red-400 h-full transition-all duration-500"
+                        className="bg-gradient-to-r from-green-500/80 via-yellow-500/80 to-red-500/80 h-full transition-all duration-500"
                         style={{
                           width: `${
                             (currentEmotion.additionalMetrics?.stress_level ||
@@ -751,25 +754,27 @@ function Agent({ userName, userId, type, jobContextJson }: AgentProps & { jobCon
           )}
 
           {/* Control Buttons */}
-          <div className="flex flex-col justify-center items-center gap-4 mt-4">
+          <div className="flex flex-col justify-center items-center gap-4 mt-6">
             {callStatus !== CallStatus.ACTIVE ? (
               <button
-                className="bg-primary text-white border border-none shadow-neo px-10 py-4 rounded-3xl font-black text-xl relative overflow-hidden group"
+                className="bg-primary/90 hover:bg-primary text-white shadow-[0_0_30px_rgba(157,125,249,0.3)] hover:shadow-[0_0_40px_rgba(157,125,249,0.5)] border border-primary/50 px-12 py-4 rounded-full font-bold text-lg relative overflow-hidden group transition-all duration-300"
                 onClick={handleCall}
               >
                 {callStatus === CallStatus.CONNECTING && (
-                  <span className="absolute inset-0 bg-[#f5f5f7] animate-pulse"></span>
+                  <span className="absolute inset-0 bg-white/20 animate-pulse"></span>
                 )}
-                <span className="relative z-10">
+                <span className="relative z-10 flex items-center gap-2">
+                  <Mic className="w-5 h-5" />
                   {isInativeOrFinished ? "Start Interview" : "Connecting..."}
                 </span>
-                <div className="absolute inset-0 bg-black/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out"></div>
               </button>
             ) : (
               <button
-                className="bg-[#f5f5f7] 0 text-white border border-none shadow-neo px-10 py-4 rounded-3xl font-black text-xl"
+                className="bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.2)] px-12 py-4 rounded-full font-bold text-lg transition-all duration-300 flex items-center gap-2"
                 onClick={handleDisconnect}
               >
+                <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
                 End Interview
               </button>
             )}
@@ -786,15 +791,16 @@ function Agent({ userName, userId, type, jobContextJson }: AgentProps & { jobCon
       </div>
 
       {/* Code Editor Panel */}
-      <div className="w-full lg:w-[500px] h-[40vh] lg:h-full bg-[#f5f5f7]  border border-none border-t-2 lg:border-t-0 lg:border-l-2 border-black flex flex-col z-20 shadow-neo">
+      <div className="w-full lg:w-[550px] h-[40vh] lg:h-full bg-background/50 backdrop-blur-3xl border-t border-t-white/10 lg:border-t-0 lg:border-l lg:border-l-white/10 flex flex-col z-20 shadow-2xl relative">
+        <div className="absolute inset-y-0 left-0 w-px bg-gradient-to-b from-transparent via-primary/30 to-transparent hidden lg:block"></div>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b-2 border-black bg-[#f5f5f7]  text-foreground">
+        <div className="flex items-center justify-between p-5 border-b border-white/5 bg-white/5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary text-white border border-none rounded-2xl flex items-center justify-center shadow-neo">
-              <span className="text-base font-black">&lt;/&gt;</span>
+            <div className="w-10 h-10 bg-primary/20 border border-primary/30 rounded-xl flex items-center justify-center shadow-inner">
+              <Code className="w-5 h-5 text-primary" />
             </div>
-            <span className="text-black font-black text-xl">
-              Code Editor
+            <span className="text-foreground font-semibold text-lg tracking-wide">
+              Coding Environment
             </span>
           </div>
         </div>
@@ -803,45 +809,45 @@ function Agent({ userName, userId, type, jobContextJson }: AgentProps & { jobCon
         <div className="flex-1 flex flex-col p-6 overflow-y-auto">
           {/* Problem Statement */}
           {currentQuestion && (
-            <div className="mb-6 p-4 bg-[#f5f5f7]  text-foreground rounded-3xl border border-none shadow-neo">
-              <div className="flex items-start justify-between mb-3">
-                <h4 className="text-black font-bold text-lg">
+            <div className="mb-6 glass-card p-5 rounded-2xl">
+              <div className="flex items-start justify-between mb-4">
+                <h4 className="text-foreground/90 font-semibold tracking-wide text-lg">
                   {currentQuestion.title}
                 </h4>
                 <span
                   className={cn(
-                    "px-3 py-1 rounded-full text-xs font-black ml-3 flex-shrink-0 border border-none",
+                    "px-3 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider ml-3 flex-shrink-0 border",
                     currentQuestion.difficulty === "Easy" &&
-                      "bg-green-100 text-green-700",
+                      "bg-green-500/10 text-green-400 border-green-500/20",
                     currentQuestion.difficulty === "Medium" &&
-                      "bg-orange-100 text-orange-700",
+                      "bg-orange-500/10 text-orange-400 border-orange-500/20",
                     currentQuestion.difficulty === "Hard" &&
-                      "bg-red-100 text-red-700"
+                      "bg-red-500/10 text-red-400 border-red-500/20"
                   )}
                 >
                   {currentQuestion.difficulty}
                 </span>
               </div>
 
-              <div className="text-gray-700 text-sm leading-relaxed mb-3 max-h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-black/20 font-medium">
+              <div className="text-muted-foreground text-sm leading-relaxed mb-4 max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 font-light">
                 {currentQuestion.problem}
               </div>
 
               {currentQuestion.constraints &&
                 currentQuestion.constraints.length > 0 && (
-                  <div className="pt-3 border-t-2 border-black/5">
-                    <p className="text-black text-xs font-bold mb-2">
-                      Constraints:
+                  <div className="pt-4 border-t border-white/5">
+                    <p className="text-foreground/70 text-[10px] uppercase tracking-wider font-semibold mb-2">
+                      Rules & Constraints:
                     </p>
-                    <ul className="text-gray-600 text-xs space-y-1 font-mono">
+                    <ul className="text-muted-foreground text-xs space-y-1.5 font-mono">
                       {currentQuestion.constraints
-                        .slice(0, 3)
+                        .slice(0, 4)
                         .map((constraint, index) => (
                           <li key={index} className="flex items-start gap-2">
-                            <span className="text-black mt-0.5 flex-shrink-0 font-bold">
+                            <span className="text-primary mt-0.5 flex-shrink-0">
                               •
                             </span>
-                            <span className="leading-relaxed">
+                            <span className="leading-relaxed opacity-80">
                               {constraint}
                             </span>
                           </li>
@@ -854,22 +860,23 @@ function Agent({ userName, userId, type, jobContextJson }: AgentProps & { jobCon
 
           {/* Previous Solutions */}
           {chatMessages.length > 0 && (
-            <div className="mb-4 p-4 bg-[#f5f5f7]  text-foreground rounded-3xl border border-none shadow-neo">
-              <p className="text-black text-xs font-black mb-2 uppercase tracking-wide">
+            <div className="mb-5 bg-black/40 border border-white/5 rounded-2xl p-4 shadow-inner">
+              <p className="text-foreground/50 text-[10px] uppercase font-bold tracking-wider mb-3">
                 Chat & Solutions:
               </p>
-              <div className="max-h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-black/20 space-y-3">
+              <div className="max-h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 space-y-3 pr-2">
                 {chatMessages.map(
                   (msg, index) =>
                     msg.role === "user" && (
                       <div
                         key={index}
-                        className="bg-[#f5f5f7]  border border-none rounded-2xl p-3 border border-none/10"
+                        className="bg-white/5 border border-white/10 rounded-xl p-3"
                       >
-                        <div className="font-mono text-xs text-black">
-                          {msg.content.substring(0, 100)}...
+                        <div className="font-mono text-[11px] text-foreground/80 leading-relaxed">
+                          {msg.content}
                         </div>
-                        <div className="text-gray-500 text-[10px] mt-1 font-bold">
+                        <div className="text-muted-foreground text-[9px] mt-2 font-mono flex items-center justify-between opacity-50">
+                          <span>// User Input</span>
                           {msg.timestamp.toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -883,19 +890,19 @@ function Agent({ userName, userId, type, jobContextJson }: AgentProps & { jobCon
           )}
 
           {/* Code Editor */}
-          <div className="flex-1 flex flex-col min-h-[300px]">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-black text-sm font-bold">
-                Your Solution:
+          <div className="flex-1 flex flex-col min-h-[350px]">
+            <div className="flex items-center justify-between mb-2 px-1">
+              <p className="text-foreground/80 text-xs font-semibold tracking-wide flex items-center gap-2">
+                <Code className="w-3 h-3 text-primary" /> Integrated Environment
               </p>
-              <div className="flex items-center gap-2 text-xs text-gray-500 font-bold">
-                <span>Lines: {currentInput.split("\n").length}</span>
-                <span>•</span>
-                <span>Chars: {currentInput.length}</span>
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5">
+                <span>Ln {currentInput.split("\n").length}</span>
+                <span className="opacity-50">|</span>
+                <span>Ch {currentInput.length}</span>
               </div>
             </div>
 
-            <div className="flex-1 relative group overflow-hidden rounded-3xl">
+            <div className="flex-1 relative group overflow-hidden rounded-2xl border border-white/10 shadow-[inner_0_0_20px_rgba(0,0,0,0.5)]">
               <textarea
                 ref={textareaRef}
                 onScroll={() => {
@@ -911,27 +918,28 @@ function Agent({ userName, userId, type, jobContextJson }: AgentProps & { jobCon
                     sendChatMessage(currentInput);
                   }
                 }}
-                placeholder={`// Write your solution here...
+                placeholder={`// Write your algorithm here...
 function solution() {
     // Your code here
     return result;
 }`}
                 disabled={isLoadingChat}
-                className="w-full h-full bg-[#f5f5f7]  text-foreground border border-none text-black placeholder:text-gray-400 rounded-3xl p-4 pl-12 font-mono text-sm !leading-6 resize-none focus:border-primary focus:shadow-neo focus:outline-none transition-all shadow-neo"
-                style={{ minHeight: "300px" }}
+                className="w-full h-full bg-[#0a0a0c] text-[#e2e2e3] border-none placeholder:text-gray-600 p-5 pl-14 font-mono text-[13px] leading-relaxed resize-none focus:outline-none transition-all"
+                style={{ minHeight: "350px" }}
+                spellCheck="false"
               />
 
               {/* Line numbers overlay */}
               <div 
                 ref={lineNumbersRef}
-                className="absolute top-0 left-0 w-10 h-full overflow-hidden pt-4 text-gray-400 text-xs font-mono select-none text-right pr-2 border-r border-transparent pointer-events-none"
+                className="absolute top-0 left-0 w-12 h-full overflow-hidden pt-5 bg-black/40 text-gray-600/80 text-[11px] font-mono select-none text-right pr-3 border-r border-white/10 pointer-events-none"
               >
                 {Array.from(
-                  { length: Math.max(20, currentInput.split("\n").length) },
+                  { length: Math.max(30, currentInput.split("\n").length) },
                   (_, i) => (
                     <div
                       key={i}
-                      className="h-6 flex items-center justify-end"
+                      className="h-[21px] flex items-center justify-end"
                     >
                       {i + 1}
                     </div>
@@ -941,7 +949,7 @@ function solution() {
             </div>
 
             {/* Submit Controls */}
-            <div className="mt-4 flex flex-col sm:flex-row items-center gap-3">
+            <div className="mt-5 flex flex-col sm:flex-row items-center gap-4">
               <Button
                 onClick={() => sendChatMessage(currentInput)}
                 disabled={
@@ -949,11 +957,11 @@ function solution() {
                   !currentInput.trim() ||
                   callStatus !== CallStatus.ACTIVE
                 }
-                className="w-full sm:w-auto bg-primary text-white border border-none shadow-neo rounded-3xl px-6 py-3 font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white shadow-[0_0_15px_rgba(157,125,249,0.2)] rounded-xl px-6 py-4 font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.02]"
               >
                 {isLoadingChat ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-none border-t-white rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                     Submitting...
                   </>
                 ) : (
@@ -964,25 +972,26 @@ function solution() {
                 )}
               </Button>
 
-              <div className="text-xs text-gray-500 font-bold">
+              <div className="text-xs text-muted-foreground font-medium flex items-center gap-2">
+                <kbd className="bg-white/10 px-1.5 py-0.5 rounded font-mono text-[10px] border border-white/10">Ctrl+Enter</kbd>
                 {callStatus === CallStatus.ACTIVE
-                  ? "Ctrl+Enter to submit"
-                  : "Start interview to submit"}
+                  ? "to submit solution"
+                  : "Start interview to engage code"}
               </div>
             </div>
 
             {/* Status Messages */}
             {chatMessages.length > 0 && (
-              <div className="mt-3">
+              <div className="mt-4 animate-slideUpFade">
                 {chatMessages.slice(-1).map(
                   (msg, index) =>
                     msg.role === "assistant" && (
                       <div
                         key={index}
-                        className="flex items-center gap-2 text-sm p-2 bg-green-50 border border-green-200 rounded-2xl"
+                        className="flex items-center gap-3 text-sm p-3 bg-green-500/10 border border-green-500/20 rounded-xl"
                       >
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span className="text-green-700 font-bold">{msg.content}</span>
+                        <div className="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_10px_#22c55e]"></div>
+                        <span className="text-green-400 font-medium text-xs">{msg.content}</span>
                       </div>
                     )
                 )}

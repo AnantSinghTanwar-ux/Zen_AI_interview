@@ -140,26 +140,29 @@ export default function FeedbackDisplay({ interviewId, callId, userId, callData 
   if (loading) {
     return (
       <div className="space-y-6 animate-pulse">
-        <div className="h-8 bg-[#f5f5f7]  border border-none rounded w-64"></div>
+        <div className="h-8 bg-white/5 border border-white/10 rounded w-64 mb-8"></div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-24 bg-[#f5f5f7]  border border-none rounded-2xl"></div>
+            <div key={i} className="h-24 bg-white/5 border border-white/10 rounded-2xl"></div>
           ))}
         </div>
-        <div className="h-40 bg-[#f5f5f7]  border border-none rounded-2xl"></div>
+        <div className="h-40 bg-white/5 border border-white/10 rounded-2xl mt-8"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <Card className="bg-[#f5f5f7]  border-2 border-red-600 shadow-neo">
-        <CardContent className="pt-6">
+      <Card className="glass-card border-destructive/50 overflow-hidden">
+        <div className="absolute inset-x-0 top-0 h-1 bg-destructive"></div>
+        <CardContent className="pt-8">
           <div className="text-center py-8">
-            <AlertCircle className="w-12 h-12 mx-auto text-red-600 mb-4" />
-            <h3 className="text-red-700 font-black text-xl mb-2">Error Loading Feedback</h3>
-            <p className="text-red-600 font-medium mb-4">{error}</p>
-            <p className="text-gray-600 text-sm mb-4">
+            <div className="mx-auto w-16 h-16 rounded-full bg-destructive/20 flex flex-center mb-6 shadow-[0_0_20px_rgba(215,51,87,0.3)]">
+              <AlertCircle className="w-8 h-8 text-destructive" />
+            </div>
+            <h3 className="text-foreground tracking-tight font-bold text-2xl mb-2">Error Loading Feedback</h3>
+            <p className="text-destructive font-medium mb-4">{error}</p>
+            <p className="text-muted-foreground text-sm mb-8 max-w-lg mx-auto">
               This might happen if the interview session doesn't have enough conversation data 
               or if there was an issue processing the interview.
             </p>
@@ -168,7 +171,7 @@ export default function FeedbackDisplay({ interviewId, callId, userId, callData 
                 setError(null);
                 fetchFeedback();
               }}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold border border-none shadow-neo"
+              className="btn-secondary"
             >
               Try Again
             </Button>
@@ -180,17 +183,16 @@ export default function FeedbackDisplay({ interviewId, callId, userId, callData 
 
   if (!feedback) {
     return (
-      <Card className="bg-[#f5f5f7]  text-foreground border border-none shadow-neo">
-        <CardContent className="pt-6">
-          <div className="text-center py-8">
-            <MessageSquare className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-black font-bold text-lg">Interview feedback not available yet.</p>
-            <p className="text-gray-600 text-sm mt-2 font-medium">
+      <Card className="glass-card">
+        <CardContent className="pt-8">
+          <div className="text-center py-12">
+            <div className="mx-auto w-16 h-16 rounded-full bg-white/5 border border-white/10 flex flex-center mb-6">
+              <MessageSquare className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <p className="text-foreground font-semibold tracking-tight text-xl mb-4">Feedback Unavailable</p>
+            <p className="text-muted-foreground text-sm max-w-md mx-auto leading-relaxed">
               This interview session may not have enough conversation data to generate feedback, 
               or there might have been an issue processing the transcript.
-            </p>
-            <p className="text-gray-600 text-sm mt-2 font-medium">
-              Try selecting a different interview session or ensure the interview was completed successfully.
             </p>
           </div>
         </CardContent>
@@ -199,142 +201,114 @@ export default function FeedbackDisplay({ interviewId, callId, userId, callData 
   }
 
   const getScoreColor = (score: number) => {
-    if (score >= 90) return 'text-green-700';
-    if (score >= 80) return 'text-yellow-700';
-    if (score >= 70) return 'text-orange-700';
-    return 'text-red-700';
+    if (score >= 90) return 'text-[#9d7df9] drop-shadow-[0_0_10px_rgba(157,125,249,0.5)]';
+    if (score >= 75) return 'text-[#7445eb] drop-shadow-[0_0_10px_rgba(116,69,235,0.4)]';
+    if (score >= 60) return 'text-[#acaaae]';
+    return 'text-[#d73357]';
   };
 
   const getScoreBadgeColor = (score: number) => {
-    if (score >= 90) return 'bg-green-100 text-green-700 border-green-700';
-    if (score >= 80) return 'bg-yellow-100 text-yellow-700 border-yellow-700';
-    if (score >= 70) return 'bg-orange-100 text-orange-700 border-orange-700';
-    return 'bg-red-100 text-red-700 border-red-700';
+    if (score >= 90) return 'bg-[#9d7df9]/20 text-[#ba9eff] border-[#9d7df9]/50 shadow-[0_0_15px_rgba(157,125,249,0.3)]';
+    if (score >= 75) return 'bg-[#7445eb]/20 text-white border-[#7445eb]/50';
+    if (score >= 60) return 'bg-white/10 text-white/80 border-white/20';
+    return 'bg-[#d73357]/20 text-[#ffb2b9] border-[#d73357]/50';
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-stagger-1 pb-20">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h1 className="text-3xl font-black text-black">Interview Feedback</h1>
-        <Badge className={`${getScoreBadgeColor(feedback.overallScore)} border-2 font-bold text-lg px-4 py-1 self-start md:self-auto`}>
-          Overall Score: {feedback.overallScore}%
-        </Badge>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-white/10">
+        <div>
+           <Badge className="bg-white/5 hover:bg-white/10 transition-colors text-white/70 border border-white/10 mb-3 text-xs uppercase tracking-widest px-3 py-1">
+             Interview Overview
+           </Badge>
+           <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">Analysis & Results</h1>
+        </div>
+        <div className={`px-6 py-3 rounded-2xl border flex items-center gap-3 ${getScoreBadgeColor(feedback.overallScore)}`}>
+           <div className="text-xs uppercase font-medium tracking-wide opacity-80">Overall Score</div>
+           <div className="text-2xl font-bold">{feedback.overallScore}%</div>
+        </div>
       </div>
 
-      {/* Score Breakdown */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-[#f5f5f7]  text-foreground border border-none shadow-neo">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-bold text-gray-500 uppercase tracking-wide">Communication</p>
-                <p className={`text-3xl font-black ${getScoreColor(feedback.communicationScore)}`}>
-                  {feedback.communicationScore}%
-                </p>
-              </div>
-              <MessageSquare className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#f5f5f7]  text-foreground border border-none shadow-neo">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-bold text-gray-500 uppercase tracking-wide">Technical</p>
-                <p className={`text-3xl font-black ${getScoreColor(feedback.technicalScore)}`}>
-                  {feedback.technicalScore}%
-                </p>
-              </div>
-              <Brain className="h-8 w-8 text-purple-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#f5f5f7]  text-foreground border border-none shadow-neo">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-bold text-gray-500 uppercase tracking-wide">Problem Solving</p>
-                <p className={`text-3xl font-black ${getScoreColor(feedback.problemSolvingScore)}`}>
-                  {feedback.problemSolvingScore}%
-                </p>
-              </div>
-              <Target className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#f5f5f7]  text-foreground border border-none shadow-neo">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-bold text-gray-500 uppercase tracking-wide">Confidence</p>
-                <p className={`text-3xl font-black ${getScoreColor(feedback.confidenceScore)}`}>
-                  {feedback.confidenceScore}%
-                </p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-yellow-600" />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Score Breakdown Elements */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+        {[
+           { label: 'Communication', score: feedback.communicationScore, icon: MessageSquare, color: 'text-primary' },
+           { label: 'Technical', score: feedback.technicalScore, icon: Brain, color: 'text-[#ba9eff]' },
+           { label: 'Problem Solving', score: feedback.problemSolvingScore, icon: Target, color: 'text-[#c08cf7]' },
+           { label: 'Confidence', score: feedback.confidenceScore, icon: TrendingUp, color: 'text-indigo-400' }
+        ].map((item, idx) => (
+          <Card key={idx} className="glass-card hover:-translate-y-1 transition-all duration-300">
+            <CardContent className="pt-6 relative overflow-hidden">
+               <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full bg-white/5 mix-blend-overlay"></div>
+               <div className="flex items-start justify-between relative z-10">
+                 <div>
+                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{item.label}</p>
+                   <p className={`text-4xl font-bold tracking-tight ${getScoreColor(item.score)}`}>
+                     {item.score}%
+                   </p>
+                 </div>
+                 <div className={`p-3 rounded-xl bg-white/5 border border-white/10 ${item.color}`}>
+                    <item.icon className="h-6 w-6" />
+                 </div>
+               </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* AI Summary */}
-      <Card className="bg-[#f5f5f7]  text-foreground border border-none shadow-neo overflow-hidden">
-        <CardHeader className="bg-[#f5f5f7]  border border-none border-b-2 border-black">
-          <CardTitle className="text-black font-black flex items-center gap-2">
-            <Brain className="w-5 h-5 text-primary" />
-            AI Analysis Summary
-          </CardTitle>
+      {/* Structured Sections */}
+      
+      {/* section 1: Analysis Summary */}
+      <Card className="glass-card overflow-hidden">
+        <CardHeader className="border-b border-white/5 bg-white/5 px-8 py-5 flex flex-row items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/20 border border-primary/30">
+               <Brain className="w-5 h-5 text-primary" />
+            </div>
+            <CardTitle className="text-foreground tracking-wide font-medium text-lg">AI Analysis Summary</CardTitle>
         </CardHeader>
-        <CardContent className="pt-6">
-          <p className="text-gray-800 leading-relaxed font-medium">
+        <CardContent className="p-8">
+          <p className="text-foreground/90 leading-loose text-lg font-light max-w-4xl">
             {feedback.aiSummary}
           </p>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Strengths */}
-        <Card className="bg-[#f5f5f7]  text-foreground border border-none shadow-neo overflow-hidden">
-          <CardHeader className="bg-green-50 border-b-2 border-black">
-            <CardTitle className="text-green-800 font-black flex items-center gap-2">
-              <ThumbsUp className="w-5 h-5" />
-              Key Strengths
-            </CardTitle>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* section 2: Strengths */}
+        <Card className="glass-card overflow-hidden h-full">
+          <CardHeader className="border-b border-white/5 bg-white/5 px-8 py-5 flex flex-row items-center gap-3">
+            <div className="p-2 rounded-lg bg-[#29823b]/20 border border-[#29823b]/30">
+               <ThumbsUp className="w-5 h-5 text-[#49de50]" />
+            </div>
+            <CardTitle className="text-foreground tracking-wide font-medium text-lg">Key Strengths</CardTitle>
           </CardHeader>
-          <CardContent className="pt-6">
-            <ul className="space-y-3">
+          <CardContent className="p-8">
+            <ul className="space-y-5">
               {feedback.strengths.map((strength, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <div className="bg-green-100 p-1 rounded-full border border-green-300 mt-0.5 shrink-0">
-                    <CheckCircle className="w-4 h-4 text-green-700" />
-                  </div>
-                  <span className="text-gray-800 font-medium">{strength}</span>
+                <li key={i} className="flex items-start gap-4">
+                  <CheckCircle className="w-5 h-5 text-[#49de50] shrink-0 mt-0.5" />
+                  <span className="text-foreground/80 leading-relaxed">{strength}</span>
                 </li>
               ))}
             </ul>
           </CardContent>
         </Card>
 
-        {/* Weaknesses */}
-        <Card className="bg-[#f5f5f7]  text-foreground border border-none shadow-neo overflow-hidden">
-          <CardHeader className="bg-[#f5f5f7]  border-b-2 border-black">
-            <CardTitle className="text-red-800 font-black flex items-center gap-2">
-              <ThumbsDown className="w-5 h-5" />
-              Areas for Improvement
-            </CardTitle>
+        {/* section 3: Weaknesses */}
+        <Card className="glass-card overflow-hidden h-full">
+          <CardHeader className="border-b border-white/5 bg-white/5 px-8 py-5 flex flex-row items-center gap-3">
+             <div className="p-2 rounded-lg bg-destructive/20 border border-destructive/30">
+               <ThumbsDown className="w-5 h-5 text-white" />
+            </div>
+            <CardTitle className="text-foreground tracking-wide font-medium text-lg">Areas for Improvement</CardTitle>
           </CardHeader>
-          <CardContent className="pt-6">
-            <ul className="space-y-3">
+          <CardContent className="p-8">
+            <ul className="space-y-5">
               {feedback.weaknesses.map((weakness, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <div className="bg-red-100 p-1 rounded-full border border-red-300 mt-0.5 shrink-0">
-                    <AlertCircle className="w-4 h-4 text-red-700" />
-                  </div>
-                  <span className="text-gray-800 font-medium">{weakness}</span>
+                <li key={i} className="flex items-start gap-4">
+                  <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                  <span className="text-foreground/80 leading-relaxed">{weakness}</span>
                 </li>
               ))}
             </ul>
@@ -342,44 +316,40 @@ export default function FeedbackDisplay({ interviewId, callId, userId, callData 
         </Card>
       </div>
 
-       {/* Suggestions and Next Steps */}
+       {/* Next Steps & Suggestions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-[#f5f5f7]  text-foreground border border-none shadow-neo overflow-hidden">
-          <CardHeader className="bg-yellow-50 border-b-2 border-black">
-            <CardTitle className="text-yellow-800 font-black flex items-center gap-2">
-              <Lightbulb className="w-5 h-5" />
-              Suggestions
-            </CardTitle>
+        <Card className="glass-card overflow-hidden h-full">
+          <CardHeader className="border-b border-white/5 bg-white/5 px-8 py-5 flex flex-row items-center gap-3">
+            <div className="p-2 rounded-lg bg-yellow-500/20 border border-yellow-500/30">
+               <Lightbulb className="w-5 h-5 text-yellow-400" />
+            </div>
+            <CardTitle className="text-foreground tracking-wide font-medium text-lg">Actionable Suggestions</CardTitle>
           </CardHeader>
-          <CardContent className="pt-6">
-            <ul className="space-y-3">
+          <CardContent className="p-8">
+            <ul className="space-y-5">
               {feedback.suggestions.map((suggestion, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <div className="bg-yellow-100 p-1 rounded-full border border-yellow-300 mt-0.5 shrink-0">
-                    <Lightbulb className="w-4 h-4 text-yellow-700" />
-                  </div>
-                  <span className="text-gray-800 font-medium">{suggestion}</span>
+                <li key={i} className="flex items-start gap-4">
+                  <Lightbulb className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
+                  <span className="text-foreground/80 leading-relaxed">{suggestion}</span>
                 </li>
               ))}
             </ul>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#f5f5f7]  text-foreground border border-none shadow-neo overflow-hidden">
-          <CardHeader className="bg-[#f5f5f7]  border-b-2 border-black">
-             <CardTitle className="text-blue-800 font-black flex items-center gap-2">
-              <ArrowRight className="w-5 h-5" />
-              Next Steps
-            </CardTitle>
+        <Card className="glass-card overflow-hidden h-full">
+          <CardHeader className="border-b border-white/5 bg-white/5 px-8 py-5 flex flex-row items-center gap-3">
+             <div className="p-2 rounded-lg bg-blue-500/20 border border-blue-500/30">
+               <ArrowRight className="w-5 h-5 text-blue-400" />
+            </div>
+            <CardTitle className="text-foreground tracking-wide font-medium text-lg">Next Steps</CardTitle>
           </CardHeader>
-          <CardContent className="pt-6">
-            <ul className="space-y-3">
+          <CardContent className="p-8">
+            <ul className="space-y-5">
               {feedback.nextSteps.map((step, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <div className="bg-blue-100 p-1 rounded-full border border-blue-300 mt-0.5 shrink-0">
-                    <ArrowRight className="w-4 h-4 text-blue-700" />
-                  </div>
-                  <span className="text-gray-800 font-medium">{step}</span>
+                <li key={i} className="flex items-start gap-4">
+                  <ArrowRight className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                  <span className="text-foreground/80 leading-relaxed">{step}</span>
                 </li>
               ))}
             </ul>
@@ -388,83 +358,88 @@ export default function FeedbackDisplay({ interviewId, callId, userId, callData 
       </div>
 
       {/* Personalized Improvement Plan */}
-      <Card className="bg-primary/5 border border-none shadow-neo overflow-hidden">
-        <CardHeader className="bg-primary text-white border-b-2 border-black">
-          <CardTitle className="font-black flex items-center gap-2">
-            <BookOpen className="w-5 h-5" />
-            Personalized Improvement Plan
-          </CardTitle>
+      <Card className="glass-card overflow-hidden border-primary/30 relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none"></div>
+        <CardHeader className="border-b border-primary/20 bg-primary/10 px-8 py-5 flex flex-row items-center gap-3">
+          <BookOpen className="w-6 h-6 text-primary" />
+          <CardTitle className="text-foreground tracking-wide font-medium text-lg">Personalized Improvement Plan</CardTitle>
         </CardHeader>
-        <CardContent className="pt-6">
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="p-8">
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
             {Array.isArray(feedback.personalizedPlan) ? feedback.personalizedPlan.map((plan: string, index: number) => (
-              <div key={index} className="flex items-start gap-3 p-4 bg-[#f5f5f7]  text-foreground rounded-3xl border border-none shadow-sm transition-transform hover:-translate-y-1">
-                <div className="flex items-center justify-center w-8 h-8 bg-black text-white rounded-2xl text-sm font-black flex-shrink-0 border border-none shadow-neo">
+              <div key={index} className="flex items-start gap-4 p-6 bg-background/40 backdrop-blur-md rounded-2xl border border-white/5 shadow-inner transition-all hover:bg-white/5 hover:-translate-y-1">
+                <div className="flex items-center justify-center w-10 h-10 bg-primary/20 text-primary border border-primary/30 rounded-full text-sm font-bold flex-shrink-0 shadow-[0_0_15px_rgba(157,125,249,0.2)]">
                   {index + 1}
                 </div>
-                <p className="text-gray-800 font-bold leading-tight">{plan}</p>
+                <p className="text-foreground/90 font-medium leading-relaxed pt-1.5">{plan}</p>
               </div>
-            )) : <p className="text-gray-800 font-medium">{feedback.personalizedPlan}</p>}
+            )) : <p className="text-foreground/80 leading-relaxed">{feedback.personalizedPlan}</p>}
           </div>
         </CardContent>
       </Card>
       
       {/* User Feedback Section */}
       {!userFeedbackSubmitted && (
-        <Card className="bg-[#f5f5f7]  text-foreground border border-none shadow-neo overflow-hidden">
-          <CardHeader className="bg-[#f5f5f7]  border border-none border-b-2 border-black">
-            <CardTitle className="text-black font-black">How was your experience?</CardTitle>
+        <Card className="glass-card overflow-hidden border-white/10 mt-12 bg-white/5">
+          <CardHeader className="px-8 pt-8 pb-4">
+            <CardTitle className="text-foreground tracking-tight font-medium text-xl">Help us refine the ZenAI experience</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6 pt-6">
-            <div>
-              <p className="text-gray-700 font-bold mb-3">Rate this interview session:</p>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5].map((rating) => (
-                  <button
-                    key={rating}
-                    onClick={() => setUserRating(rating)}
-                    className={`p-2 rounded-2xl transition-transform hover:scale-110 ${
-                      userRating >= rating ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'
-                    }`}
-                  >
-                    <Star className="w-8 h-8 drop-shadow-sm" fill={userRating >= rating ? 'currentColor' : 'none'} strokeWidth={2.5} />
-                  </button>
-                ))}
-              </div>
-            </div>
-            
-            <div>
-              <p className="text-gray-700 font-bold mb-2">Additional comments (optional):</p>
-              <textarea
-                value={userComments}
-                onChange={(e) => setUserComments(e.target.value)}
-                className="w-full p-4 bg-[#f5f5f7]  text-foreground border border-none rounded-3xl text-black placeholder-gray-400 resize-none focus:outline-none focus:shadow-neo"
-                rows={3}
-                placeholder="Share your thoughts about this interview experience..."
-              />
+          <CardContent className="px-8 pb-8 space-y-8">
+            <div className="flex flex-col md:flex-row gap-8">
+               <div className="flex-1">
+                 <p className="text-muted-foreground text-sm uppercase tracking-wider font-semibold mb-4">Rate this session</p>
+                 <div className="flex gap-3">
+                   {[1, 2, 3, 4, 5].map((rating) => (
+                     <button
+                       key={rating}
+                       onClick={() => setUserRating(rating)}
+                       className={`p-3 rounded-xl transition-all duration-300 border ${
+                         userRating >= rating 
+                           ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400 scale-110 shadow-[0_0_15px_rgba(234,179,8,0.3)]' 
+                           : 'bg-white/5 border-white/10 text-white/20 hover:text-white/40 hover:bg-white/10'
+                       }`}
+                     >
+                       <Star className="w-6 h-6" fill={userRating >= rating ? 'currentColor' : 'none'} strokeWidth={2} />
+                     </button>
+                   ))}
+                 </div>
+               </div>
+               
+               <div className="flex-[2]">
+                 <p className="text-muted-foreground text-sm uppercase tracking-wider font-semibold mb-4">Additional Context (Optional)</p>
+                 <textarea
+                   value={userComments}
+                   onChange={(e) => setUserComments(e.target.value)}
+                   className="w-full p-4 bg-black/40 border border-white/10 rounded-xl text-foreground placeholder-white/30 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
+                   rows={3}
+                   placeholder="Share your thoughts about this interview..."
+                 />
+               </div>
             </div>
 
-            <Button 
-              onClick={submitUserFeedback} 
-              className="bg-black text-white hover:bg-black/80 font-bold text-lg px-8 py-6 border border-none shadow-neo"
-              disabled={userRating === 0}
-            >
-              Submit Feedback
-            </Button>
+            <div className="flex justify-end pt-4 border-t border-white/5">
+               <Button 
+                 onClick={submitUserFeedback} 
+                 className="btn-primary"
+                 disabled={userRating === 0}
+               >
+                 Submit anonymous rating
+               </Button>
+            </div>
           </CardContent>
         </Card>
       )}
 
       {userFeedbackSubmitted && (
-        <Card className="bg-green-50 border-2 border-green-600 shadow-neo">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-2 bg-green-100 rounded-full border-2 border-green-600">
-                <CheckCircle className="w-8 h-8 text-green-700" />
+        <Card className="glass-card border-[#29823b]/40 bg-[#1b4b24]/20 mt-12 overflow-hidden">
+          <CardContent className="p-8">
+            <div className="flex items-center gap-6">
+              <div className="p-3 bg-[#29823b]/30 rounded-full border border-[#29823b]/50 shadow-[0_0_20px_rgba(41,130,59,0.3)]">
+                <CheckCircle className="w-8 h-8 text-[#49de50]" />
               </div>
               <div>
-                <p className="text-green-800 font-black text-xl">Thank you for your feedback!</p>
-                <p className="text-green-700 font-medium">Your input helps us improve the interview experience.</p>
+                <p className="text-foreground font-bold text-xl mb-1">Feedback Verified & Submitted</p>
+                <p className="text-muted-foreground">Your input directly recalibrates the AI model for future sessions.</p>
               </div>
             </div>
           </CardContent>

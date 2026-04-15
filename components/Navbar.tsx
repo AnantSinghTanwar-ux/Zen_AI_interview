@@ -28,28 +28,28 @@ const Navbar = () => {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-none bg-[#f5f5f7]  shadow-neo-sm">
+    <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-background/60 backdrop-blur-xl transition-all duration-300">
       <div className="mx-auto max-w-7xl w-full">
         {/* Added relative positioning for mobile menu context */}
-        <div className="flex h-16 items-center px-6 w-full justify-between relative">
-          <Link href="/" className="flex items-center gap-2 font-black text-xl hover:scale-105 transition-transform">
-            <div className="relative h-10 w-10 overflow-hidden rounded-3xl border border-none bg-[#f5f5f7]  flex items-center justify-center shadow-neo-sm">
-              <Swords className="w-6 h-6 text-primary" />
+        <div className="flex h-20 items-center px-6 w-full justify-between relative">
+          <Link href="/" className="flex items-center gap-3 font-bold text-xl hover:opacity-80 transition-opacity">
+            <div className="relative h-10 w-10 overflow-hidden rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
+              <Swords className="w-5 h-5 text-primary" />
             </div>
-            <span className="text-black text-2xl tracking-tight">ZenAI</span>
+            <span className="text-foreground tracking-wide font-semibold text-2xl">ZenAI</span>
           </Link>
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
-            <Link href="/interview" className="text-black font-bold hover:text-primary transition-colors border-b-2 border-transparent hover:border-primary">Practice</Link>
-            <Link href="/feedback" className="text-black font-bold hover:text-primary transition-colors border-b-2 border-transparent hover:border-primary">Feedback</Link>
-            <Link href="/call-data" className="text-black font-bold hover:text-primary transition-colors border-b-2 border-transparent hover:border-primary">Interviews</Link>
+            <Link href="/interview" className="text-foreground/80 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Practice</Link>
+            <Link href="/feedback" className="text-foreground/80 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Feedback</Link>
+            <Link href="/call-data" className="text-foreground/80 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Interviews</Link>
             {!loading && (
               isAuthenticated ? (
                 <LogoutButton />
               ) : (
                 <Link href="/sign-in">
-                  <Button className="btn-primary">Sign In</Button>
+                  <Button className="bg-primary hover:bg-primary/90 text-white rounded-full px-6 border-none shadow-[0_0_15px_rgba(157,125,249,0.3)] transition-all hover:scale-105">Sign In</Button>
                 </Link>
               )
             )}
@@ -61,7 +61,7 @@ const Navbar = () => {
               variant="ghost" 
               size="icon" 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-black hover:bg-black/5"
+              className="text-foreground/80 hover:text-white hover:bg-white/5 rounded-full transition-colors"
             >
               {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </Button>
@@ -69,35 +69,35 @@ const Navbar = () => {
 
           {/* Mobile Navigation Dropdown */}
           {isMobileMenuOpen && (
-            <div className="absolute top-full left-0 right-0 p-4 border-b border-none bg-[#f5f5f7]  flex flex-col gap-4 md:hidden shadow-neo-sm z-50 animate-in slide-in-from-top-2 rounded-b-2xl">
+            <div className="absolute top-full left-0 right-0 p-6 border-b border-white/5 bg-background/95 backdrop-blur-xl flex flex-col gap-4 md:hidden z-50 animate-in slide-in-from-top-2 rounded-b-3xl shadow-2xl">
               <Link 
                 href="/interview" 
-                className="text-black font-bold text-lg w-full text-center py-3 hover:bg-[#f5f5f7] border border-transparent hover:border-none rounded-3xl transition-all"
+                className="text-foreground/90 font-medium text-lg w-full text-center py-3 hover:bg-white/5 rounded-2xl transition-all"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Practice
               </Link>
               <Link 
                 href="/feedback" 
-                className="text-black font-bold text-lg w-full text-center py-3 hover:bg-[#f5f5f7] border border-transparent hover:border-none rounded-3xl transition-all"
+                className="text-foreground/90 font-medium text-lg w-full text-center py-3 hover:bg-white/5 rounded-2xl transition-all"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Feedback
               </Link>
               <Link 
                 href="/call-data" 
-                className="text-black font-bold text-lg w-full text-center py-3 hover:bg-[#f5f5f7] border border-transparent hover:border-none rounded-3xl transition-all"
+                className="text-foreground/90 font-medium text-lg w-full text-center py-3 hover:bg-white/5 rounded-2xl transition-all"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Interviews
               </Link>
-              <div className="flex justify-center pt-2 border-t border-none">
+              <div className="flex justify-center pt-4 mt-2 border-t border-white/10">
                 {!loading && (
                   isAuthenticated ? (
                     <LogoutButton />
                   ) : (
                     <Link href="/sign-in" onClick={() => setIsMobileMenuOpen(false)} className="w-full">
-                      <Button className="w-full btn-primary h-12">Sign In</Button>
+                      <Button className="w-full bg-primary hover:bg-primary/90 text-white rounded-full h-12 shadow-[0_0_15px_rgba(157,125,249,0.3)]">Sign In</Button>
                     </Link>
                   )
                 )}

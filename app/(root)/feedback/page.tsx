@@ -86,9 +86,9 @@ function FeedbackPageContent() {
     return (
       <PageLayout>
         <div className="min-h-screen p-6 pt-32 flex items-center justify-center">
-            <div className="bg-[#f5f5f7]  text-foreground border border-none p-8 rounded-3xl shadow-neo text-center max-w-md">
-                <h1 className="text-2xl font-black text-black mb-4">Access Denied</h1>
-                <p className="text-gray-600 font-medium font-medium">You must be logged in to view feedback.</p>
+            <div className="glass-card p-10 text-center max-w-md animate-stagger-1">
+                <h1 className="text-3xl font-bold mb-4 bg-gradient-to-r from-primary to-primary-dim bg-clip-text text-transparent">Access Denied</h1>
+                <p className="text-muted-foreground font-medium">You must be logged in to view feedback.</p>
             </div>
         </div>
       </PageLayout>
@@ -99,10 +99,12 @@ function FeedbackPageContent() {
     return (
       <PageLayout>
         <div className="min-h-screen p-6 pt-32 flex items-center justify-center">
-          <div className="text-center py-12 bg-[#f5f5f7]  text-foreground border border-none p-8 rounded-3xl shadow-neo max-w-lg">
-            <Activity className="w-16 h-16 mx-auto text-black mb-4" />
-            <h1 className="text-3xl font-black text-black mb-4">No Interview Data</h1>
-            <p className="text-gray-600 font-medium text-lg">Complete an interview session to see detailed feedback and analytics.</p>
+          <div className="text-center py-12 glass-card p-12 max-w-lg mb-20 animate-stagger-1 w-full mx-4">
+            <div className="bg-white/5 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/10 shadow-[0_0_30px_rgba(157,125,249,0.2)]">
+              <Activity className="w-10 h-10 text-primary" />
+            </div>
+            <h1 className="text-3xl font-bold text-foreground mb-4">No Interview Data</h1>
+            <p className="text-muted-foreground font-medium text-lg leading-relaxed">Complete an interview session to see detailed feedback and analytics.</p>
           </div>
         </div>
       </PageLayout>
@@ -111,74 +113,100 @@ function FeedbackPageContent() {
 
   return (
     <PageLayout>
-      <div className="min-h-screen p-6 pt-32 max-w-7xl mx-auto">
-        <div className="space-y-8">
-          <div>
-            <h1 className="text-4xl font-black text-black mb-2 flex items-center gap-3">
-              <span className="bg-black text-white px-3 py-1 -skew-x-12 inline-block text-3xl">Feedback</span>
-              & Analysis
+      <div className="min-h-screen p-6 pt-32 max-w-7xl mx-auto relative z-10">
+        <div className="space-y-12">
+          {/* Header section with refined typography */}
+          <div className="animate-stagger-1">
+            <h1 className="text-5xl font-bold text-foreground mb-4 tracking-tight flex items-center gap-4">
+              <span className="bg-gradient-to-r from-primary to-[#ba9eff] text-transparent bg-clip-text">Feedback</span>
+              <span className="text-white/90 font-light">& Analysis</span>
             </h1>
-            <p className="text-gray-600 text-lg font-medium border-l-4 border-black pl-4">AI-powered insights from your interview sessions</p>
+            <p className="text-muted-foreground text-lg ml-1 font-medium max-w-2xl">
+              AI-powered insights extracted from your interview sessions. Review your performance with precision.
+            </p>
           </div>
 
-          {/* Call Selection */}
+          {/* Call Selection - Glassmorphism UI */}
           {callData.length > 1 && (
-            <div className="bg-[#f5f5f7]  text-foreground p-6 rounded-3xl border border-none shadow-neo">
-              <h3 className="text-black font-black text-xl mb-4 flex items-center gap-2">
-                 <Clock className="w-5 h-5" />
-                 Interview History
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {callData.map((call) => (
+            <div className="glass-card p-8 animate-stagger-2">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/10">
+                 <div className="w-10 h-10 rounded-full bg-primary/20 flex-center border border-primary/30">
+                   <Clock className="w-5 h-5 text-primary" />
+                 </div>
+                 <h3 className="text-foreground font-semibold text-xl tracking-wide">
+                   Session History
+                 </h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {callData.map((call, index) => (
                   <button
                     key={call.id}
                     onClick={() => setSelectedCall(call)}
-                    className={`p-4 rounded-3xl border-2 text-left transition-all relative group ${
-                      selectedCall?.id === call.id
-                        ? 'border-black bg-primary text-white shadow-neo translate-x-[-2px] translate-y-[-2px]'
-                        : 'border-black bg-[#f5f5f7]  text-foreground hover:bg-[#f5f5f7]  border border-none hover:shadow-neo'
-                    }`}
+                    className={`p-5 rounded-2xl border transition-all duration-300 relative group text-left
+                      ${selectedCall?.id === call.id
+                        ? 'border-primary/50 bg-primary/10 shadow-[0_0_30px_rgba(157,125,249,0.15)] -translate-y-1'
+                        : 'border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/20 hover:-translate-y-1'
+                      }`}
+                    style={{ animationDelay: `${index * 0.1}s` }}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                       <div className={`font-black text-lg ${selectedCall?.id === call.id ? 'text-white' : 'text-black'}`}>
+                    {selectedCall?.id === call.id && (
+                      <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-primary to-transparent opacity-50" />
+                    )}
+                    
+                    <div className="flex items-center justify-between mb-3">
+                       <div className={`font-semibold text-lg ${selectedCall?.id === call.id ? 'text-white' : 'text-white/80'}`}>
                         {new Date(call.startedAt).toLocaleDateString()}
                       </div>
-                      {selectedCall?.id === call.id && <ChevronRight className="w-5 h-5 text-white" />}
+                      <ChevronRight className={`w-5 h-5 transition-transform duration-300 ${selectedCall?.id === call.id ? 'text-primary translate-x-1' : 'text-white/30 group-hover:text-white/70 group-hover:translate-x-1'}`} />
                     </div>
                     
-                    <div className={`text-sm font-bold flex items-center gap-1 ${selectedCall?.id === call.id ? 'text-white/80' : 'text-gray-500'}`}>
-                       <Clock className="w-3 h-3" />
-                       {new Date(call.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                     <div className={`text-sm mt-1 font-bold uppercase tracking-wide flex items-center gap-1 ${selectedCall?.id === call.id ? 'text-white/80' : 'text-gray-500'}`}>
-                      <Activity className="w-3 h-3" />
-                      {call.status}
-                    </div>
-                    {call.messageCount && (
-                      <div className={`text-xs mt-2 font-black flex items-center gap-1 px-2 py-1 rounded w-fit ${selectedCall?.id === call.id ? 'bg-black/20 text-white' : 'bg-[#f5f5f7]  border border-none text-gray-700'}`}>
-                        <MessageSquare className="w-3 h-3" />
-                        {call.messageCount} msgs
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+                         <Clock className="w-4 h-4 text-white/40" />
+                         {new Date(call.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
-                    )}
+                      
+                      <div className="flex items-center justify-between mt-4">
+                        <div className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 px-2.5 py-1 rounded-md
+                          ${selectedCall?.id === call.id ? 'bg-primary/20 text-primary-foreground border border-primary/30' : 'bg-white/5 text-white/60 border border-white/10'}`}>
+                          <Activity className="w-3.5 h-3.5" />
+                          {call.status}
+                        </div>
+                        
+                        {call.messageCount && (
+                          <div className={`text-xs font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded-md
+                            ${selectedCall?.id === call.id ? 'bg-primary/20 text-white border border-primary/30' : 'bg-white/5 text-white/50 border border-white/10'}`}>
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            {call.messageCount} msg
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Feedback Display */}
-          {selectedCall ? (
-            <FeedbackDisplay 
-              callId={selectedCall.id}
-              userId={user.id}
-              callData={selectedCall}
-            />
-          ) : (
-            <div className="text-center py-16 bg-[#f5f5f7]  text-foreground border-2 border-dashed border-gray-400 rounded-3xl">
-              <h3 className="text-black text-xl font-bold mb-2">Select an Interview Session</h3>
-              <p className="text-gray-500 font-medium">Choose a session to analyze your performance</p>
-            </div>
-          )}
+          {/* Feedback Display Container */}
+          <div className="animate-stagger-3">
+            {selectedCall ? (
+              <FeedbackDisplay 
+                callId={selectedCall.id}
+                userId={user.id}
+                callData={selectedCall}
+              />
+            ) : (
+              <div className="text-center py-20 glass-card">
+                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-6 border border-white/10">
+                  <Activity className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-foreground text-2xl font-semibold mb-3">Select a Session</h3>
+                <p className="text-muted-foreground text-lg max-w-md mx-auto">Choose an interview session from the history above to analyze your performance in high fidelity.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </PageLayout>
