@@ -33,16 +33,16 @@ const HeroSection = () => {
         }}
       ></div>
       
-      {/* Cinematic Glowing Orbs */}
-      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px] pointer-events-none -translate-x-1/2 -translate-y-1/2 mix-blend-screen opacity-60"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-[#eca4ff]/10 rounded-full blur-[150px] pointer-events-none translate-x-1/4 translate-y-1/4 mix-blend-screen opacity-50"></div>
+      {/* Cinematic Glowing Orbs - reduced opacity for softer look */}
+      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] pointer-events-none -translate-x-1/2 -translate-y-1/2 mix-blend-screen opacity-40"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-[#eca4ff]/5 rounded-full blur-[150px] pointer-events-none translate-x-1/4 translate-y-1/4 mix-blend-screen opacity-30"></div>
 
       {/* Interactive Grid Overlay (Revealed on Hover) */}
       <div
         className="absolute inset-0 z-0 pointer-events-none"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(157,125,249,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(157,125,249,0.3) 1px, transparent 1px)",
+            "linear-gradient(rgba(157,125,249,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(157,125,249,0.15) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
           opacity: 0.8,
           maskImage: `radial-gradient(400px circle at ${mousePosition.x}px ${mousePosition.y}px, black, transparent)`,
@@ -52,23 +52,23 @@ const HeroSection = () => {
 
       {/* Hero content aligned with navbar width */}
       <div className="relative z-10 mx-auto text-center flex flex-col items-center gap-8 px-6 max-w-7xl w-full">
-        <div className="inline-flex items-center gap-3 px-6 py-2.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-8 animate-slideUpFade">
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+        <div className="inline-flex items-center gap-3 px-6 py-2.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-8 animate-slideUpFade shadow-sm">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary/70 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
           </span>
-          <span className="text-sm font-semibold tracking-wide text-foreground/90 uppercase pr-1">New: DSA Interview Support</span>
+          <span className="text-xs sm:text-sm font-medium tracking-wide text-foreground/80 uppercase pr-1">New: DSA Interview Support</span>
         </div>
 
         <h1 className="text-5xl md:text-7xl lg:text-[5.5rem] font-bold tracking-tight text-foreground leading-[1.1] text-center animate-slideUpFade delay-100 max-w-5xl">
-          Better Ways to{" "}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-[#eca4ff] to-primary bg-300% animate-shimmer italic">
-            Prepare
+          Better ways to{" "}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary/90 to-[#b59af8]">
+            prepare.
           </span>
           <br />
-          Smarter Ways to{" "}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-[#eca4ff] to-primary bg-300% animate-shimmer italic">
-            Hired
+          Smarter ways to{" "}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary/90 to-[#b59af8]">
+            get hired.
           </span>
         </h1>
 

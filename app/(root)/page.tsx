@@ -25,7 +25,7 @@ const HomePage = () => {
           {/* CTA Section */}
           <FadeUp delay={0.1}>
             <section className="glass-card p-10 md:p-12 mb-24 overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-96 h-96 bg-primary/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+              <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
               <div className="flex flex-col md:flex-row items-center gap-12 relative z-10">
                 <div className="flex-1 space-y-6">
                    <h2 className="text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">Get Interview Ready</h2>
@@ -50,10 +50,10 @@ const HomePage = () => {
                 </div>
                 <FadeUp delay={0.2} className="flex-1 flex justify-center items-center h-[260px]">
                   <div className="relative w-[300px] h-[300px] flex items-center justify-center">
-                     <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-purple-500/10 rounded-full blur-3xl animate-pulse"></div>
-                     <div className="relative z-10 w-48 h-48 rounded-full border border-white/10 bg-black/40 backdrop-blur-xl shadow-[0_0_50px_rgba(157,125,249,0.3)] flex items-center justify-center overflow-hidden">
-                        <div className="absolute inset-0 border border-t-primary/50 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" style={{ animationDuration: '3s' }}></div>
-                        <Mic className="w-16 h-16 text-primary/80" strokeWidth={1} />
+                     <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-2xl transition-opacity duration-700"></div>
+                     <div className="relative z-10 w-48 h-48 rounded-full border border-white/10 bg-black/40 backdrop-blur-xl shadow-[0_0_30px_rgba(157,125,249,0.1)] flex items-center justify-center overflow-hidden">
+                        <div className="absolute inset-0 border border-t-primary/30 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" style={{ animationDuration: '4s' }}></div>
+                        <Mic className="w-16 h-16 text-primary/70" strokeWidth={1} />
                      </div>
                   </div>
                 </FadeUp>
@@ -78,9 +78,9 @@ const HomePage = () => {
             <StaggerParent className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <StaggerItem>
                 <ScaleCard className="h-full">
-                  <div className="glass-card p-10 h-full flex flex-col relative overflow-hidden cursor-default">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[50px] transition-all rounded-full pointer-events-none"></div>
-                      <div className="w-14 h-14 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center mb-8 relative z-10">
+                  <div className="glass-card p-10 h-full flex flex-col relative overflow-hidden cursor-default group">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[50px] group-hover:bg-primary/10 transition-all duration-500 rounded-full pointer-events-none"></div>
+                      <div className="w-14 h-14 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center mb-8 relative z-10 group-hover:bg-white/10 transition-colors">
                         <Mic className="w-7 h-7 text-primary" />
                       </div>
                       <h3 className="font-semibold text-2xl mb-4 text-foreground/90 relative z-10">Voice Interaction</h3>
@@ -101,9 +101,9 @@ const HomePage = () => {
 
               <StaggerItem>
                 <ScaleCard className="h-full">
-                  <div className="glass-card p-10 h-full flex flex-col relative overflow-hidden cursor-default">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-[#49de50]/10 blur-[50px] transition-all rounded-full pointer-events-none"></div>
-                      <div className="w-14 h-14 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center mb-8 relative z-10">
+                  <div className="glass-card p-10 h-full flex flex-col relative overflow-hidden cursor-default group">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-[#49de50]/5 blur-[50px] group-hover:bg-[#49de50]/10 transition-all duration-500 rounded-full pointer-events-none"></div>
+                      <div className="w-14 h-14 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center mb-8 relative z-10 group-hover:bg-white/10 transition-colors">
                         <Code className="w-7 h-7 text-[#49de50]" />
                       </div>
                       <h3 className="font-semibold text-2xl mb-4 text-foreground/90 relative z-10">Algorithmic Environments</h3>
