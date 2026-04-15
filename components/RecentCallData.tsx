@@ -54,7 +54,6 @@ export default function RecentCallData() {
   if (loading) {
     return (
       <div className="flex flex-col gap-6 mt-12">
-      <div className="flex flex-col gap-6 mt-12">
         <div className="flex justify-between items-center w-full">
           <h2 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent">Recent Sessions</h2>
            <Skeleton className="h-10 w-24 bg-white/10 rounded-full" />
@@ -64,21 +63,21 @@ export default function RecentCallData() {
             <div key={i} className="glass-card p-6 h-[150px] flex flex-col justify-between">
               <div className="flex justify-between items-start">
                 <div className="space-y-3">
-                  <Skeleton className="h-5 w-24 bg-white/10" />
-                  <Skeleton className="h-4 w-16 bg-white/10" />
+                  <Skeleton className="h-5 w-24 bg-white/10 rounded-md" />
+                  <Skeleton className="h-4 w-16 bg-white/10 rounded-md" />
                 </div>
                 <Skeleton className="h-6 w-16 bg-white/10 rounded-full" />
               </div>
               
               <div className="flex justify-between items-end mt-4">
-                <Skeleton className="h-4 w-20 bg-white/10" />
-                <Skeleton className="h-4 w-20 bg-white/10" />
+                <Skeleton className="h-4 w-20 bg-white/10 rounded-md" />
+                <Skeleton className="h-4 w-20 bg-white/10 rounded-md" />
               </div>
             </div>
           ))}
         </div>
         <div className="flex justify-center mt-4">
-           <Skeleton className="h-10 w-40 rounded-full bg-[#f5f5f7]  border border-none" />
+           <Skeleton className="h-10 w-40 rounded-full bg-white/10" />
         </div>
       </div>
     );
@@ -86,10 +85,10 @@ export default function RecentCallData() {
 
   if (error) {
     return (
-      <div className="flex flex-col gap-6 mt-8">
-        <h2 className="text-3xl font-black text-black">Recent Interviews</h2>
-        <div className="bg-[#f5f5f7]  border-2 border-red-600 rounded-2xl p-4 shadow-neo">
-          <p className="text-red-700 font-bold">Unable to load recent interviews</p>
+      <div className="flex flex-col gap-6 mt-12">
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent">Recent Sessions</h2>
+        <div className="bg-red-500/10 border border-red-500/20 backdrop-blur-md rounded-2xl p-4">
+          <p className="text-red-400 font-medium">Unable to load recent sessions: {error}</p>
         </div>
       </div>
     );
@@ -97,12 +96,12 @@ export default function RecentCallData() {
 
   if (callData.length === 0) {
     return (
-      <div className="flex flex-col gap-6 mt-8">
-        <h2 className="text-3xl font-black text-black">Recent Interviews</h2>
-        <div className="text-center py-8 bg-[#f5f5f7]  text-foreground border border-none rounded-3xl shadow-neo">
-          <p className="text-gray-600 font-medium">No interview data available yet</p>
+      <div className="flex flex-col gap-6 mt-12">
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent">Recent Sessions</h2>
+        <div className="text-center py-12 glass-card rounded-3xl border border-white/10 border-dashed">
+          <p className="text-muted-foreground font-light mb-6">No session data available yet.</p>
           <Link href="/interview">
-            <Button className="mt-4 font-bold border border-none shadow-neo bg-primary text-white hover:bg-primary/90">Start Your First Interview</Button>
+            <Button className="bg-primary hover:bg-primary/90 text-white rounded-full px-8 py-2.5 h-auto border-none shadow-[0_0_15px_rgba(157,125,249,0.3)] transition-all font-semibold">Start First Session</Button>
           </Link>
         </div>
       </div>
