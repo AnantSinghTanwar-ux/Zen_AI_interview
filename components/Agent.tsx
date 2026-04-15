@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { vapi } from "@/services/vapi/vapi.sdk";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MessageSquare, Code, Activity, User } from "lucide-react";
+import { Send, MessageSquare, Code, Activity, User, Mic } from "lucide-react";
 import {
   emotionDetectionService,
   EmotionData,

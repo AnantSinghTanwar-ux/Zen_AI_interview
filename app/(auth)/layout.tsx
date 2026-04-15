@@ -13,7 +13,7 @@ async function AuthLayout({ children }: { children: ReactNode }) {
     redirect("/");
   }
   return (
-    <div className="flex flex-col min-h-screen bg-[#f5f5f7]  border border-none">
+    <div className="flex flex-col min-h-screen bg-background">
       <Navbar />
       <GridBackground>
         {children}
