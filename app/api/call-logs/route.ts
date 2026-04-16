@@ -2,12 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { callLogService } from "@/services/firebase/call-log.service";
 import { vapiCallDataService } from "@/services/vapi/call-data.service";
 import { db } from "@/services/firebase/admin";
-import { getCurrentUser } from "@/lib/actions/auth.actions";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const genAI = process.env.GOOGLE_AI_API_KEY
+  ? new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY)
+  : null;
+
+const SCORE_MODEL_CANDIDATES = [
+  process.env.GOOGLE_AI_FEEDBACK_MODEL || "gemini-2.0-flash-lite",
+  "gemini-1.5-flash",
+  "gemini-2.0-flash",
+  "gemini-2.5-flash",
+].filter(Boolean);
 
 /**
  * Auto-create an external_application record when a candidate completes
  * an interview that was started via the browser extension (has job context).
- * This bridges the extension flow into the recruiter analytics pipeline.
+ * Returns the created document ID so we can attach a score to it.
  */
 async function createExternalApplicationFromJobContext(
   jobContextJson: string,
@@ -15,19 +26,18 @@ async function createExternalApplicationFromJobContext(
   vapiCallId: string,
   userName?: string,
   userEmail?: string
-) {
+): Promise<string | null> {
   try {
     const jobContext = JSON.parse(jobContextJson);
     const job = jobContext.job || jobContext;
 
     const title = (job.title || "").trim();
     const company = (job.company || "").trim();
-    const description = (job.description || "").trim();
     const sourceUrl = (jobContext.sourceUrl || "").trim();
 
     if (!title && !company) {
       console.warn("Job context missing title and company, skipping external_application creation");
-      return;
+      return null;
     }
 
     // Determine source platform from URL
@@ -61,7 +71,6 @@ async function createExternalApplicationFromJobContext(
       .get();
 
     if (!existing.empty) {
-      // Update existing application with interview info
       const docId = existing.docs[0].id;
       await db.collection("external_applications").doc(docId).update({
         interviewStatus: "completed",
@@ -70,7 +79,7 @@ async function createExternalApplicationFromJobContext(
         updatedAt: new Date().toISOString(),
       });
       console.log(`Updated existing external_application ${docId} with interview data`);
-      return;
+      return docId;
     }
 
     const now = new Date().toISOString();
@@ -88,15 +97,162 @@ async function createExternalApplicationFromJobContext(
       interviewStatus: "completed",
       scoreStatus: "pending",
       status: "completed",
-      recruiterOwnerId: "anantsa@gmail.com", // hardcoded demo recruiter
+      recruiterOwnerId: "anantsa@gmail.com",
       createdAt: now,
       updatedAt: now,
     });
 
     console.log(`Auto-created external_application ${docRef.id} from extension job context`);
+    return docRef.id;
   } catch (error) {
-    // Don't fail the main call-log save if this fails
     console.error("Error creating external_application from job context:", error);
+    return null;
+  }
+}
+
+/**
+ * Auto-generate a recruiter score from the interview transcript using Gemini.
+ * Writes to `application_scores` and updates the external_application's scoreStatus.
+ */
+async function generateRecruiterScore(
+  applicationId: string,
+  vapiCallId: string,
+  vapiCallData: any
+) {
+  if (!genAI) {
+    console.warn("GOOGLE_AI_API_KEY not set, skipping auto-score generation");
+    return;
+  }
+
+  try {
+    // Extract transcript from Vapi messages
+    const messages = vapiCallData.artifact?.messages || vapiCallData.messages || [];
+    const transcript = messages
+      .filter((msg: any) => {
+        if (msg.type === "transcript" && msg.transcriptType === "final") return true;
+        if ((msg.role === "user" || msg.role === "assistant") && (msg.content || msg.message || msg.transcript)) return true;
+        return false;
+      })
+      .map((msg: any) => {
+        const role = msg.role === "user" ? "Candidate" : "Interviewer";
+        const content = msg.transcript || msg.content || msg.message || "";
+        return `${role}: ${content}`;
+      })
+      .join("\n");
+
+    if (!transcript || transcript.trim().length < 50) {
+      console.warn("Transcript too short for scoring, skipping");
+      return;
+    }
+
+    // Update scoreStatus to processing
+    await db.collection("external_applications").doc(applicationId).update({
+      scoreStatus: "processing",
+      updatedAt: new Date().toISOString(),
+    });
+
+    const prompt = `
+You are a recruiter evaluating an interview candidate. Analyze this interview transcript and provide a scoring assessment.
+
+Transcript:
+${transcript}
+
+Respond in ONLY valid JSON with this exact structure:
+{
+  "overallScore": <number 0-100>,
+  "technicalScore": <number 0-100>,
+  "communicationScore": <number 0-100>,
+  "problemSolvingScore": <number 0-100>,
+  "recommendation": "<one of: strong_hire, hire, maybe, no_hire>",
+  "strengths": ["<strength1>", "<strength2>", "<strength3>"],
+  "weaknesses": ["<weakness1>", "<weakness2>"],
+  "feedbackSummary": "<2-3 sentence overall assessment>"
+}
+
+Be realistic and constructive. Return ONLY JSON.
+`;
+
+    let result: any = null;
+    let lastError: unknown = null;
+
+    for (const modelName of SCORE_MODEL_CANDIDATES) {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      let retries = 2;
+      let delay = 1500;
+
+      while (retries >= 0) {
+        try {
+          console.log(`[AutoScore] Trying model: ${modelName}, retries left: ${retries}`);
+          result = await model.generateContent(prompt);
+          console.log(`[AutoScore] Model succeeded: ${modelName}`);
+          break;
+        } catch (e: any) {
+          lastError = e;
+          const msg = String(e?.message || "").toLowerCase();
+          const transient =
+            msg.includes("429") ||
+            msg.includes("503") ||
+            msg.includes("quota") ||
+            msg.includes("high demand") ||
+            msg.includes("service unavailable") ||
+            msg.includes("too many requests");
+
+          if (!transient || retries === 0) break;
+
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          retries -= 1;
+          delay *= 2;
+        }
+      }
+
+      if (result) break;
+    }
+
+    if (!result) {
+      throw lastError || new Error("All scoring models failed");
+    }
+
+    const text = result.response.text();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("Invalid AI scoring response");
+
+    const scoreData = JSON.parse(jsonMatch[0]);
+
+    // Save to application_scores collection
+    const scoreDoc = await db.collection("application_scores").add({
+      applicationId,
+      interviewId: vapiCallId,
+      overallScore: Math.min(100, Math.max(0, scoreData.overallScore || 0)),
+      technicalScore: Math.min(100, Math.max(0, scoreData.technicalScore || 0)),
+      communicationScore: Math.min(100, Math.max(0, scoreData.communicationScore || 0)),
+      problemSolvingScore: Math.min(100, Math.max(0, scoreData.problemSolvingScore || 0)),
+      recommendation: scoreData.recommendation || "maybe",
+      strengths: scoreData.strengths || [],
+      weaknesses: scoreData.weaknesses || [],
+      feedbackSummary: scoreData.feedbackSummary || "",
+      generatedBy: "gemini",
+      createdAt: new Date().toISOString(),
+    });
+
+    // Update the external_application with score info
+    await db.collection("external_applications").doc(applicationId).update({
+      scoreStatus: "available",
+      scoreId: scoreDoc.id,
+      updatedAt: new Date().toISOString(),
+    });
+
+    console.log(`[AutoScore] Score saved: ${scoreDoc.id} for application ${applicationId} (overall: ${scoreData.overallScore})`);
+  } catch (error) {
+    console.error("[AutoScore] Error generating recruiter score:", error);
+    // Mark as failed so the UI can show an error state
+    try {
+      await db.collection("external_applications").doc(applicationId).update({
+        scoreStatus: "failed",
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (_) {
+      // ignore
+    }
   }
 }
 
@@ -156,9 +312,8 @@ export async function POST(request: NextRequest) {
     const logId = await callLogService.saveCallLog(callLogData);
 
     // If job context was provided (from extension), auto-create an external_application
-    // so the interview shows up in the recruiter dashboard
+    // and auto-generate a recruiter score using Gemini
     if (jobContext) {
-      // Fetch user info for the application record
       let userName = "";
       let userEmail = "";
       try {
@@ -172,13 +327,20 @@ export async function POST(request: NextRequest) {
         console.warn("Could not fetch user data for external_application:", e);
       }
 
-      await createExternalApplicationFromJobContext(
+      const applicationId = await createExternalApplicationFromJobContext(
         jobContext,
         userId,
         vapiCallId,
         userName,
         userEmail
       );
+
+      // Auto-score in the background (don't block the response)
+      if (applicationId) {
+        generateRecruiterScore(applicationId, vapiCallId, vapiCallData).catch((err) =>
+          console.error("[AutoScore] Background scoring failed:", err)
+        );
+      }
     }
 
     return NextResponse.json({
