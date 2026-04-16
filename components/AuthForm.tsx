@@ -143,27 +143,25 @@ function AuthForm({ type }: { type: FormType }) {
   }
 
   return (
-    <div className="w-full max-w-[500px] mx-auto relative mt-20 mb-20">
-      <div className="absolute inset-0 bg-primary/10 rounded-[2rem] blur-2xl transform-gpu"></div>
-      <div className="glass-card overflow-hidden rounded-[2rem] border border-white/10 relative z-10 backdrop-blur-2xl">
+    <div className="w-full max-w-[500px] mx-auto">
+      <div className="glass-card overflow-hidden">
         
         {/* Header Section */}
-        <div className="pt-10 pb-6 px-8 text-center bg-transparent relative">
-            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
-            <div className="flex items-center justify-center gap-3 mb-4">
-                <div className="p-2 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
-                  <Swords className="w-8 h-8 text-primary drop-shadow-[0_0_10px_rgba(157,125,249,0.5)]" />
+        <div className="pt-8 pb-4 px-8 text-center bg-[#f5f5f7]">
+            <div className="flex items-center justify-center gap-3 mb-2">
+                <div className="p-2 rounded-3xl border border-none bg-[#f5f5f7]  flex items-center justify-center shadow-neo-sm">
+                  <Swords className="w-8 h-8 text-primary" />
                 </div>
-                <h1 className="text-3xl font-bold text-foreground tracking-wide">ZENAI</h1>
+                <h1 className="text-4xl font-black text-black uppercase tracking-tight">ZENAI</h1>
             </div>
-            <h2 className="text-muted-foreground font-medium">Practice Job Interviews with AI</h2>
+            <h2 className="text-lg font-bold text-black">Practice Job Interviews with AI</h2>
         </div>
         
         {/* Divider */}
-        <div className="w-full border-t border-white/5"></div>
+        <div className="w-full border-t border-none"></div>
 
         {/* Form Section */}
-        <div className="p-8 bg-transparent">
+        <div className="p-8 bg-[#f5f5f7]">
             <Form {...form}>
             <form
                 onSubmit={form.handleSubmit(onSubmit)}
@@ -175,11 +173,11 @@ function AuthForm({ type }: { type: FormType }) {
                     name="name"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="text-sm font-semibold text-foreground/80 tracking-wide">Name</FormLabel>
+                        <FormLabel className="text-lg font-black text-black">Name:</FormLabel>
                         <FormControl>
                         <Input 
                             placeholder="John Doe"
-                            className="bg-black/40 border border-white/10 focus-visible:ring-1 focus-visible:ring-primary/50 text-foreground rounded-xl h-12 px-4 shadow-inner" 
+                            className="input" 
                             {...field} 
                             type="text" 
                         />
@@ -194,11 +192,11 @@ function AuthForm({ type }: { type: FormType }) {
                 name="email"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel className="text-sm font-semibold text-foreground/80 tracking-wide">Email Address</FormLabel>
+                    <FormLabel className="text-lg font-black text-black">Email:</FormLabel>
                     <FormControl>
                         <Input 
-                            placeholder="name@example.com"
-                            className="bg-black/40 border border-white/10 focus-visible:ring-1 focus-visible:ring-primary/50 text-foreground rounded-xl h-12 px-4 shadow-inner" 
+                            placeholder="mail@example.com"
+                            className="input" 
                             {...field} 
                             type="email" 
                         />
@@ -212,11 +210,11 @@ function AuthForm({ type }: { type: FormType }) {
                 name="password"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel className="text-sm font-semibold text-foreground/80 tracking-wide">Password</FormLabel>
+                    <FormLabel className="text-lg font-black text-black">Password:</FormLabel>
                     <FormControl>
                         <Input 
                             placeholder="••••••••"
-                            className="bg-black/40 border border-white/10 focus-visible:ring-1 focus-visible:ring-primary/50 text-foreground rounded-xl h-12 px-4 shadow-inner" 
+                            className="input" 
                             {...field} 
                             type="password" 
                         />
@@ -227,19 +225,19 @@ function AuthForm({ type }: { type: FormType }) {
                 )}
                 />
 
-                <div className="flex justify-center pt-6">
-                    <Button className="w-full bg-primary hover:bg-primary/90 text-white rounded-xl py-6 text-lg font-medium shadow-[0_0_20px_rgba(157,125,249,0.3)] hover:shadow-[0_0_30px_rgba(157,125,249,0.5)] transition-all" type="submit">
-                         {isSignIn ? "Sign In" : "Create Account"}
+                <div className="flex justify-center pt-4">
+                    <Button className="btn btn-primary text-lg py-6 px-12" type="submit">
+                         {isSignIn ? "Sign In" : "Sign Up"}
                     </Button>
                 </div>
             </form>
             </Form>
 
-            <div className="mt-8 text-center text-muted-foreground text-sm">
-                 {isSignIn ? "Don't have an account? " : "Already have an account? "}
+            <div className="mt-8 text-center text-black font-bold text-lg">
+                 {isSignIn ? "No Account Yet? " : "Have an account already? "}
                 <Link
                     href={!isSignIn ? "/sign-in" : "/sign-up"}
-                    className="text-primary hover:text-primary-foreground transition-colors font-medium hover:underline underline-offset-4"
+                    className="hover:underline"
                 >
                     {!isSignIn ? "Sign In" : "Sign Up"}
                 </Link>

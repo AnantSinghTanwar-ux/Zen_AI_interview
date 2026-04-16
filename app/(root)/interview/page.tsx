@@ -26,7 +26,11 @@ async function InterviewPage({
   const query = await searchParams;
 
   if (!user) {
-    redirect("/sign-in");
+    const rawJobParam = Array.isArray(query.job) ? query.job[0] : query.job;
+    const redirectUrl = rawJobParam 
+      ? `/sign-in?redirect=${encodeURIComponent(`/interview?job=${rawJobParam}&source=extension`)}`
+      : `/sign-in`;
+    redirect(redirectUrl);
   }
 
   const rawJobParam = Array.isArray(query.job) ? query.job[0] : query.job;

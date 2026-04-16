@@ -62,40 +62,16 @@ const sanitizeJobPayload = (payload = {}) => {
   };
 };
 
-const buildAnalyzeUrlWithData = (dataObj) => {
-  const encoded = encodeURIComponent(JSON.stringify(dataObj));
-  return `${ANALYZE_URL}?data=${encoded}`;
-};
-
 const buildInterviewUrlWithData = (dataObj) => {
   const encoded = encodeURIComponent(JSON.stringify(dataObj));
   return `${INTERVIEW_URL}?job=${encoded}&source=extension`;
 };
 
-const buildLoginRedirectUrl = (currentPageUrl) => {
-  const redirect = encodeURIComponent(`${ANALYZE_URL}?from=extension&source=${encodeURIComponent(currentPageUrl || "")}`);
-  return `${LOGIN_URL}?redirect=${redirect}`;
-};
-
-const buildInterviewLoginRedirectUrl = (currentPageUrl) => {
-  const redirect = encodeURIComponent(`${INTERVIEW_URL}?from=extension&source=${encodeURIComponent(currentPageUrl || "")}`);
-  return `${LOGIN_URL}?redirect=${redirect}`;
-};
-
-const handleStartZScoreInterview = async (message) => {
-  const { authToken, extensionEnabled } = await getFromStorage([
-    STORAGE_KEYS.AUTH_TOKEN,
-    STORAGE_KEYS.EXTENSION_ENABLED
-  ]);
+const handleInterviewRedirect = async (message) => {
+  const { extensionEnabled } = await getFromStorage([ STORAGE_KEYS.EXTENSION_ENABLED ]);
 
   if (extensionEnabled === false) {
     return { ok: false, disabled: true, action: "disabled" };
-  }
-
-  if (!authToken) {
-    log("No auth token, redirecting to login for interview flow");
-    openTab(buildInterviewLoginRedirectUrl(message?.payload?.sourceUrl));
-    return { ok: true, action: "redirect_login" };
   }
 
   const sanitizedPayload = sanitizeJobPayload(message.payload);
@@ -122,92 +98,6 @@ const handleStartZScoreInterview = async (message) => {
   return { ok: true, action: "opened_interview" };
 };
 
-const analyzeWithBackend = async (token, payload, resumePayload) => {
-  const response = await fetch(ANALYZE_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({
-      ...payload,
-      resume: resumePayload
-    })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Analyze API failed (${response.status}): ${errorText.slice(0, 300)}`);
-  }
-
-  return response.json();
-};
-
-const handleCheckMyFit = async (message) => {
-  const { authToken, resumeText, resumeId, extensionEnabled } = await getFromStorage([
-    STORAGE_KEYS.AUTH_TOKEN,
-    STORAGE_KEYS.RESUME_TEXT,
-    STORAGE_KEYS.RESUME_ID,
-    STORAGE_KEYS.EXTENSION_ENABLED
-  ]);
-
-  if (extensionEnabled === false) {
-    return { ok: false, disabled: true, action: "disabled" };
-  }
-
-  if (!authToken) {
-    log("No auth token, redirecting to login");
-    openTab(buildLoginRedirectUrl(message?.payload?.sourceUrl));
-    return { ok: true, action: "redirect_login" };
-  }
-
-  const sanitizedPayload = sanitizeJobPayload(message.payload);
-  const resumePayload = {
-    text: sanitizeString(resumeText, 30000),
-    resumeId: sanitizeString(resumeId, 200)
-  };
-
-  try {
-    log("Sending payload to analyze API", {
-      hasResumeText: Boolean(resumePayload.text),
-      hasResumeId: Boolean(resumePayload.resumeId)
-    });
-
-    const apiResult = await analyzeWithBackend(authToken, sanitizedPayload, resumePayload);
-
-    const analyzeTabUrl = buildAnalyzeUrlWithData({
-      source: "extension",
-      job: sanitizedPayload.job,
-      sourceUrl: sanitizedPayload.sourceUrl,
-      analysis: {
-        matchPercentage: apiResult?.matchPercentage,
-        missingSkills: apiResult?.missingSkills || [],
-        suggestions: apiResult?.suggestions || [],
-        interviewReadinessScore: apiResult?.interviewReadinessScore,
-        analysisId: apiResult?.analysisId
-      }
-    });
-
-    openTab(analyzeTabUrl);
-    return { ok: true, action: "opened_analysis" };
-  } catch (error) {
-    log("API analyze failed, opening fallback analysis view", error.message);
-
-    const fallbackAnalyzeUrl = buildAnalyzeUrlWithData({
-      source: "extension-fallback",
-      job: sanitizedPayload.job,
-      sourceUrl: sanitizedPayload.sourceUrl
-    });
-
-    openTab(fallbackAnalyzeUrl);
-    return {
-      ok: false,
-      action: "opened_fallback",
-      error: "Failed to fetch analysis from API"
-    };
-  }
-};
-
 chrome.runtime.onInstalled.addListener(async () => {
   log("Extension installed");
   await setToStorage({
@@ -223,18 +113,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  if (message.type === "CHECK_MY_FIT") {
-    handleCheckMyFit(message)
-      .then((result) => sendResponse(result))
-      .catch((err) => {
-        log("Unexpected error", err);
-        sendResponse({ ok: false, error: "Unexpected background error" });
-      });
-    return true;
-  }
-
-  if (message.type === "START_ZSCORE_INTERVIEW") {
-    handleStartZScoreInterview(message)
+  if (message.type === "CHECK_MY_FIT" || message.type === "START_ZSCORE_INTERVIEW") {
+    handleInterviewRedirect(message)
       .then((result) => sendResponse(result))
       .catch((err) => {
         log("Unexpected interview flow error", err);
