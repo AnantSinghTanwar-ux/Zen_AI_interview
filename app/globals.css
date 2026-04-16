@@ -117,6 +117,17 @@
   h3 {
     @apply text-2xl font-medium;
   }
+
+  /* Ensure native <select> dropdown options remain readable in dark UI */
+  select option {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+
+  select optgroup {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
 }
 
 @layer components {

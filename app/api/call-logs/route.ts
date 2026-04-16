@@ -4,9 +4,12 @@ import { vapiCallDataService } from "@/services/vapi/call-data.service";
 import { db } from "@/services/firebase/admin";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = process.env.GOOGLE_AI_API_KEY
-  ? new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY)
-  : null;
+const GOOGLE_AI_KEY =
+  process.env.GOOGLE_AI_API_KEY ||
+  process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
+  "";
+
+const genAI = GOOGLE_AI_KEY ? new GoogleGenerativeAI(GOOGLE_AI_KEY) : null;
 
 const SCORE_MODEL_CANDIDATES = [
   process.env.GOOGLE_AI_FEEDBACK_MODEL || "gemini-2.0-flash-lite",
@@ -31,9 +34,70 @@ async function createExternalApplicationFromJobContext(
     const jobContext = JSON.parse(jobContextJson);
     const job = jobContext.job || jobContext;
 
-    const title = (job.title || "").trim();
-    const company = (job.company || "").trim();
-    const sourceUrl = (jobContext.sourceUrl || "").trim();
+    const cleanEntity = (value: string, maxLen: number) =>
+      String(value || "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, maxLen);
+
+    const cleanCompanyName = (value: string) => {
+      let v = cleanEntity(value, 200);
+      if (!v) return "";
+
+      const lower = v.toLowerCase();
+
+      // Common non-company values seen on job boards (LinkedIn often shows employee count).
+      if (/(\bemployees?\b|\bfollowers?\b)/i.test(v)) return "";
+
+      // Chop off common trailing UI fragments.
+      const cutMarkers = [
+        " apply now",
+        " easy apply",
+        " resume",
+        " your current resume",
+        " see application",
+        " promoted",
+      ];
+      for (const marker of cutMarkers) {
+        const idx = lower.indexOf(marker);
+        if (idx > 0) {
+          v = v.slice(0, idx).trim();
+          break;
+        }
+      }
+
+      // Split on separators frequently used by job boards.
+      v = v.split(" · ")[0].split(" | ")[0].trim();
+
+      return cleanEntity(v, 120);
+    };
+
+    const cleanRoleTitle = (value: string) => {
+      let v = cleanEntity(value, 220);
+      if (!v) return "";
+
+      const lower = v.toLowerCase();
+      const cutMarkers = [" apply now", " easy apply", " resume", " your current resume", " see application"];
+      for (const marker of cutMarkers) {
+        const idx = lower.indexOf(marker);
+        if (idx > 0) {
+          v = v.slice(0, idx).trim();
+          break;
+        }
+      }
+
+      return cleanEntity(v, 160);
+    };
+
+    const titleRaw = cleanEntity(job.title || "", 220);
+    const title = cleanRoleTitle(titleRaw) || titleRaw;
+
+    const companyCandidate = cleanEntity(
+      job.companyName || job.company?.name || job.company || job.organization || job.employer || "",
+      200
+    );
+    const company = cleanCompanyName(companyCandidate);
+    const sourceUrl = cleanEntity(jobContext.sourceUrl || "", 600);
 
     if (!title && !company) {
       console.warn("Job context missing title and company, skipping external_application creation");
@@ -125,12 +189,17 @@ async function generateRecruiterScore(
   }
 
   try {
-    // Extract transcript from Vapi messages
-    const messages = vapiCallData.artifact?.messages || vapiCallData.messages || [];
-    const transcript = messages
+    const artifactTranscript =
+      typeof vapiCallData?.artifact?.transcript === "string"
+        ? String(vapiCallData.artifact.transcript)
+        : "";
+
+    // Extract transcript from Vapi messages (fallback when artifact transcript isn't present)
+    const messages = vapiCallData?.artifact?.messages || vapiCallData?.messages || [];
+    const transcriptFromMessages = (messages as any[])
       .filter((msg: any) => {
         if (msg.type === "transcript" && msg.transcriptType === "final") return true;
-        if ((msg.role === "user" || msg.role === "assistant") && (msg.content || msg.message || msg.transcript)) return true;
+        if ((msg.role === "user" || msg.role === "assistant" || msg.role === "bot") && (msg.content || msg.message || msg.transcript)) return true;
         return false;
       })
       .map((msg: any) => {
@@ -139,6 +208,10 @@ async function generateRecruiterScore(
         return `${role}: ${content}`;
       })
       .join("\n");
+
+    const transcript = artifactTranscript.trim().length >= 50
+      ? artifactTranscript.trim()
+      : transcriptFromMessages;
 
     if (!transcript || transcript.trim().length < 50) {
       console.warn("Transcript too short for scoring, skipping");
@@ -279,8 +352,13 @@ export async function POST(request: NextRequest) {
     // Fetch call data from Vapi
     const vapiCallData = await vapiCallDataService.getCall(vapiCallId);
 
+    const artifactTranscript =
+      typeof vapiCallData?.artifact?.transcript === "string"
+        ? String(vapiCallData.artifact.transcript)
+        : "";
+
     const rawMessages = vapiCallData.artifact?.messages || vapiCallData.messages || [];
-    const transcript = rawMessages
+    const transcriptFromMessages = (rawMessages as any[])
       .filter((msg: any) => {
         if (msg.type === "transcript" && msg.transcriptType === "final") return true;
         if ((msg.role === "user" || msg.role === "assistant" || msg.role === "bot") && (msg.content || msg.message || msg.transcript)) return true;
@@ -292,6 +370,10 @@ export async function POST(request: NextRequest) {
         return `${role}: ${content}`;
       })
       .join("\n");
+
+    const transcript = artifactTranscript.trim().length >= 50
+      ? artifactTranscript.trim()
+      : transcriptFromMessages;
 
     // Extract relevant data for Firestore
     const callLogData = {

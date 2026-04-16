@@ -34,12 +34,15 @@ const SELECTORS = {
     ".job-details-jobs-unified-top-card__job-title"
   ],
   company: [
+    // LinkedIn (most reliable)
+    ".job-details-jobs-unified-top-card__company-name",
+    ".topcard__org-name-link",
+
+    // Generic fallbacks
     "[data-testid*='company']",
     "a[class*='company']",
-    "span[class*='company']",
-    ".topcard__org-name-link",
-    ".job-details-jobs-unified-top-card__company-name",
-    "[class*='employer']"
+    "[class*='employer']",
+    "span[class*='company']"
   ],
   description: [
     "[data-testid*='job-description']",
@@ -226,6 +229,36 @@ const parseCompanyFromText = (text) => {
   return "";
 };
 
+const cleanCompanyName = (value) => {
+  let v = sanitizeText(String(value || ""), 200);
+  if (!v) return "";
+
+  const lower = v.toLowerCase();
+
+  // Often extracted from LinkedIn/boards as employee count or other metadata.
+  if (/(\bemployees?\b|\bfollowers?\b)/.test(lower)) return "";
+
+  const cutMarkers = [
+    " apply now",
+    " easy apply",
+    " resume",
+    " your current resume",
+    " see application",
+    " promoted",
+  ];
+
+  for (const marker of cutMarkers) {
+    const idx = lower.indexOf(marker);
+    if (idx > 0) {
+      v = v.slice(0, idx).trim();
+      break;
+    }
+  }
+
+  v = v.split(" · ")[0].split(" | ")[0].trim();
+  return sanitizeText(v, 120);
+};
+
 const normalizeRequirementLine = (line) =>
   sanitizeText(line, 260)
     .replace(/^[-•\d.)\s]+/, "")
@@ -251,7 +284,7 @@ const extractJobDetails = () => {
     sanitizeText(document.body?.innerText || "", 20000);
 
   const description = cleanJobDescription(rawDescription);
-  const company = extractedCompany || parseCompanyFromText(rawDescription);
+  const company = cleanCompanyName(extractedCompany) || parseCompanyFromText(rawDescription);
 
   const skills = extractSkills(description);
   const requirements = extractRequirements(description);

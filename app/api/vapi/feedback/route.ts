@@ -3,7 +3,12 @@ import { vapiCallDataService } from "@/services/vapi/call-data.service";
 import { callLogService } from "@/services/firebase/call-log.service";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || "");
+const GOOGLE_AI_KEY =
+  process.env.GOOGLE_AI_API_KEY ||
+  process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
+  "";
+
+const genAI = GOOGLE_AI_KEY ? new GoogleGenerativeAI(GOOGLE_AI_KEY) : null;
 const FEEDBACK_MODEL_CANDIDATES = [
   process.env.GOOGLE_AI_FEEDBACK_MODEL || "gemini-2.0-flash-lite",
   "gemini-1.5-flash",
@@ -100,6 +105,10 @@ function calculateResponseTime(messages: any[]): number {
 async function generateFeedbackFromTranscript(transcript: string, callData: any): Promise<FeedbackAnalysis> {
   if (!transcript || transcript.trim().length === 0) {
     throw new Error("No conversation transcript available for analysis");
+  }
+
+  if (!genAI) {
+    throw new Error("Google AI API key not configured");
   }
 
   const prompt = `
