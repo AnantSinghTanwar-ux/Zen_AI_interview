@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     const { message, context, previousMessages, callId } = await request.json();
 
     // Get Vapi private API key
-    const apiKey = process.env.VAPI_PRIVATE_API_KEY;
+    const apiKey = "71617d6d-e8fe-4558-9980-513a135d0527";
     if (!apiKey) {
       return NextResponse.json(
         { error: "Vapi API key not configured" },
