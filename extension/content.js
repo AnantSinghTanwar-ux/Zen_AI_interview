@@ -345,6 +345,12 @@ const isLikelyJobPage = () => {
   }
 
   const url = window.location.href.toLowerCase();
+  
+  // Explicitly support LinkedIn job pages which load dynamically
+  if (url.includes("linkedin.com/jobs/") && (url.includes("currentjobid=") || url.includes("/view/"))) {
+    return true;
+  }
+
   const urlSignal = /(\/jobs?\/|jobid|job-description|careers?|position|vacancy|opening|myworkdayjobs|greenhouse|lever\.co)/i.test(url);
 
   const jsonLdSignal = Boolean(extractJsonLdJobPosting());
