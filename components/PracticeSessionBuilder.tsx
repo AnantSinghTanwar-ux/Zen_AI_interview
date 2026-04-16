@@ -41,8 +41,8 @@ export default function PracticeSessionBuilder({
     "Core CS Fundamentals",
     "Problem Solving",
   ]);
-  // Auto-start when coming from Job Prep with a pre-built context
-  const [started, setStarted] = useState(autoStart === true && !!initialPracticeContextJson);
+  // Auto-start if coming from Job Prep, OR if triggered via LinkedIn extension (jobContextJson present)
+  const [started, setStarted] = useState((autoStart === true && !!initialPracticeContextJson) || !!jobContextJson);
 
   const profile = useMemo(
     () => getPracticeCompanyProfile(selectedCompany),
