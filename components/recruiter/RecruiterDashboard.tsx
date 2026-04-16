@@ -300,6 +300,7 @@ export default function RecruiterDashboard() {
   }
 
   return (
+    <>
     <div className="flex flex-col md:flex-row gap-8">
       {/* Sidebar Dock */}
       <div className="hidden md:flex flex-col items-center py-6 gap-6 w-20 shrink-0 bg-[#0A0A0A]/40 border border-white/[0.04] backdrop-blur-3xl rounded-3xl sticky top-24 h-fit z-10 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
@@ -676,6 +677,8 @@ export default function RecruiterDashboard() {
           </div>
         </div>
       )}
+    </div>
+    </div>
 
       {/* ========== DETAIL PANEL ========== */}
       {detailApp && (
@@ -758,6 +761,6 @@ export default function RecruiterDashboard() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
