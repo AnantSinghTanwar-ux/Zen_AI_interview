@@ -1,4 +1,4 @@
-const APP_BASE_URL = "https://zen-ai-wvo2-git-main-anantsinghtanwar-uxs-projects.vercel.app";
+const APP_BASE_URL = "https://zen-ai-zeta.vercel.app";
 
 const LOGIN_URL = `${APP_BASE_URL}/sign-in`;
 const ANALYZE_URL = `${APP_BASE_URL}/analyze`;
