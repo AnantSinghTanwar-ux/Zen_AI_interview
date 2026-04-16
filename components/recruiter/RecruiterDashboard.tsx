@@ -3,449 +3,670 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import {
-  Briefcase, Users, CheckCircle2, XCircle, BarChart3,
-  Plus, Upload, Send, Download, ChevronRight, Loader2,
-  Building2, TrendingUp, Clock, Filter,
+  BarChart3, Users, CheckCircle2, Clock, TrendingUp,
+  Upload, Send, Trophy, Loader2, Building2, Globe,
+  Filter, ChevronDown, ThumbsUp, ThumbsDown, Mail,
+  Award, ExternalLink, Search, ArrowUpDown, Eye
 } from "lucide-react";
-import { RecruitmentJob, Applicant, ScreeningResult, RecruiterDashboardStats } from "@/types/recruiter";
-import ApplicantCard from "./ApplicantCard";
-import ApplicantUploader from "./ApplicantUploader";
-import JobForm from "./JobForm";
+import type { ExternalApplication, ApplicationScore, LeaderboardEntry } from "@/types/external-application";
 
-type ViewMode = "dashboard" | "create-job" | "import" | "pipeline";
+type Tab = "overview" | "applications" | "leaderboard" | "import";
 
 export default function RecruiterDashboard() {
-  const [view, setView] = useState<ViewMode>("dashboard");
-  const [jobs, setJobs] = useState<RecruitmentJob[]>([]);
-  const [selectedJobId, setSelectedJobId] = useState("");
-  const [applicants, setApplicants] = useState<(Applicant & { results?: ScreeningResult })[]>([]);
+  const [tab, setTab] = useState<Tab>("overview");
   const [stats, setStats] = useState<any>(null);
+  const [applications, setApplications] = useState<(ExternalApplication & { score?: ApplicationScore | null })[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [filterOptions, setFilterOptions] = useState<{ roleCategories: string[]; companies: string[]; sources: string[] }>({ roleCategories: [], companies: [], sources: [] });
   const [loading, setLoading] = useState(true);
-  const [loadingApplicants, setLoadingApplicants] = useState(false);
-  const [assigning, setAssigning] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const fetchJobs = useCallback(async () => {
-    try {
-      const res = await fetch("/api/v2/recruiter/jobs");
-      if (res.ok) {
-        const data = await res.json();
-        setJobs(data);
-      }
-    } catch { /* ignore */ }
-  }, []);
+  // Filters
+  const [roleFilter, setRoleFilter] = useState("");
+  const [companyFilter, setCompanyFilter] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [assigning, setAssigning] = useState(false);
+
+  // Import
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<any[]>([]);
+  const [importing, setImporting] = useState(false);
+
+  // Detail
+  const [detailApp, setDetailApp] = useState<(ExternalApplication & { score?: ApplicationScore | null }) | null>(null);
 
   const fetchStats = useCallback(async () => {
     try {
       const res = await fetch("/api/v2/recruiter/dashboard");
       if (res.ok) {
-        setStats(await res.json());
+        const data = await res.json();
+        setStats(data);
+        if (data.filterOptions) setFilterOptions(data.filterOptions);
       }
     } catch { /* ignore */ }
   }, []);
 
-  const fetchApplicants = useCallback(async (jobId: string) => {
-    setLoadingApplicants(true);
+  const fetchApplications = useCallback(async () => {
     try {
-      const url = statusFilter && statusFilter !== "all"
-        ? `/api/v2/recruiter/applicants?jobId=${jobId}&status=${statusFilter}`
-        : `/api/v2/recruiter/applicants?jobId=${jobId}`;
-      const res = await fetch(url);
+      const params = new URLSearchParams();
+      if (roleFilter) params.set("roleCategory", roleFilter);
+      if (companyFilter) params.set("companyName", companyFilter);
+      if (sourceFilter) params.set("sourcePlatform", sourceFilter);
+      if (statusFilter) params.set("status", statusFilter);
+      params.set("includeFilters", "true");
+
+      const res = await fetch(`/api/v2/recruiter/applications?${params}`);
       if (res.ok) {
-        setApplicants(await res.json());
+        const data = await res.json();
+        setApplications(data.applications || []);
+        if (data.filterOptions) setFilterOptions(data.filterOptions);
       }
-    } catch { /* ignore */ } finally {
-      setLoadingApplicants(false);
-    }
-  }, [statusFilter]);
+    } catch { /* ignore */ }
+  }, [roleFilter, companyFilter, sourceFilter, statusFilter]);
 
-  useEffect(() => {
-    Promise.all([fetchJobs(), fetchStats()]).finally(() => setLoading(false));
-  }, [fetchJobs, fetchStats]);
-
-  useEffect(() => {
-    if (selectedJobId) fetchApplicants(selectedJobId);
-  }, [selectedJobId, fetchApplicants]);
-
-  const handleJobCreated = () => {
-    setView("dashboard");
-    fetchJobs();
-    fetchStats();
-  };
-
-  const handleImportSuccess = () => {
-    setView("pipeline");
-    if (selectedJobId) fetchApplicants(selectedJobId);
-    fetchStats();
-  };
-
-  const handleStatusChange = async (applicantId: string, status: string) => {
+  const fetchLeaderboard = useCallback(async () => {
     try {
-      const res = await fetch("/api/v2/recruiter/applicants", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ applicantId, status }),
-      });
+      const params = new URLSearchParams();
+      if (roleFilter) params.set("roleCategory", roleFilter);
+      if (companyFilter) params.set("companyName", companyFilter);
+      if (sourceFilter) params.set("sourcePlatform", sourceFilter);
 
+      const res = await fetch(`/api/v2/recruiter/leaderboard?${params}`);
       if (res.ok) {
-        toast.success(`Applicant ${status === "shortlisted" ? "shortlisted" : "rejected"}`);
-        if (selectedJobId) fetchApplicants(selectedJobId);
+        const data = await res.json();
+        setLeaderboard(data.leaderboard || []);
+      }
+    } catch { /* ignore */ }
+  }, [roleFilter, companyFilter, sourceFilter]);
+
+  useEffect(() => {
+    Promise.all([fetchStats(), fetchApplications()]).finally(() => setLoading(false));
+  }, [fetchStats, fetchApplications]);
+
+  useEffect(() => { if (tab === "applications") fetchApplications(); }, [tab, fetchApplications]);
+  useEffect(() => { if (tab === "leaderboard") fetchLeaderboard(); }, [tab, fetchLeaderboard]);
+
+  // Import handlers
+  const handleFileSelect = async (file: File) => {
+    setImportFile(file);
+    const text = await file.text();
+    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+    if (lines.length < 2) { toast.error("Invalid CSV"); return; }
+    const header = lines[0].split(",").map((h) => h.trim());
+    const preview = lines.slice(1, 6).map((line) => {
+      const cols = line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+      const obj: Record<string, string> = {};
+      header.forEach((h, i) => { obj[h] = cols[i] || ""; });
+      return obj;
+    });
+    setImportPreview(preview);
+  };
+
+  const handleImport = async () => {
+    if (!importFile) return;
+    setImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", importFile);
+      const res = await fetch("/api/v2/recruiter/applications/import", { method: "POST", body: formData });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Imported ${data.imported} applications (${data.skipped} skipped)`);
+        setImportFile(null);
+        setImportPreview([]);
         fetchStats();
+        fetchApplications();
+        setTab("applications");
       } else {
-        toast.error("Failed to update status");
+        toast.error(data.error || "Import failed");
       }
-    } catch {
-      toast.error("Network error");
-    }
+    } catch { toast.error("Import failed"); } finally { setImporting(false); }
   };
 
-  const handleAssignAll = async () => {
-    const pending = applicants.filter((a) => a.status === "pending");
-    if (pending.length === 0) {
-      toast.error("No pending applicants to assign");
-      return;
-    }
+  // Selection & actions
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
 
+  const selectAllPending = () => {
+    const pending = applications.filter((a) => a.interviewStatus === "pending");
+    setSelectedIds(new Set(pending.map((a) => a.id)));
+  };
+
+  const handleAssign = async () => {
+    if (selectedIds.size === 0) return;
     setAssigning(true);
     try {
-      const res = await fetch("/api/v2/recruiter/screening/assign", {
+      const res = await fetch("/api/v2/recruiter/interview/assign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jobId: selectedJobId,
-          applicantIds: pending.map((a) => a.id),
-        }),
+        body: JSON.stringify({ applicationIds: Array.from(selectedIds) }),
       });
-
-      const result = await res.json();
-
+      const data = await res.json();
       if (res.ok) {
-        toast.success(
-          `Assigned ${result.assigned} interview${result.assigned !== 1 ? "s" : ""}${
-            result.failed ? ` (${result.failed} failed)` : ""
-          }`
-        );
-        fetchApplicants(selectedJobId);
+        toast.success(`Assigned ${data.assigned} interviews${data.failed ? ` (${data.failed} failed)` : ""}`);
+        setSelectedIds(new Set());
+        fetchApplications();
         fetchStats();
       } else {
-        toast.error(result.error || "Failed to assign interviews");
+        toast.error(data.error || "Assignment failed");
       }
-    } catch {
-      toast.error("Network error");
-    } finally {
-      setAssigning(false);
-    }
+    } catch { toast.error("Assignment failed"); } finally { setAssigning(false); }
   };
 
-  const handleExport = async () => {
-    if (!selectedJobId) return;
-
+  const handleStatusChange = async (appId: string, status: string) => {
     try {
-      const res = await fetch("/api/v2/recruiter/export", {
-        method: "POST",
+      const res = await fetch("/api/v2/recruiter/applications/status", {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId: selectedJobId }),
+        body: JSON.stringify({ applicationId: appId, status }),
       });
-
       if (res.ok) {
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `shortlisted_${Date.now()}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-        toast.success("Export downloaded!");
-      } else {
-        const err = await res.json();
-        toast.error(err.error || "Nothing to export");
+        toast.success(`Updated to ${status}`);
+        fetchApplications();
+        fetchStats();
       }
-    } catch {
-      toast.error("Export failed");
-    }
+    } catch { toast.error("Update failed"); }
   };
 
-  // Group applicants by status for pipeline view
-  const pipeline = {
-    pending: applicants.filter((a) => a.status === "pending"),
-    invited: applicants.filter((a) => a.status === "invited"),
-    completed: applicants.filter((a) => a.status === "completed"),
-    shortlisted: applicants.filter((a) => a.status === "shortlisted"),
-    rejected: applicants.filter((a) => a.status === "rejected"),
+  // Filter applications by search query
+  const filteredApps = searchQuery
+    ? applications.filter((a) =>
+        a.candidateName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        a.candidateEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        a.roleTitle.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : applications;
+
+  const scoreColor = (s: number) => s >= 80 ? "text-emerald-400" : s >= 60 ? "text-yellow-400" : "text-red-400";
+
+  const statusBadge = (status: string) => {
+    const colors: Record<string, string> = {
+      pending: "bg-yellow-500/15 text-yellow-400",
+      invited: "bg-blue-500/15 text-blue-400",
+      in_progress: "bg-orange-500/15 text-orange-400",
+      completed: "bg-cyan-500/15 text-cyan-400",
+      shortlisted: "bg-emerald-500/15 text-emerald-400",
+      rejected: "bg-red-500/15 text-red-400",
+      available: "bg-emerald-500/15 text-emerald-400",
+    };
+    return colors[status] || colors.pending;
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
-    );
+    return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="w-8 h-8 text-primary animate-spin" /></div>;
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            Recruiter Dashboard
-          </h1>
-          {stats?.recruiter && (
-            <div className="flex items-center gap-2 mt-1.5 text-sm text-muted-foreground">
-              <Building2 className="w-4 h-4" />
-              {stats.recruiter.companyName} · {stats.recruiter.industry}
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setView("create-job")}
-            className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white text-sm font-medium px-5 py-2.5 rounded-full transition-all"
-          >
-            <Plus className="w-4 h-4" /> New Job
-          </button>
+          <h1 className="text-3xl font-bold text-foreground">Recruiter Analytics</h1>
+          <p className="text-sm text-muted-foreground mt-1">External application pipeline & candidate scoring</p>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: "Total Jobs", value: stats.totalJobs, icon: Briefcase, color: "text-primary" },
-            { label: "Total Applicants", value: stats.totalApplicants, icon: Users, color: "text-blue-400" },
-            { label: "Shortlisted", value: stats.byStatus?.shortlisted || 0, icon: CheckCircle2, color: "text-emerald-400" },
-            { label: "Avg Score", value: stats.averageScore || "—", icon: TrendingUp, color: "text-yellow-400" },
-          ].map(({ label, value, icon: Icon, color }) => (
-            <div
-              key={label}
-              className="rounded-xl border border-white/10 bg-card/60 backdrop-blur-sm p-5 flex items-center gap-4"
-            >
-              <div className={`w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center ${color}`}>
-                <Icon className="w-5 h-5" />
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-white/[0.03] rounded-xl border border-white/10">
+        {([
+          { key: "overview", label: "Dashboard", icon: BarChart3 },
+          { key: "applications", label: "Applications", icon: Users },
+          { key: "leaderboard", label: "Leaderboard", icon: Trophy },
+          { key: "import", label: "Import", icon: Upload },
+        ] as const).map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex-1 justify-center ${
+              tab === key
+                ? "bg-primary/15 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
+            }`}
+          >
+            <Icon className="w-4 h-4" />
+            <span className="hidden sm:inline">{label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ========== OVERVIEW TAB ========== */}
+      {tab === "overview" && stats && (
+        <div className="space-y-6">
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: "Total Applications", value: stats.totalApplications, icon: Users, color: "text-blue-400" },
+              { label: "Interviews Done", value: stats.completedInterviews, icon: CheckCircle2, color: "text-emerald-400" },
+              { label: "Pending", value: stats.pendingInterviews, icon: Clock, color: "text-yellow-400" },
+              { label: "Avg Score", value: stats.averageScore || "—", icon: TrendingUp, color: "text-primary" },
+            ].map(({ label, value, icon: Icon, color }) => (
+              <div key={label} className="rounded-xl border border-white/10 bg-card/60 backdrop-blur-sm p-5 flex items-center gap-4">
+                <div className={`w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center ${color}`}>
+                  <Icon className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{value}</p>
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{value}</p>
-                <p className="text-xs text-muted-foreground">{label}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
 
-      {/* Create Job View */}
-      {view === "create-job" && (
-        <div className="rounded-2xl border border-white/10 bg-card/60 backdrop-blur-sm p-8">
-          <h2 className="text-xl font-bold text-foreground mb-6 flex items-center gap-2">
-            <Briefcase className="w-5 h-5 text-primary" />
-            Create New Job Posting
-          </h2>
-          <JobForm onSuccess={handleJobCreated} onCancel={() => setView("dashboard")} />
-        </div>
-      )}
-
-      {/* Import View */}
-      {view === "import" && selectedJobId && (
-        <div className="rounded-2xl border border-white/10 bg-card/60 backdrop-blur-sm p-8">
-          <h2 className="text-xl font-bold text-foreground mb-6 flex items-center gap-2">
-            <Upload className="w-5 h-5 text-primary" />
-            Import Applicants
-          </h2>
-          <ApplicantUploader jobId={selectedJobId} onSuccess={handleImportSuccess} />
-        </div>
-      )}
-
-      {/* Jobs List & Pipeline */}
-      {(view === "dashboard" || view === "pipeline") && (
-        <>
-          {/* Job Selector */}
-          {jobs.length > 0 && (
-            <div className="rounded-2xl border border-white/10 bg-card/60 backdrop-blur-sm p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-foreground">Your Jobs</h2>
-                <div className="flex items-center gap-2">
-                  {selectedJobId && (
-                    <>
-                      <button
-                        onClick={() => setView("import")}
-                        className="flex items-center gap-1.5 text-xs font-medium text-foreground/80 hover:text-foreground bg-white/[0.04] border border-white/10 px-3 py-1.5 rounded-lg transition-all hover:border-white/20"
-                      >
-                        <Upload className="w-3.5 h-3.5" /> Import CSV
-                      </button>
-                      <button
-                        onClick={handleAssignAll}
-                        disabled={assigning || pipeline.pending.length === 0}
-                        className="flex items-center gap-1.5 text-xs font-medium text-white bg-primary hover:bg-primary/90 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
-                      >
-                        {assigning ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Send className="w-3.5 h-3.5" />
-                        )}
-                        Assign Interviews ({pipeline.pending.length})
-                      </button>
-                      <button
-                        onClick={handleExport}
-                        className="flex items-center gap-1.5 text-xs font-medium text-foreground/80 hover:text-foreground bg-white/[0.04] border border-white/10 px-3 py-1.5 rounded-lg transition-all hover:border-white/20"
-                      >
-                        <Download className="w-3.5 h-3.5" /> Export
-                      </button>
-                    </>
+          {/* Breakdown cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { title: "By Role", data: stats.byRole, icon: Award },
+              { title: "By Company", data: stats.byCompany, icon: Building2 },
+              { title: "By Source", data: stats.bySource, icon: Globe },
+            ].map(({ title, data, icon: Icon }) => (
+              <div key={title} className="rounded-xl border border-white/10 bg-card/60 backdrop-blur-sm p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Icon className="w-4 h-4 text-primary" />
+                  <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+                </div>
+                <div className="space-y-2">
+                  {Object.entries(data || {}).slice(0, 5).map(([key, count]) => (
+                    <div key={key} className="flex justify-between text-xs">
+                      <span className="text-muted-foreground capitalize">{key}</span>
+                      <span className="text-foreground font-medium">{count as number}</span>
+                    </div>
+                  ))}
+                  {(!data || Object.keys(data).length === 0) && (
+                    <p className="text-xs text-muted-foreground">No data yet</p>
                   )}
                 </div>
               </div>
+            ))}
+          </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {jobs.map((job) => (
-                  <button
-                    key={job.id}
-                    onClick={() => {
-                      setSelectedJobId(job.id);
-                      setView("pipeline");
-                    }}
-                    className={`text-left p-4 rounded-xl border transition-all duration-200 ${
-                      selectedJobId === job.id
-                        ? "border-primary/40 bg-primary/[0.06]"
-                        : "border-white/10 bg-white/[0.02] hover:border-white/20"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-foreground truncate">
-                        {job.title}
-                      </h3>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          {/* Top candidates */}
+          {stats.topCandidates?.length > 0 && (
+            <div className="rounded-xl border border-white/10 bg-card/60 backdrop-blur-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Trophy className="w-4 h-4 text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">Top Candidates</h3>
+              </div>
+              <div className="space-y-2">
+                {stats.topCandidates.map((c: LeaderboardEntry, i: number) => (
+                  <div key={c.applicationId} className="flex items-center gap-3 p-2 rounded-lg bg-white/[0.02]">
+                    <span className="text-lg font-bold text-primary w-6 text-center">#{i + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{c.candidateName}</p>
+                      <p className="text-xs text-muted-foreground">{c.roleTitle} · {c.companyName}</p>
                     </div>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3 h-3" />
-                        {job.applicantIds?.length || 0} applicants
-                      </span>
-                      <span className={`px-2 py-0.5 rounded-full ${
-                        job.status === "active" ? "bg-emerald-500/15 text-emerald-400" :
-                        job.status === "closed" ? "bg-red-500/15 text-red-400" :
-                        "bg-yellow-500/15 text-yellow-400"
-                      }`}>
-                        {job.status}
-                      </span>
-                      <span className="capitalize">{job.experienceLevel}</span>
-                    </div>
-                    {job.requiredSkills?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {job.requiredSkills.slice(0, 4).map((s) => (
-                          <span key={s} className="text-[10px] bg-white/[0.04] text-muted-foreground px-1.5 py-0.5 rounded">
-                            {s}
-                          </span>
-                        ))}
-                        {job.requiredSkills.length > 4 && (
-                          <span className="text-[10px] text-muted-foreground">
-                            +{job.requiredSkills.length - 4}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </button>
+                    <span className={`text-lg font-bold ${scoreColor(c.overallScore)}`}>{c.overallScore}</span>
+                  </div>
                 ))}
               </div>
             </div>
           )}
+        </div>
+      )}
 
-          {/* Pipeline View */}
-          {view === "pipeline" && selectedJobId && (
-            <div className="space-y-6">
-              {/* Pipeline Header with filter */}
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-foreground">
-                  Applicant Pipeline
-                </h2>
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-muted-foreground" />
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="bg-white/[0.04] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary/50 appearance-none"
+      {/* ========== APPLICATIONS TAB ========== */}
+      {tab === "applications" && (
+        <div className="space-y-4">
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3 items-center">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text" placeholder="Search candidates..."
+                value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 bg-white/[0.04] border border-white/10 rounded-lg text-sm text-foreground focus:outline-none focus:border-primary/50"
+              />
+            </div>
+            <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-foreground appearance-none">
+              <option value="">All Roles</option>
+              {filterOptions.roleCategories.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+            <select value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)} className="bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-foreground appearance-none">
+              <option value="">All Companies</option>
+              {filterOptions.companies.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)} className="bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-foreground appearance-none">
+              <option value="">All Sources</option>
+              {filterOptions.sources.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-foreground appearance-none">
+              <option value="">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="invited">Invited</option>
+              <option value="completed">Completed</option>
+              <option value="shortlisted">Shortlisted</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+
+          {/* Actions bar */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <button onClick={selectAllPending} className="text-xs text-primary hover:underline">Select all pending</button>
+              {selectedIds.size > 0 && (
+                <span className="text-xs text-muted-foreground">{selectedIds.size} selected</span>
+              )}
+            </div>
+            {selectedIds.size > 0 && (
+              <button
+                onClick={handleAssign}
+                disabled={assigning}
+                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white text-xs font-medium px-4 py-2 rounded-full transition-all disabled:opacity-50"
+              >
+                {assigning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                Assign Interviews ({selectedIds.size})
+              </button>
+            )}
+          </div>
+
+          {/* Table */}
+          <div className="rounded-xl border border-white/10 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10 bg-white/[0.02]">
+                    <th className="p-3 text-left w-10"><input type="checkbox" className="accent-primary" /></th>
+                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Candidate</th>
+                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Role</th>
+                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Company</th>
+                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Source</th>
+                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Status</th>
+                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Score</th>
+                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {filteredApps.map((app) => (
+                    <tr key={app.id} className="hover:bg-white/[0.02] transition-colors">
+                      <td className="p-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(app.id)}
+                          onChange={() => toggleSelect(app.id)}
+                          className="accent-primary"
+                        />
+                      </td>
+                      <td className="p-3">
+                        <div>
+                          <p className="text-foreground font-medium">{app.candidateName}</p>
+                          <p className="text-xs text-muted-foreground">{app.candidateEmail}</p>
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <p className="text-foreground text-xs">{app.roleTitle}</p>
+                        <span className="text-[10px] text-primary capitalize">{app.roleCategory}</span>
+                      </td>
+                      <td className="p-3 text-xs text-foreground">{app.companyName}</td>
+                      <td className="p-3">
+                        <span className="text-xs capitalize text-muted-foreground">{app.sourcePlatform}</span>
+                      </td>
+                      <td className="p-3">
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusBadge(app.status)}`}>
+                          {app.status}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        {app.score ? (
+                          <span className={`text-sm font-bold ${scoreColor(app.score.overallScore)}`}>
+                            {app.score.overallScore}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => setDetailApp(app)} className="p-1 text-muted-foreground hover:text-foreground"><Eye className="w-3.5 h-3.5" /></button>
+                          {app.status !== "shortlisted" && (
+                            <button onClick={() => handleStatusChange(app.id, "shortlisted")} className="p-1 text-emerald-400 hover:text-emerald-300"><ThumbsUp className="w-3.5 h-3.5" /></button>
+                          )}
+                          {app.status !== "rejected" && (
+                            <button onClick={() => handleStatusChange(app.id, "rejected")} className="p-1 text-red-400 hover:text-red-300"><ThumbsDown className="w-3.5 h-3.5" /></button>
+                          )}
+                          {app.inviteLink && (
+                            <a href={app.inviteLink} target="_blank" rel="noopener noreferrer" className="p-1 text-primary hover:text-primary/80"><ExternalLink className="w-3.5 h-3.5" /></a>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {filteredApps.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                <Users className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                <p>No applications found. Import some first!</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========== LEADERBOARD TAB ========== */}
+      {tab === "leaderboard" && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-3">
+            <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-foreground appearance-none">
+              <option value="">All Roles</option>
+              {filterOptions.roleCategories.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+            <select value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)} className="bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-foreground appearance-none">
+              <option value="">All Companies</option>
+              {filterOptions.companies.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          <div className="rounded-xl border border-white/10 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/10 bg-white/[0.02]">
+                  <th className="p-3 text-left text-xs font-medium text-muted-foreground w-14">Rank</th>
+                  <th className="p-3 text-left text-xs font-medium text-muted-foreground">Candidate</th>
+                  <th className="p-3 text-left text-xs font-medium text-muted-foreground">Role</th>
+                  <th className="p-3 text-left text-xs font-medium text-muted-foreground">Company</th>
+                  <th className="p-3 text-left text-xs font-medium text-muted-foreground">Source</th>
+                  <th className="p-3 text-center text-xs font-medium text-muted-foreground">Overall</th>
+                  <th className="p-3 text-center text-xs font-medium text-muted-foreground">Tech</th>
+                  <th className="p-3 text-center text-xs font-medium text-muted-foreground">Comm</th>
+                  <th className="p-3 text-center text-xs font-medium text-muted-foreground">Problem</th>
+                  <th className="p-3 text-left text-xs font-medium text-muted-foreground">Recommendation</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {leaderboard.map((entry) => (
+                  <tr key={entry.applicationId} className="hover:bg-white/[0.02]">
+                    <td className="p-3">
+                      <span className={`text-lg font-bold ${entry.rank <= 3 ? "text-primary" : "text-muted-foreground"}`}>
+                        #{entry.rank}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <p className="text-foreground font-medium">{entry.candidateName}</p>
+                      <p className="text-xs text-muted-foreground">{entry.candidateEmail}</p>
+                    </td>
+                    <td className="p-3 text-xs text-foreground">{entry.roleTitle}</td>
+                    <td className="p-3 text-xs text-foreground">{entry.companyName}</td>
+                    <td className="p-3 text-xs text-muted-foreground capitalize">{entry.sourcePlatform}</td>
+                    <td className="p-3 text-center"><span className={`text-sm font-bold ${scoreColor(entry.overallScore)}`}>{entry.overallScore}</span></td>
+                    <td className="p-3 text-center text-xs text-foreground">{entry.technicalScore}</td>
+                    <td className="p-3 text-center text-xs text-foreground">{entry.communicationScore}</td>
+                    <td className="p-3 text-center text-xs text-foreground">{entry.problemSolvingScore}</td>
+                    <td className="p-3">
+                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full capitalize ${
+                        entry.recommendation === "strong_hire" || entry.recommendation === "hire"
+                          ? "bg-emerald-500/15 text-emerald-400"
+                          : entry.recommendation === "maybe"
+                          ? "bg-yellow-500/15 text-yellow-400"
+                          : "bg-red-500/15 text-red-400"
+                      }`}>
+                        {entry.recommendation.replace("_", " ")}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {leaderboard.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                <Trophy className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                <p>No scored candidates yet. Assign & complete interviews first.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========== IMPORT TAB ========== */}
+      {tab === "import" && (
+        <div className="space-y-6">
+          <div className="rounded-xl border border-white/10 bg-card/60 backdrop-blur-sm p-8">
+            <h2 className="text-lg font-bold text-foreground mb-2">Import External Applications</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Upload a CSV with columns: <code className="text-primary">name, email, company, role, source, category, resumeUrl, externalJobId, externalJobUrl</code>
+            </p>
+
+            <div
+              className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center hover:border-primary/40 transition-colors cursor-pointer"
+              onClick={() => document.getElementById("ext-import-file")?.click()}
+            >
+              <input
+                id="ext-import-file" type="file" accept=".csv,.json"
+                onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
+                className="hidden"
+              />
+              <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+              <p className="text-foreground font-medium">{importFile ? importFile.name : "Drop CSV or click to browse"}</p>
+              <p className="text-xs text-muted-foreground mt-1">Supports CSV and JSON formats</p>
+            </div>
+
+            {importPreview.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-foreground mb-3">Preview (first 5 rows):</h3>
+                <div className="overflow-x-auto rounded-lg border border-white/10">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-white/[0.03]">
+                        {Object.keys(importPreview[0]).map((key) => (
+                          <th key={key} className="p-2 text-left text-muted-foreground">{key}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {importPreview.map((row, i) => (
+                        <tr key={i}>
+                          {Object.values(row).map((val, j) => (
+                            <td key={j} className="p-2 text-foreground truncate max-w-[150px]">{val as string}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex justify-end mt-4">
+                  <button
+                    onClick={handleImport}
+                    disabled={importing}
+                    className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white text-sm font-medium px-6 py-2.5 rounded-full transition-all disabled:opacity-50"
                   >
-                    <option value="all">All Statuses</option>
-                    <option value="pending">Pending</option>
-                    <option value="invited">Invited</option>
-                    <option value="completed">Completed</option>
-                    <option value="shortlisted">Shortlisted</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
+                    {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                    Import All
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========== DETAIL PANEL ========== */}
+      {detailApp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setDetailApp(null)}>
+          <div className="bg-[#1a1a1f] border border-white/10 rounded-2xl w-full max-w-lg mx-4 p-6 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-foreground">Application Details</h2>
+              <button onClick={() => setDetailApp(null)} className="text-muted-foreground hover:text-foreground">✕</button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center text-xl font-bold text-primary">
+                  {detailApp.candidateName.charAt(0)}
+                </div>
+                <div>
+                  <p className="text-foreground font-semibold">{detailApp.candidateName}</p>
+                  <p className="text-xs text-muted-foreground">{detailApp.candidateEmail}</p>
                 </div>
               </div>
 
-              {loadingApplicants ? (
-                <div className="flex justify-center py-12">
-                  <Loader2 className="w-6 h-6 text-primary animate-spin" />
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="p-3 rounded-lg bg-white/[0.03]">
+                  <p className="text-muted-foreground">Role</p>
+                  <p className="text-foreground font-medium">{detailApp.roleTitle}</p>
+                  <p className="text-primary capitalize">{detailApp.roleCategory}</p>
                 </div>
-              ) : applicants.length === 0 ? (
-                <div className="text-center py-16 rounded-2xl border border-white/10 bg-card/60">
-                  <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-foreground font-medium mb-1">No applicants yet</p>
-                  <p className="text-sm text-muted-foreground mb-4">Import applicants via CSV to get started</p>
-                  <button
-                    onClick={() => setView("import")}
-                    className="bg-primary hover:bg-primary/90 text-white text-sm font-medium px-5 py-2 rounded-full transition-all"
-                  >
-                    Import Applicants
-                  </button>
+                <div className="p-3 rounded-lg bg-white/[0.03]">
+                  <p className="text-muted-foreground">Company</p>
+                  <p className="text-foreground font-medium">{detailApp.companyName}</p>
                 </div>
-              ) : (
-                /* Kanban columns */
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {(["pending", "invited", "completed", "shortlisted", "rejected"] as const).map((status) => {
-                    const items = pipeline[status];
-                    const colors: Record<string, string> = {
-                      pending: "border-yellow-500/30",
-                      invited: "border-blue-500/30",
-                      completed: "border-cyan-500/30",
-                      shortlisted: "border-emerald-500/30",
-                      rejected: "border-red-500/30",
-                    };
-                    return (
-                      <div key={status}>
-                        <div className={`flex items-center justify-between mb-3 pb-2 border-b-2 ${colors[status]}`}>
-                          <span className="text-sm font-medium text-foreground capitalize">
-                            {status.replace("_", " ")}
-                          </span>
-                          <span className="text-xs text-muted-foreground bg-white/[0.04] px-2 py-0.5 rounded-full">
-                            {items.length}
-                          </span>
-                        </div>
-                        <div className="space-y-3">
-                          {items.map((applicant) => (
-                            <ApplicantCard
-                              key={applicant.id}
-                              applicant={applicant}
-                              onStatusChange={handleStatusChange}
-                            />
-                          ))}
-                        </div>
+                <div className="p-3 rounded-lg bg-white/[0.03]">
+                  <p className="text-muted-foreground">Source</p>
+                  <p className="text-foreground font-medium capitalize">{detailApp.sourcePlatform}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-white/[0.03]">
+                  <p className="text-muted-foreground">Status</p>
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusBadge(detailApp.status)}`}>{detailApp.status}</span>
+                </div>
+              </div>
+
+              {detailApp.score && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">Scores</h3>
+                  {[
+                    { label: "Overall", score: detailApp.score.overallScore },
+                    { label: "Technical", score: detailApp.score.technicalScore },
+                    { label: "Communication", score: detailApp.score.communicationScore },
+                    { label: "Problem Solving", score: detailApp.score.problemSolvingScore },
+                  ].map(({ label, score }) => (
+                    <div key={label}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-muted-foreground">{label}</span>
+                        <span className={scoreColor(score)}>{score}</span>
                       </div>
-                    );
-                  })}
+                      <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                        <div className="h-full rounded-full bg-primary" style={{ width: `${score}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                  {detailApp.score.feedbackSummary && (
+                    <div className="p-3 rounded-lg bg-white/[0.03] text-xs text-foreground/80 leading-relaxed">
+                      {detailApp.score.feedbackSummary}
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Empty State — No jobs */}
-          {jobs.length === 0 && view === "dashboard" && (
-            <div className="text-center py-20 rounded-2xl border border-white/10 bg-card/60 backdrop-blur-sm">
-              <Briefcase className="w-14 h-14 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-foreground mb-2">Create your first job</h3>
-              <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-                Post a job, import applicants via CSV, and let ZenAI auto-generate
-                personalized interviews for each candidate.
-              </p>
-              <button
-                onClick={() => setView("create-job")}
-                className="bg-primary hover:bg-primary/90 text-white text-sm font-medium px-6 py-3 rounded-full transition-all"
-              >
-                <Plus className="w-4 h-4 inline mr-2" /> Create Job
-              </button>
+              {detailApp.externalJobUrl && (
+                <a href={detailApp.externalJobUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-primary hover:underline">
+                  <ExternalLink className="w-3.5 h-3.5" /> View original job posting
+                </a>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button onClick={() => { handleStatusChange(detailApp.id, "shortlisted"); setDetailApp(null); }} className="flex-1 bg-emerald-500/15 text-emerald-400 text-sm font-medium py-2 rounded-lg hover:bg-emerald-500/25 transition-colors">Shortlist</button>
+                <button onClick={() => { handleStatusChange(detailApp.id, "rejected"); setDetailApp(null); }} className="flex-1 bg-red-500/15 text-red-400 text-sm font-medium py-2 rounded-lg hover:bg-red-500/25 transition-colors">Reject</button>
+              </div>
             </div>
-          )}
-        </>
+          </div>
+        </div>
       )}
     </div>
   );

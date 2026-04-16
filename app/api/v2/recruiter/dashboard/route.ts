@@ -1,108 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/actions/auth.actions";
-import { recruiterService } from "@/services/recruiter/recruiter.service";
-import { jobService } from "@/services/recruiter/job.service";
-import { applicantService } from "@/services/recruiter/applicant.service";
-import { screeningService } from "@/services/recruiter/screening.service";
-
-async function getOrCreateRecruiter(userId: string) {
-  let recruiter = await recruiterService.getRecruiterByUserId(userId);
-  if (!recruiter) {
-    const id = await recruiterService.createRecruiterProfile({
-      userId,
-      companyName: "My Company",
-      industry: "Technology",
-      role: "recruiter",
-      jobsCreated: 0,
-      applicantsScreened: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-    recruiter = await recruiterService.getRecruiter(id);
-  }
-  return recruiter;
-}
+import { recruiterGuard } from "@/app/api/v2/recruiter/_guard";
+import { getApplications, getDistinctValues } from "@/services/recruiter/external-application.service";
+import { getLeaderboard } from "@/services/recruiter/application-score.service";
 
 export async function GET(request: NextRequest) {
+  const { error } = await recruiterGuard();
+  if (error) return error;
+
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const allApps = await getApplications();
+    const filterOptions = await getDistinctValues();
+    const topCandidates = await getLeaderboard();
 
-    const recruiter = await getOrCreateRecruiter(user.id);
-    if (!recruiter) {
-      return NextResponse.json(
-        { totalJobs: 0, totalApplicants: 0, byStatus: {}, averageScore: 0 },
-        { status: 200 }
-      );
-    }
+    const totalApplications = allApps.length;
+    const completedInterviews = allApps.filter((a) => a.interviewStatus === "completed").length;
+    const pendingInterviews = allApps.filter((a) => a.interviewStatus === "pending").length;
+    const invitedInterviews = allApps.filter((a) => a.interviewStatus === "invited").length;
 
-    // Get all jobs for this recruiter
-    const jobs = await jobService.listJobsByRecruiter(recruiter.id!);
+    // By role
+    const byRole: Record<string, number> = {};
+    const byCompany: Record<string, number> = {};
+    const bySource: Record<string, number> = {};
 
-    let totalApplicants = 0;
-    const byStatus: Record<string, number> = {
-      pending: 0,
-      invited: 0,
-      in_progress: 0,
-      completed: 0,
-      shortlisted: 0,
-      rejected: 0,
-    };
-    let totalScore = 0;
-    let scoredCount = 0;
+    allApps.forEach((a) => {
+      byRole[a.roleCategory] = (byRole[a.roleCategory] || 0) + 1;
+      byCompany[a.companyName] = (byCompany[a.companyName] || 0) + 1;
+      bySource[a.sourcePlatform] = (bySource[a.sourcePlatform] || 0) + 1;
+    });
 
-    // Aggregate stats across all jobs
-    for (const job of jobs) {
-      try {
-        const applicants = await applicantService.getApplicantsByJob(job.id);
-        totalApplicants += applicants.length;
-
-        for (const applicant of applicants) {
-          if (byStatus[applicant.status] !== undefined) {
-            byStatus[applicant.status]++;
-          }
-
-          if (applicant.status === "completed" || applicant.status === "shortlisted") {
-            try {
-              const result = await screeningService.getScreeningResults(applicant.id);
-              if (result) {
-                totalScore += result.overallScore;
-                scoredCount++;
-              }
-            } catch {
-              // Skip if result fetch fails
-            }
-          }
-        }
-      } catch {
-        // Skip if this job's applicants fail to load
-      }
-    }
-
-    const averageScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : 0;
+    // Average score from leaderboard
+    const scoredEntries = topCandidates.filter((c) => c.overallScore > 0);
+    const averageScore =
+      scoredEntries.length > 0
+        ? Math.round(scoredEntries.reduce((s, c) => s + c.overallScore, 0) / scoredEntries.length)
+        : 0;
 
     return NextResponse.json(
       {
-        recruiter: {
-          companyName: recruiter.companyName,
-          industry: recruiter.industry,
-          jobsCreated: recruiter.jobsCreated,
-          applicantsScreened: recruiter.applicantsScreened,
-        },
-        totalJobs: jobs.length,
-        totalApplicants,
-        byStatus,
+        totalApplications,
+        completedInterviews,
+        pendingInterviews,
+        invitedInterviews,
         averageScore,
+        byRole,
+        byCompany,
+        bySource,
+        topCandidates: topCandidates.slice(0, 5),
+        filterOptions,
       },
       { status: 200 }
     );
-  } catch (error) {
-    console.error("Error fetching dashboard:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch dashboard data", details: (error as Error).message },
-      { status: 500 }
-    );
+  } catch (err) {
+    console.error("Dashboard error:", err);
+    return NextResponse.json({ error: "Failed", details: (err as Error).message }, { status: 500 });
   }
 }
