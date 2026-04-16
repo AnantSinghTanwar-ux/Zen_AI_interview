@@ -25,13 +25,17 @@ class JobService {
     const snapshot = await db
       .collection(this.COLLECTION)
       .where("recruiterId", "==", recruiterId)
-      .orderBy("createdAt", "desc")
       .get();
 
-    return snapshot.docs.map((doc) => ({
+    const jobs = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     })) as RecruitmentJob[];
+
+    // Sort in memory to avoid needing a composite Firestore index
+    return jobs.sort((a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }
 
   async updateJob(

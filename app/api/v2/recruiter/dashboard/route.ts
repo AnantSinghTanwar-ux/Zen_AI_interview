@@ -5,6 +5,24 @@ import { jobService } from "@/services/recruiter/job.service";
 import { applicantService } from "@/services/recruiter/applicant.service";
 import { screeningService } from "@/services/recruiter/screening.service";
 
+async function getOrCreateRecruiter(userId: string) {
+  let recruiter = await recruiterService.getRecruiterByUserId(userId);
+  if (!recruiter) {
+    const id = await recruiterService.createRecruiterProfile({
+      userId,
+      companyName: "My Company",
+      industry: "Technology",
+      role: "recruiter",
+      jobsCreated: 0,
+      applicantsScreened: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    recruiter = await recruiterService.getRecruiter(id);
+  }
+  return recruiter;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
@@ -12,11 +30,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const recruiter = await recruiterService.getRecruiterByUserId(user.id);
+    const recruiter = await getOrCreateRecruiter(user.id);
     if (!recruiter) {
       return NextResponse.json(
-        { error: "Recruiter profile not found" },
-        { status: 403 }
+        { totalJobs: 0, totalApplicants: 0, byStatus: {}, averageScore: 0 },
+        { status: 200 }
       );
     }
 
@@ -37,19 +55,29 @@ export async function GET(request: NextRequest) {
 
     // Aggregate stats across all jobs
     for (const job of jobs) {
-      const applicants = await applicantService.getApplicantsByJob(job.id);
-      totalApplicants += applicants.length;
+      try {
+        const applicants = await applicantService.getApplicantsByJob(job.id);
+        totalApplicants += applicants.length;
 
-      for (const applicant of applicants) {
-        byStatus[applicant.status] = (byStatus[applicant.status] || 0) + 1;
+        for (const applicant of applicants) {
+          if (byStatus[applicant.status] !== undefined) {
+            byStatus[applicant.status]++;
+          }
 
-        if (applicant.status === "completed" || applicant.status === "shortlisted") {
-          const result = await screeningService.getScreeningResults(applicant.id);
-          if (result) {
-            totalScore += result.overallScore;
-            scoredCount++;
+          if (applicant.status === "completed" || applicant.status === "shortlisted") {
+            try {
+              const result = await screeningService.getScreeningResults(applicant.id);
+              if (result) {
+                totalScore += result.overallScore;
+                scoredCount++;
+              }
+            } catch {
+              // Skip if result fetch fails
+            }
           }
         }
+      } catch {
+        // Skip if this job's applicants fail to load
       }
     }
 
@@ -73,7 +101,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error fetching dashboard:", error);
     return NextResponse.json(
-      { error: "Failed to fetch dashboard data" },
+      { error: "Failed to fetch dashboard data", details: (error as Error).message },
       { status: 500 }
     );
   }

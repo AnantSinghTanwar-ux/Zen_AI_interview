@@ -3,6 +3,24 @@ import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { recruiterService } from "@/services/recruiter/recruiter.service";
 import { applicantService } from "@/services/recruiter/applicant.service";
 
+async function getOrCreateRecruiter(userId: string) {
+  let recruiter = await recruiterService.getRecruiterByUserId(userId);
+  if (!recruiter) {
+    const id = await recruiterService.createRecruiterProfile({
+      userId,
+      companyName: "My Company",
+      industry: "Technology",
+      role: "recruiter",
+      jobsCreated: 0,
+      applicantsScreened: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    recruiter = await recruiterService.getRecruiter(id);
+  }
+  return recruiter;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
@@ -10,12 +28,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const recruiter = await recruiterService.getRecruiterByUserId(user.id);
+    const recruiter = await getOrCreateRecruiter(user.id);
     if (!recruiter) {
-      return NextResponse.json(
-        { error: "Recruiter profile not found" },
-        { status: 403 }
-      );
+      return NextResponse.json([], { status: 200 });
     }
 
     const { searchParams } = new URL(request.url);
