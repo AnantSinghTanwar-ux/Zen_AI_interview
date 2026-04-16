@@ -1,4 +1,4 @@
-const APP_BASE_URL = "https://zen-ai-zeta.vercel.app";
+const APP_BASE_URL = "https://zen-ai-wvo2-git-main-anantsinghtanwar-uxs-projects.vercel.app";
 const DASHBOARD_URL = `${APP_BASE_URL}/`;
 const STORAGE_KEY = "authToken";
 const EXTENSION_ENABLED_KEY = "extensionEnabled";
