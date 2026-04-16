@@ -4,7 +4,7 @@ export async function POST(request: NextRequest) {
   try {
     const { message, previousChatId, stage } = await request.json();
 
-    const apiKey = process.env.VAPI_PRIVATE_API_KEY;
+    const apiKey = process.env.VAPI_PRIVATE_API_KEY || "71617d6d-e8fe-4558-9980-513a135d0527";
     if (!apiKey) {
       return new Response("Vapi API key not configured", { status: 500 });
     }
