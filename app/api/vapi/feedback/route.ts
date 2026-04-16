@@ -13,8 +13,8 @@ function normalizeFeedbackModel(model?: string): string {
   const value = String(model || "").trim();
   if (!value) return "gemini-3-flash";
 
-  // Prevent stale env overrides from pinning unsupported or overloaded 2.x models.
-  if (value.includes("gemini-2.0-flash") || value.includes("gemini-2.5-flash")) {
+  // Prevent stale env overrides from pinning unsupported 1.5 / 2.0 variants.
+  if (value.includes("gemini-1.5-flash") || value.includes("gemini-2.0-flash")) {
     return "gemini-3-flash";
   }
 
@@ -29,7 +29,7 @@ const FEEDBACK_MODEL_CANDIDATES = Array.from(
   new Set([
     normalizeFeedbackModel(process.env.GOOGLE_AI_FEEDBACK_MODEL),
     "gemini-3-flash",
-    "gemini-1.5-flash",
+    "gemini-2.5-flash",
   ])
 ).filter(Boolean);
 
