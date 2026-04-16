@@ -279,6 +279,20 @@ export async function POST(request: NextRequest) {
     // Fetch call data from Vapi
     const vapiCallData = await vapiCallDataService.getCall(vapiCallId);
 
+    const rawMessages = vapiCallData.artifact?.messages || vapiCallData.messages || [];
+    const transcript = rawMessages
+      .filter((msg: any) => {
+        if (msg.type === "transcript" && msg.transcriptType === "final") return true;
+        if ((msg.role === "user" || msg.role === "assistant" || msg.role === "bot") && (msg.content || msg.message || msg.transcript)) return true;
+        return false;
+      })
+      .map((msg: any) => {
+        const role = msg.role === "user" ? "Candidate" : "Interviewer";
+        const content = msg.transcript || msg.content || msg.message || "";
+        return `${role}: ${content}`;
+      })
+      .join("\n");
+
     // Extract relevant data for Firestore
     const callLogData = {
       userId,
@@ -305,6 +319,7 @@ export async function POST(request: NextRequest) {
       hasTranscript: !!(
         vapiCallData.artifact?.transcript || (vapiCallData as any).transcript
       ),
+      transcript: transcript || null,
       summary: (vapiCallData as any).summary || null,
       analysis: (vapiCallData as any).analysis || null,
     };

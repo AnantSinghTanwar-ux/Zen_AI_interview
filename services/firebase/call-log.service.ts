@@ -20,6 +20,7 @@ interface CallLogData {
   messageCount?: number;
   hasRecording?: boolean;
   hasTranscript?: boolean;
+  transcript?: string | null;
   summary?: string | null;
   analysis?: any;
   createdAt: Timestamp;

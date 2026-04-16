@@ -28,6 +28,24 @@ interface FeedbackAnalysis {
   duration: number;
 }
 
+function extractTranscriptFromCallLog(callLog: any): string {
+  if (!callLog) return "";
+
+  // Preferred: transcript stored directly on the call log document.
+  if (typeof callLog.transcript === "string" && callLog.transcript.trim().length > 0) {
+    return callLog.transcript;
+  }
+
+  // Fallback: build minimal analyzable text from summary/analysis fields.
+  const summary = typeof callLog.summary === "string" ? callLog.summary.trim() : "";
+  const analysis = callLog.analysis && typeof callLog.analysis === "object"
+    ? JSON.stringify(callLog.analysis)
+    : "";
+
+  const combined = [summary, analysis].filter(Boolean).join("\n\n");
+  return combined;
+}
+
 function extractConversationFromMessages(messages: any[]): string {
   if (!messages || messages.length === 0) return "";
 
@@ -210,10 +228,11 @@ export async function GET(request: NextRequest) {
     // The callId from the frontend may be a Firestore document ID OR a Vapi UUID.
     // Strategy: try direct Firestore doc lookup first (O(1)), then try Vapi UUID lookup.
     let vapiCallId: string = callId;
+    let firestoreLog: any = null;
 
     try {
       // Step 1: try treating callId as a Firestore document ID
-      const firestoreLog = await callLogService.getCallLogById(callId).catch(() => null);
+      firestoreLog = await callLogService.getCallLogById(callId).catch(() => null);
       if (firestoreLog?.vapiCallId) {
         vapiCallId = firestoreLog.vapiCallId;
         console.log(`Resolved Firestore doc ID ${callId} → Vapi UUID ${vapiCallId}`);
@@ -221,6 +240,7 @@ export async function GET(request: NextRequest) {
         // Step 2: callId might already be the Vapi UUID — verify by lookup
         const byVapiId = await callLogService.getCallLogByVapiId(callId).catch(() => null);
         if (byVapiId?.vapiCallId) {
+          firestoreLog = byVapiId;
           vapiCallId = byVapiId.vapiCallId;
         } else {
           console.warn(`Could not resolve vapiCallId for "${callId}", using as-is`);
@@ -230,8 +250,43 @@ export async function GET(request: NextRequest) {
       console.warn("Firestore ID resolution failed, using callId directly:", lookupError);
     }
 
-    // Fetch call data from Vapi using the real UUID
-    const callData = await vapiCallDataService.getCall(vapiCallId);
+    let callData: any = null;
+    let transcript = "";
+
+    // Primary source: Vapi live call fetch.
+    try {
+      callData = await vapiCallDataService.getCall(vapiCallId);
+      const messages = callData.messages || [];
+      transcript = extractConversationFromMessages(messages);
+
+      console.log(`Call data structure:`, {
+        hasArtifact: !!(callData as any).artifact,
+        hasMessages: !!messages.length,
+        messageCount: messages.length,
+        transcriptLength: transcript.length,
+        callStatus: callData.status,
+        firstMessageType: messages[0]?.type || "none",
+      });
+    } catch (vapiError) {
+      console.warn("Vapi call fetch failed, attempting Firestore fallback:", vapiError);
+
+      // Secondary source: data already persisted in Firestore.
+      if (!firestoreLog) {
+        firestoreLog = await callLogService.getCallLogByVapiId(vapiCallId).catch(() => null);
+      }
+
+      transcript = extractTranscriptFromCallLog(firestoreLog);
+      callData = {
+        status: firestoreLog?.status || "ended",
+        startedAt: firestoreLog?.startedAt,
+        endedAt: firestoreLog?.endedAt,
+        messages: [],
+      };
+
+      if (!transcript || transcript.trim().length === 0) {
+        throw vapiError;
+      }
+    }
 
     if (!callData) {
       return NextResponse.json(
@@ -239,20 +294,6 @@ export async function GET(request: NextRequest) {
         { status: 404 }
       );
     }
-
-    // Extract conversation transcript
-    // Vapi messages may use `message`, `content`, or `transcript` fields
-    const messages = callData.messages || [];
-    const transcript = extractConversationFromMessages(messages);
-
-    console.log(`Call data structure:`, {
-      hasArtifact: !!(callData as any).artifact,
-      hasMessages: !!messages.length,
-      messageCount: messages.length,
-      transcriptLength: transcript.length,
-      callStatus: callData.status,
-      firstMessageType: messages[0]?.type || "none",
-    });
 
     if (!transcript || transcript.trim().length === 0) {
       console.log(`No transcript available for call ${vapiCallId}`);
