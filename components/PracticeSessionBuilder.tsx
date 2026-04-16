@@ -14,6 +14,8 @@ interface PracticeSessionBuilderProps {
   userName: string;
   userId: string;
   jobContextJson?: string;
+  initialPracticeContextJson?: string;
+  autoStart?: boolean;
 }
 
 const focusAreas = [
@@ -28,6 +30,8 @@ export default function PracticeSessionBuilder({
   userName,
   userId,
   jobContextJson,
+  initialPracticeContextJson,
+  autoStart,
 }: PracticeSessionBuilderProps) {
   const [selectedCompany, setSelectedCompany] =
     useState<PracticeCompanyKey>("microsoft");
@@ -37,7 +41,8 @@ export default function PracticeSessionBuilder({
     "Core CS Fundamentals",
     "Problem Solving",
   ]);
-  const [started, setStarted] = useState(false);
+  // Auto-start when coming from Job Prep with a pre-built context
+  const [started, setStarted] = useState(autoStart === true && !!initialPracticeContextJson);
 
   const profile = useMemo(
     () => getPracticeCompanyProfile(selectedCompany),
@@ -73,6 +78,9 @@ export default function PracticeSessionBuilder({
     });
   };
 
+  // Use initial context from Job Prep if provided, otherwise use the locally built one
+  const effectiveContextJson = initialPracticeContextJson || practiceContextJson;
+
   if (started) {
     return (
       <Agent
@@ -80,7 +88,7 @@ export default function PracticeSessionBuilder({
         userId={userId}
         type="generate"
         jobContextJson={jobContextJson}
-        practiceContextJson={practiceContextJson}
+        practiceContextJson={effectiveContextJson}
       />
     );
   }

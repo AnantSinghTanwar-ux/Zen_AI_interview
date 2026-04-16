@@ -222,7 +222,7 @@ export default function CallDetailsPage() {
                   ].map((row, i) => (
                     <div key={i} className="flex items-center justify-between p-3 bg-white/3 rounded-xl border border-white/5">
                       <span className="text-muted-foreground text-sm font-medium">{row.label}</span>
-                      <span className="text-foreground/90 text-sm font-medium">{row.value as any}</span>
+                      <span className="text-foreground text-sm font-medium">{row.value as any}</span>
                     </div>
                   ))}
                 </div>
@@ -337,7 +337,7 @@ export default function CallDetailsPage() {
                           {message.secondsFromStart && ` +${message.secondsFromStart.toFixed(1)}s`}
                         </span>
                       </div>
-                      <p className="text-foreground/85 leading-relaxed text-sm">{message.message}</p>
+                      <p className="text-foreground/90 leading-relaxed text-sm">{message.message}</p>
                     </div>
                   ))}
               </div>
@@ -384,7 +384,7 @@ export default function CallDetailsPage() {
                     ].map((item) => (
                       <div key={item.label} className="flex flex-col gap-1 p-3 bg-white/3 rounded-xl border border-white/5 text-center">
                         <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">{item.label}</span>
-                        <span className="text-foreground/80 text-sm font-mono">${item.val?.toFixed(4) || '0.0000'}</span>
+                        <span className="text-foreground text-sm font-mono">${item.val?.toFixed(4) || '0.0000'}</span>
                       </div>
                     ))}
                   </div>

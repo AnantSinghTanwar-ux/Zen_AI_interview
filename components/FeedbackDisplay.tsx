@@ -288,7 +288,7 @@ export default function FeedbackDisplay({ interviewId, callId, userId, callData 
               {feedback.strengths.map((strength, i) => (
                 <li key={i} className="flex items-start gap-4">
                   <CheckCircle className="w-5 h-5 text-[#49de50] shrink-0 mt-0.5" />
-                  <span className="text-foreground/80 leading-relaxed">{strength}</span>
+                  <span className="text-foreground/90 leading-relaxed">{strength}</span>
                 </li>
               ))}
             </ul>
@@ -308,7 +308,7 @@ export default function FeedbackDisplay({ interviewId, callId, userId, callData 
               {feedback.weaknesses.map((weakness, i) => (
                 <li key={i} className="flex items-start gap-4">
                   <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-                  <span className="text-foreground/80 leading-relaxed">{weakness}</span>
+                  <span className="text-foreground/90 leading-relaxed">{weakness}</span>
                 </li>
               ))}
             </ul>
@@ -330,7 +330,7 @@ export default function FeedbackDisplay({ interviewId, callId, userId, callData 
               {feedback.suggestions.map((suggestion, i) => (
                 <li key={i} className="flex items-start gap-4">
                   <Lightbulb className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
-                  <span className="text-foreground/80 leading-relaxed">{suggestion}</span>
+                  <span className="text-foreground/90 leading-relaxed">{suggestion}</span>
                 </li>
               ))}
             </ul>
@@ -349,7 +349,7 @@ export default function FeedbackDisplay({ interviewId, callId, userId, callData 
               {feedback.nextSteps.map((step, i) => (
                 <li key={i} className="flex items-start gap-4">
                   <ArrowRight className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-                  <span className="text-foreground/80 leading-relaxed">{step}</span>
+                  <span className="text-foreground/90 leading-relaxed">{step}</span>
                 </li>
               ))}
             </ul>
@@ -373,7 +373,7 @@ export default function FeedbackDisplay({ interviewId, callId, userId, callData 
                 </div>
                 <p className="text-foreground/90 font-medium leading-relaxed pt-1.5">{plan}</p>
               </div>
-            )) : <p className="text-foreground/80 leading-relaxed">{feedback.personalizedPlan}</p>}
+            )) : <p className="text-foreground/90 leading-relaxed">{feedback.personalizedPlan}</p>}
           </div>
         </CardContent>
       </Card>

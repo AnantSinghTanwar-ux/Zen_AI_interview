@@ -34,9 +34,14 @@ const SELECTORS = {
     ".job-details-jobs-unified-top-card__job-title"
   ],
   company: [
-    // LinkedIn (most reliable)
+    // LinkedIn (most reliable, ordered by specificity)
+    ".job-details-jobs-unified-top-card__company-name a",
     ".job-details-jobs-unified-top-card__company-name",
     ".topcard__org-name-link",
+    ".jobs-unified-top-card__company-name a",
+    ".jobs-unified-top-card__company-name",
+    ".job-details-about-company-module__company-description a",
+    ".jobs-company__company-name",
 
     // Generic fallbacks
     "[data-testid*='company']",
@@ -231,11 +236,18 @@ const parseCompanyFromText = (text) => {
 
 const extractLinkedInCompanyFromAboutPanel = () => {
   const candidates = [
+    // Highly specific LinkedIn selectors for the company name
     ".job-details-jobs-unified-top-card__company-name a",
     ".job-details-jobs-unified-top-card__company-name",
+    ".jobs-unified-top-card__company-name a",
+    ".jobs-unified-top-card__company-name",
     ".jobs-company__company-name",
     ".job-details-about-company-module__company-description a",
     ".job-details-about-company-module a[href*='/company/']",
+    // LinkedIn company card in sidebar
+    "a[data-tracking-control-name*='company']",
+    ".jobs-company-card__name a",
+    ".jobs-company-card__name",
   ];
 
   for (const selector of candidates) {
@@ -243,6 +255,23 @@ const extractLinkedInCompanyFromAboutPanel = () => {
     const text = sanitizeText(el?.textContent || "", 180);
     const cleaned = cleanCompanyName(text);
     if (cleaned) return cleaned;
+  }
+
+  // Fallback: try to find company from "About the company" section heading sibling
+  const aboutHeaders = document.querySelectorAll("h2, h3");
+  for (const header of aboutHeaders) {
+    const headerText = (header.textContent || "").toLowerCase().trim();
+    if (headerText.includes("about") && headerText.includes("company")) {
+      // Look for a link or strong text near this header
+      const section = header.closest("section") || header.parentElement;
+      if (section) {
+        const companyLink = section.querySelector("a[href*='/company/']");
+        if (companyLink) {
+          const name = cleanCompanyName(companyLink.textContent || "");
+          if (name) return name;
+        }
+      }
+    }
   }
 
   return "";
@@ -254,8 +283,13 @@ const cleanCompanyName = (value) => {
 
   const lower = v.toLowerCase();
 
-  // Reject only metric-like values, not actual company names that include the words.
-  if ((/(\bemployees?\b|\bfollowers?\b)/.test(lower) && /\d/.test(v)) || /\b\d+\s*[-–]\s*\d+\s*employees\b/i.test(v)) {
+  // Reject only strings that are clearly metric-like: "3,000+ employees", "1-50 employees", "10K followers"
+  // But allow "Amazon" or "Meta" even though they contain common words
+  if (
+    /^\s*[\d,.]+[kKmM+]*\s*(employees?|followers?|connections?)\s*$/i.test(v) ||
+    /\b\d+\s*[-–]\s*\d+\s*employees\b/i.test(v) ||
+    /^\s*\d[\d,.]*\+?\s*(employees?|followers?)\s*$/i.test(v)
+  ) {
     return "";
   }
 
@@ -266,6 +300,7 @@ const cleanCompanyName = (value) => {
     " your current resume",
     " see application",
     " promoted",
+    " report this job",
   ];
 
   for (const marker of cutMarkers) {
@@ -276,7 +311,12 @@ const cleanCompanyName = (value) => {
     }
   }
 
-  v = v.split(" · ")[0].split(" | ")[0].trim();
+  // Split on LinkedIn-style separators and take the first segment (the company name)
+  v = v.split(" · ")[0].split(" | ")[0].split(" - ")[0].trim();
+
+  // Remove trailing location info like "San Francisco, CA" after a newline
+  v = v.split("\n")[0].trim();
+
   return sanitizeText(v, 120);
 };
 

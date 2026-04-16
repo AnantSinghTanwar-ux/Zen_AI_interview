@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import LogoutButton from './LogoutButton';
-import { Menu, X, Swords } from 'lucide-react';
+import { Menu, X, Swords, Target } from 'lucide-react';
 import { Button } from './ui/button';
 import { useState, useEffect } from 'react';
 import { checkAuthStatus } from '@/lib/actions/check-auth';
@@ -41,6 +41,7 @@ const Navbar = () => {
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
+            <Link href="/job-prep" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1 flex items-center gap-1.5"><Target className="w-3.5 h-3.5" />Job Prep</Link>
             <Link href="/interview" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Practice</Link>
             <Link href="/feedback" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Feedback</Link>
             <Link href="/call-data" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Interviews</Link>
@@ -71,6 +72,14 @@ const Navbar = () => {
           {/* Mobile Navigation Dropdown */}
           {isMobileMenuOpen && (
             <div className="absolute top-full left-0 right-0 p-6 border-b border-white/5 bg-background/95 backdrop-blur-xl flex flex-col gap-4 md:hidden z-50 animate-in slide-in-from-top-2 rounded-b-3xl shadow-2xl">
+              <Link 
+                href="/job-prep" 
+                className="text-foreground/90 font-medium text-lg w-full text-center py-3 hover:bg-white/5 rounded-2xl transition-all flex items-center justify-center gap-2"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <Target className="w-4 h-4" />
+                Job Prep
+              </Link>
               <Link 
                 href="/interview" 
                 className="text-foreground/90 font-medium text-lg w-full text-center py-3 hover:bg-white/5 rounded-2xl transition-all"
