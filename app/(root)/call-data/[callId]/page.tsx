@@ -87,7 +87,8 @@ export default function CallDetailsPage() {
         const response = await fetch(`/api/vapi/call-data/${callId}`);
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch call details: ${response.statusText}`);
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.error || `Failed to fetch call details: ${response.statusText}`);
         }
 
         const data = await response.json();
@@ -137,8 +138,14 @@ export default function CallDetailsPage() {
         <div className="min-h-screen bg-background text-foreground py-20">
           <div className="max-w-7xl mx-auto px-6 pt-16">
             <div className="mb-8"><BackLink /></div>
-            <div className="glass-card rounded-2xl p-8 border border-red-500/20">
-              <p className="text-red-400 font-semibold text-lg">Error: {error}</p>
+            <div className="glass-card rounded-2xl p-8 border border-red-500/20 flex flex-col items-center justify-center text-center">
+              <p className="text-red-400 font-semibold text-lg mb-4">{error}</p>
+              <button 
+                onClick={() => window.location.reload()}
+                className="bg-primary text-black font-semibold px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                Try Again
+              </button>
             </div>
           </div>
         </div>

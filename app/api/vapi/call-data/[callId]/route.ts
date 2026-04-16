@@ -114,10 +114,19 @@ export async function GET(
 
     return NextResponse.json(formattedCallDetails, { status: 200 });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in call-data detail API:', error);
+    
+    // If Vapi returns 404, the call might still be processing after a sudden end
+    if (error.message && error.message.includes('404')) {
+      return NextResponse.json(
+        { error: 'Call not yet indexed by Vapi or not found. Please try again in a few seconds.' },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json(
-      { error: 'Failed to fetch call details' },
+      { error: 'Failed to fetch call details', details: error.message },
       { status: 500 }
     );
   }
