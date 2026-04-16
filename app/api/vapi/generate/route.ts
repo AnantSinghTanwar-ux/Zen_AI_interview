@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const { text: questions } = await generateText({
-      model: google("gemini-2.5-flash"),
+      model: google("gemini-3.0-flash"),
       prompt: `
         Generate interview questions for the following job description, and return ONLY the questions in format like this: [question1, question2, question3].
         Job Type: ${type}

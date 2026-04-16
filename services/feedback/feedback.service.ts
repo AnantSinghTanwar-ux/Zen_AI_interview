@@ -48,13 +48,25 @@ export interface UserFeedbackSubmission {
   improvementAreas: string[];
 }
 
+function normalizeFeedbackModel(model?: string): string {
+  const value = String(model || '').trim();
+  if (!value) return 'gemini-3-flash';
+  if (value.includes('gemini-2.0-flash') || value.includes('gemini-2.5-flash')) {
+    return 'gemini-3-flash';
+  }
+  if (value === 'gemini-3.0-flash') {
+    return 'gemini-3-flash';
+  }
+  return value;
+}
+
 class FeedbackService {
   private readonly COLLECTION = 'interview_feedback';
   private readonly USER_FEEDBACK_COLLECTION = 'user_feedback';
   private genAI: GoogleGenerativeAI | null = null;
   private readonly modelCandidates = Array.from(
     new Set([
-      process.env.GOOGLE_AI_FEEDBACK_MODEL || 'gemini-3-flash',
+      normalizeFeedbackModel(process.env.GOOGLE_AI_FEEDBACK_MODEL),
       'gemini-3-flash',
       'gemini-1.5-flash',
     ])

@@ -20,12 +20,25 @@ const GOOGLE_AI_KEY =
   process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
   "";
 
-const SCORE_MODEL_CANDIDATES = [
-  process.env.GOOGLE_AI_FEEDBACK_MODEL || "gemini-2.0-flash-lite",
-  "gemini-1.5-flash",
-  "gemini-2.0-flash",
-  "gemini-2.5-flash",
-].filter(Boolean);
+function normalizeFeedbackModel(model?: string): string {
+  const value = String(model || "").trim();
+  if (!value) return "gemini-3-flash";
+  if (value.includes("gemini-2.0-flash") || value.includes("gemini-2.5-flash")) {
+    return "gemini-3-flash";
+  }
+  if (value === "gemini-3.0-flash") {
+    return "gemini-3-flash";
+  }
+  return value;
+}
+
+const SCORE_MODEL_CANDIDATES = Array.from(
+  new Set([
+    normalizeFeedbackModel(process.env.GOOGLE_AI_FEEDBACK_MODEL),
+    "gemini-3-flash",
+    "gemini-1.5-flash",
+  ])
+).filter(Boolean);
 
 function buildTranscriptFromVapiCall(callData: any): string {
   const artifactTranscript =
