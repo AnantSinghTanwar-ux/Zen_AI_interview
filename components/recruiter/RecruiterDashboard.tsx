@@ -300,17 +300,9 @@ export default function RecruiterDashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Recruiter Analytics</h1>
-          <p className="text-sm text-muted-foreground mt-1">External application pipeline & candidate scoring</p>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-white/[0.03] rounded-xl border border-white/10">
+    <div className="flex flex-col md:flex-row gap-8">
+      {/* Sidebar Dock */}
+      <div className="hidden md:flex flex-col items-center py-6 gap-6 w-20 shrink-0 bg-[#0A0A0A]/40 border border-white/[0.04] backdrop-blur-3xl rounded-3xl sticky top-24 h-fit z-10 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
         {([
           { key: "overview", label: "Dashboard", icon: BarChart3 },
           { key: "applications", label: "Applications", icon: Users },
@@ -319,18 +311,28 @@ export default function RecruiterDashboard() {
         ] as const).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
+            title={label}
             onClick={() => setTab(key)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex-1 justify-center ${
+            className={`p-4 rounded-xl transition-all duration-300 ${
               tab === key
-                ? "bg-primary/15 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
+                ? "bg-[#A3E635] text-black shadow-[0_0_20px_rgba(163,230,53,0.3)] hover:scale-105"
+                : "text-[#888] hover:text-white hover:bg-white/5"
             }`}
           >
-            <Icon className="w-4 h-4" />
-            <span className="hidden sm:inline">{label}</span>
+            <Icon className="w-6 h-6" />
           </button>
         ))}
       </div>
+
+      {/* Main Workspace */}
+      <div className="flex-1 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">Recruiter Analytics</h1>
+            <p className="text-muted-foreground mt-2 text-lg">External pipeline & algorithmic scoring workspace.</p>
+          </div>
+        </div>
 
       {/* ========== OVERVIEW TAB ========== */}
       {tab === "overview" && stats && (
@@ -462,86 +464,75 @@ export default function RecruiterDashboard() {
           </div>
 
           {/* Table */}
-          <div className="rounded-xl border border-white/10 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-white/10 bg-white/[0.02]">
-                    <th className="p-3 text-left w-10"><input type="checkbox" className="accent-primary" /></th>
-                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Candidate</th>
-                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Role</th>
-                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Company</th>
-                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Source</th>
-                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Status</th>
-                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Score</th>
-                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {enrichedApps.map((app) => (
-                    <tr key={app.id} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="p-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(app.id)}
-                          onChange={() => toggleSelect(app.id)}
-                          className="accent-primary"
-                        />
-                      </td>
-                      <td className="p-3">
-                        <div>
-                          <p className="text-foreground font-medium">{app.candidateName}</p>
-                          <p className="text-xs text-muted-foreground">{app.candidateEmail}</p>
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <p className="text-foreground text-xs">{app.roleTitle}</p>
-                        <span className="text-[10px] text-primary capitalize">{app.roleCategory}</span>
-                      </td>
-                      <td className="p-3 text-xs text-foreground">{app.companyName}</td>
-                      <td className="p-3">
-                        <span className="text-xs capitalize text-muted-foreground">{app.sourcePlatform}</span>
-                      </td>
-                      <td className="p-3">
-                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusBadge(app.status)}`}>
-                          {app.status}
-                        </span>
-                      </td>
-                      <td className="p-3">
-                        {app.score ? (
-                          <span className={`text-sm font-bold ${scoreColor(app.score.overallScore)}`} title={app._isFallbackScore ? "Estimated score (fallback)" : "Backend score"}>
-                            {app.score.overallScore}
-                            {app._isFallbackScore && <span className="text-[8px] text-muted-foreground ml-0.5">*</span>}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => setDetailApp(app)} className="p-1 text-muted-foreground hover:text-foreground"><Eye className="w-3.5 h-3.5" /></button>
-                          {app.status !== "shortlisted" && (
-                            <button onClick={() => handleStatusChange(app.id, "shortlisted")} className="p-1 text-emerald-400 hover:text-emerald-300"><ThumbsUp className="w-3.5 h-3.5" /></button>
-                          )}
-                          {app.status !== "rejected" && (
-                            <button onClick={() => handleStatusChange(app.id, "rejected")} className="p-1 text-red-400 hover:text-red-300"><ThumbsDown className="w-3.5 h-3.5" /></button>
-                          )}
-                          {app.inviteLink && (
-                            <a href={app.inviteLink} target="_blank" rel="noopener noreferrer" className="p-1 text-primary hover:text-primary/80"><ExternalLink className="w-3.5 h-3.5" /></a>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                    {/* Premium Card-List Apps */}
+          <div className="space-y-3 mt-6">
+            <div className="hidden md:flex items-center px-4 md:px-6 py-2 text-xs font-semibold text-[#888] uppercase tracking-widest pl-14">
+               <div className="flex-1">Candidate Profile</div>
+               <div className="w-48">Role & Company</div>
+               <div className="w-32">Status</div>
+               <div className="w-24 text-center">Score</div>
+               <div className="w-28 text-right">Actions</div>
             </div>
             {enrichedApps.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                <Users className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                <p>No applications found. Import some first!</p>
+              <div className="text-center py-16 text-[#888] bg-white/[0.01] rounded-3xl border border-white/5">
+                <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p className="text-base">No applications found. Import data to populate workspace.</p>
               </div>
             )}
+
+            {enrichedApps.map((app) => (
+              <div key={app.id} className="group relative flex flex-col md:flex-row md:items-center gap-4 bg-[#0A0A0A]/40 hover:bg-[#FAFAFA]/[0.03] border border-white/[0.03] hover:border-white/10 p-4 md:p-5 rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 hidden md:block">
+                  <input type="checkbox" checked={selectedIds.has(app.id)} onChange={() => toggleSelect(app.id)} className="w-4 h-4 rounded border-white/20 accent-[#A3E635]" />
+                </div>
+                
+                <div className="flex items-center gap-4 flex-1 md:pl-8">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                     <span className="text-lg font-bold text-white/80 uppercase">{app.candidateName.charAt(0)}</span>
+                  </div>
+                  <div>
+                    <p className="text-foreground font-semibold text-lg">{app.candidateName}</p>
+                    <p className="text-xs text-[#888]">{app.candidateEmail}</p>
+                  </div>
+                </div>
+
+                <div className="md:w-48 flex flex-col">
+                  <p className="text-foreground text-sm font-medium">{app.roleTitle}</p>
+                  <p className="text-xs text-[#888]">{app.companyName} • <span className="text-[#A3E635] capitalize">{app.roleCategory || app.sourcePlatform}</span></p>
+                </div>
+
+                <div className="md:w-32">
+                  <span className={`text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider border ${
+                    app.status === "completed" ? "bg-cyan-500/10 border-cyan-500/20 text-cyan-400" :
+                    app.status === "shortlisted" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
+                    app.status === "rejected" ? "bg-red-500/10 border-red-500/20 text-red-500" :
+                    app.status === "invited" ? "bg-blue-500/10 border-blue-500/20 text-blue-400" :
+                    "bg-white/5 border-white/10 text-white/50"
+                  }`}>
+                    {app.status}
+                  </span>
+                </div>
+
+                <div className="md:w-24 flex justify-center">
+                  {app.score ? (
+                    <div className="relative w-12 h-12 flex items-center justify-center flex-shrink-0" title={app._isFallbackScore ? "Estimated score (fallback)" : "Backend score"}>
+                      <svg className="absolute w-12 h-12 transform -rotate-90">
+                        <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2.5" fill="transparent" className="text-white/5" />
+                        <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2.5" fill="transparent" className="text-[#A3E635] drop-shadow-[0_0_8px_rgba(163,230,53,0.4)]" strokeDasharray="125" strokeDashoffset={125 - (125 * Math.min(app.score.overallScore, 100) / 100)} strokeLinecap="round" />
+                      </svg>
+                      <span className="relative z-10 text-xs font-bold text-[#A3E635]">{Math.round(app.score.overallScore)}</span>
+                    </div>
+                  ) : <span className="text-sm text-[#888] font-medium">—</span>}
+                </div>
+
+                <div className="md:w-28 flex items-center justify-end gap-1.5">
+                  <button onClick={() => setDetailApp(app)} className="p-2 rounded-full cursor-pointer bg-white/[0.03] hover:bg-white/10 text-[#888] hover:text-white transition-colors"><Eye className="w-4 h-4" /></button>
+                  {app.status !== "shortlisted" && <button onClick={() => handleStatusChange(app.id, "shortlisted")} className="p-2 rounded-full bg-emerald-500/5 hover:bg-emerald-500/20 text-emerald-500 transition-colors"><ThumbsUp className="w-4 h-4" /></button>}
+                  {app.status !== "rejected" && <button onClick={() => handleStatusChange(app.id, "rejected")} className="p-2 rounded-full bg-red-500/5 hover:bg-red-500/20 text-red-500 transition-colors"><ThumbsDown className="w-4 h-4" /></button>}
+                  {app.inviteLink && <a href={app.inviteLink} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-blue-500/5 hover:bg-blue-500/20 text-blue-400 transition-colors"><ExternalLink className="w-4 h-4" /></a>}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -560,62 +551,66 @@ export default function RecruiterDashboard() {
             </select>
           </div>
 
-          <div className="rounded-xl border border-white/10 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/10 bg-white/[0.02]">
-                  <th className="p-3 text-left text-xs font-medium text-muted-foreground w-14">Rank</th>
-                  <th className="p-3 text-left text-xs font-medium text-muted-foreground">Candidate</th>
-                  <th className="p-3 text-left text-xs font-medium text-muted-foreground">Role</th>
-                  <th className="p-3 text-left text-xs font-medium text-muted-foreground">Company</th>
-                  <th className="p-3 text-left text-xs font-medium text-muted-foreground">Source</th>
-                  <th className="p-3 text-center text-xs font-medium text-muted-foreground">Overall</th>
-                  <th className="p-3 text-center text-xs font-medium text-muted-foreground">Tech</th>
-                  <th className="p-3 text-center text-xs font-medium text-muted-foreground">Comm</th>
-                  <th className="p-3 text-center text-xs font-medium text-muted-foreground">Problem</th>
-                  <th className="p-3 text-left text-xs font-medium text-muted-foreground">Recommendation</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {effectiveLeaderboard.map((entry) => (
-                  <tr key={entry.applicationId} className="hover:bg-white/[0.02]">
-                    <td className="p-3">
-                      <span className={`text-lg font-bold ${entry.rank <= 3 ? "text-primary" : "text-muted-foreground"}`}>
-                        #{entry.rank}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      <p className="text-foreground font-medium">{entry.candidateName}</p>
-                      <p className="text-xs text-muted-foreground">{entry.candidateEmail}</p>
-                    </td>
-                    <td className="p-3 text-xs text-foreground">{entry.roleTitle}</td>
-                    <td className="p-3 text-xs text-foreground">{entry.companyName}</td>
-                    <td className="p-3 text-xs text-muted-foreground capitalize">{entry.sourcePlatform}</td>
-                    <td className="p-3 text-center"><span className={`text-sm font-bold ${scoreColor(entry.overallScore)}`}>{entry.overallScore}</span></td>
-                    <td className="p-3 text-center text-xs text-foreground">{entry.technicalScore}</td>
-                    <td className="p-3 text-center text-xs text-foreground">{entry.communicationScore}</td>
-                    <td className="p-3 text-center text-xs text-foreground">{entry.problemSolvingScore}</td>
-                    <td className="p-3">
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full capitalize ${
-                        entry.recommendation === "strong_hire" || entry.recommendation === "hire"
-                          ? "bg-emerald-500/15 text-emerald-400"
-                          : entry.recommendation === "maybe"
-                          ? "bg-yellow-500/15 text-yellow-400"
-                          : "bg-red-500/15 text-red-400"
-                      }`}>
-                        {entry.recommendation.replace("_", " ")}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    {/* Premium Card List Leaderboard */}
+          <div className="space-y-3 mt-6">
+            <div className="hidden md:flex items-center px-4 py-2 text-xs font-semibold text-[#888] uppercase tracking-widest pl-4">
+               <div className="w-16">Rank</div>
+               <div className="flex-1">Candidate Profile</div>
+               <div className="w-48">Role details</div>
+               <div className="w-24 text-center">Score</div>
+               <div className="w-36 text-right pr-4">Recommendation</div>
+            </div>
             {effectiveLeaderboard.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                <Trophy className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                <p className="text-foreground/80">No scored candidates yet. Assign &amp; complete interviews first.</p>
+              <div className="text-center py-16 text-[#888] bg-white/[0.01] rounded-3xl border border-white/5">
+                <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p className="text-base">Algorithm requires sufficient candidate data points. Awaiting inputs.</p>
               </div>
             )}
+
+            {effectiveLeaderboard.map((entry) => (
+               <div key={entry.applicationId} className="group flex flex-col md:flex-row md:items-center gap-4 bg-[#0A0A0A]/40 hover:bg-[#FAFAFA]/[0.03] border border-white/[0.03] hover:border-[#A3E635]/30 p-4 md:p-5 rounded-2xl transition-all duration-300 hover:shadow-[0_0_20px_rgba(163,230,53,0.1)] hover:-translate-y-1">
+                  <div className="md:w-16 flex justify-center md:justify-start pl-2">
+                     <span className={`text-3xl font-black ${entry.rank <= 3 ? "text-[#A3E635] drop-shadow-[0_0_12px_rgba(163,230,53,0.4)]" : "text-white/20"}`}>#{entry.rank}</span>
+                  </div>
+
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                       <span className={`text-lg font-bold capitalize ${entry.rank <= 3 ? "text-white" : "text-white/50"}`}>{entry.candidateName.charAt(0)}</span>
+                    </div>
+                    <div>
+                      <p className="text-foreground font-semibold text-lg">{entry.candidateName}</p>
+                      <p className="text-xs text-[#888]">{entry.candidateEmail}</p>
+                    </div>
+                  </div>
+
+                  <div className="md:w-48">
+                    <p className="text-foreground text-sm font-medium">{entry.roleTitle}</p>
+                    <p className="text-xs text-[#888]">{entry.companyName}</p>
+                  </div>
+
+                  <div className="md:w-24 flex justify-center">
+                    <div className="relative w-12 h-12 flex items-center justify-center flex-shrink-0">
+                      <svg className="absolute w-12 h-12 transform -rotate-90">
+                        <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2.5" fill="transparent" className="text-white/5" />
+                        <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2.5" fill="transparent" className="text-[#A3E635] drop-shadow-[0_0_8px_rgba(163,230,53,0.5)]" strokeDasharray="125" strokeDashoffset={125 - (125 * Math.min(entry.overallScore, 100) / 100)} strokeLinecap="round" />
+                      </svg>
+                      <span className="relative z-10 text-xs font-bold text-[#A3E635]">{Math.round(entry.overallScore)}</span>
+                    </div>
+                  </div>
+
+                  <div className="md:w-36 flex justify-end">
+                     <span className={`text-[10px] font-bold px-4 py-1.5 rounded-full border uppercase tracking-wider ${
+                        entry.recommendation === "strong_hire" || entry.recommendation === "hire"
+                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                          : entry.recommendation === "maybe"
+                          ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                          : "bg-red-500/10 border-red-500/20 text-red-500"
+                      }`}>
+                        {entry.recommendation.replace("_", " ")}
+                     </span>
+                  </div>
+               </div>
+            ))}
           </div>
         </div>
       )}
