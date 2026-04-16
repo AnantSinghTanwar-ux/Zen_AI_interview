@@ -49,6 +49,12 @@
 
   --font-manrope: "Manrope", sans-serif;
   --font-inter: "Inter", sans-serif;
+
+  --surface-elevated: rgba(255, 255, 255, 0.06);
+  --surface-input: rgba(255, 255, 255, 0.08);
+  --text-high: #f5f3f7;
+  --text-body: #e4e2e8;
+  --text-muted-strong: #c7c4cc;
 }
 
 @theme {
@@ -105,6 +111,7 @@
     @apply text-foreground bg-background m-0 p-0 overflow-x-hidden antialiased;
     font-family: var(--font-inter);
     min-height: 100vh;
+    color: var(--text-body);
   }
   h1, h2, h3, h4, h5, h6 {
     @apply text-foreground font-semibold;
@@ -127,6 +134,27 @@
   select optgroup {
     background-color: var(--background);
     color: var(--foreground);
+  }
+
+  input,
+  textarea,
+  select {
+    color: var(--text-high);
+    background-color: var(--surface-input);
+    border-color: var(--border);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--text-muted-strong);
+    opacity: 0.85;
+  }
+
+  p,
+  li,
+  span,
+  label {
+    color: inherit;
   }
 }
 

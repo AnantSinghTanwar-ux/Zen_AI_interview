@@ -229,14 +229,35 @@ const parseCompanyFromText = (text) => {
   return "";
 };
 
+const extractLinkedInCompanyFromAboutPanel = () => {
+  const candidates = [
+    ".job-details-jobs-unified-top-card__company-name a",
+    ".job-details-jobs-unified-top-card__company-name",
+    ".jobs-company__company-name",
+    ".job-details-about-company-module__company-description a",
+    ".job-details-about-company-module a[href*='/company/']",
+  ];
+
+  for (const selector of candidates) {
+    const el = document.querySelector(selector);
+    const text = sanitizeText(el?.textContent || "", 180);
+    const cleaned = cleanCompanyName(text);
+    if (cleaned) return cleaned;
+  }
+
+  return "";
+};
+
 const cleanCompanyName = (value) => {
   let v = sanitizeText(String(value || ""), 200);
   if (!v) return "";
 
   const lower = v.toLowerCase();
 
-  // Often extracted from LinkedIn/boards as employee count or other metadata.
-  if (/(\bemployees?\b|\bfollowers?\b)/.test(lower)) return "";
+  // Reject only metric-like values, not actual company names that include the words.
+  if ((/(\bemployees?\b|\bfollowers?\b)/.test(lower) && /\d/.test(v)) || /\b\d+\s*[-–]\s*\d+\s*employees\b/i.test(v)) {
+    return "";
+  }
 
   const cutMarkers = [
     " apply now",
@@ -275,6 +296,7 @@ const extractJobDetails = () => {
 
   const extractedCompany =
     fromJsonLd?.company ||
+    extractLinkedInCompanyFromAboutPanel() ||
     extractFromSelectors(SELECTORS.company, { minLength: 2, maxLen: 300 }) ||
     "";
 
@@ -284,7 +306,11 @@ const extractJobDetails = () => {
     sanitizeText(document.body?.innerText || "", 20000);
 
   const description = cleanJobDescription(rawDescription);
-  const company = cleanCompanyName(extractedCompany) || parseCompanyFromText(rawDescription);
+  const company =
+    cleanCompanyName(extractedCompany) ||
+    extractLinkedInCompanyFromAboutPanel() ||
+    parseCompanyFromText(rawDescription) ||
+    "Unknown";
 
   const skills = extractSkills(description);
   const requirements = extractRequirements(description);

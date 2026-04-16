@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import PageLayout from "@/components/PageLayout";
-import { Badge } from "@/components/ui/badge";
 import { Clock, MessageSquare, Briefcase, FileText, ChevronRight, CalendarDays, Zap } from "lucide-react";
 
 interface CallData {
@@ -59,7 +58,7 @@ function CallDataPage() {
             <div className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#9d7df9] to-[#eca4ff] opacity-10 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]" />
           </div>
           <div className="p-6 pt-32 max-w-7xl mx-auto relative z-10">
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent mb-12 flex items-center gap-4">
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent mb-12 flex items-center gap-4">
               <Briefcase className="w-10 h-10 text-primary opacity-80" strokeWidth={2} />
               Your Sessions
             </h1>
@@ -83,7 +82,7 @@ function CallDataPage() {
             <div className="glass-card rounded-3xl p-10 text-center max-w-2xl mx-auto w-full border border-red-500/20 relative overflow-hidden backdrop-blur-xl">
               <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-red-500/0 via-red-500/60 to-red-500/0" />
               <h2 className="text-red-400 font-semibold tracking-wide text-2xl mb-4">Error Loading Sessions</h2>
-              <p className="text-white/70 font-light mb-8 text-lg leading-relaxed">{error}</p>
+              <p className="text-foreground/85 font-light mb-8 text-lg leading-relaxed">{error}</p>
               <button
                 onClick={() => window.location.reload()}
                 className="bg-red-500/10 text-red-400 px-8 py-3 rounded-full font-medium border border-red-500/30 hover:bg-red-500/20 transition-all hover:scale-105 active:scale-95"
@@ -105,7 +104,7 @@ function CallDataPage() {
         </div>
 
         <div className="p-6 pt-32 max-w-7xl mx-auto relative z-10">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent mb-12 flex items-center gap-4">
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent mb-12 flex items-center gap-4">
             <Briefcase className="w-10 h-10 text-primary opacity-80" strokeWidth={2} />
             Your Sessions
           </h1>
@@ -128,10 +127,10 @@ function CallDataPage() {
                     {/* Card Header */}
                     <div className="flex justify-between items-start mb-5">
                       <div>
-                        <h3 className="text-white font-semibold text-lg tracking-wide group-hover:text-primary transition-colors">
+                        <h3 className="text-foreground font-semibold text-lg tracking-wide group-hover:text-primary transition-colors">
                           Session #{interviewNumber}
                         </h3>
-                        <p className="text-white/55 text-xs font-medium uppercase tracking-wider flex items-center gap-1.5 mt-1.5">
+                        <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider flex items-center gap-1.5 mt-1.5">
                           <CalendarDays className="w-3.5 h-3.5" />
                           {new Date(call.startedAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
                         </p>
@@ -152,11 +151,11 @@ function CallDataPage() {
                     <div className="space-y-2.5 mb-5 bg-white/4 backdrop-blur-md p-4 rounded-2xl border border-white/8">
                       {/* Duration */}
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-white/55 font-medium flex items-center gap-2">
+                        <span className="text-muted-foreground font-medium flex items-center gap-2">
                           <Clock className="w-3.5 h-3.5 text-primary/80" />
                           Duration
                         </span>
-                        <span className="font-semibold text-white/90 tabular-nums">
+                        <span className="font-semibold text-foreground/90 tabular-nums">
                           {durationMins !== null ? `${durationMins} min` : (
                             <span className="text-amber-300 text-xs font-medium">Ongoing</span>
                           )}
@@ -165,22 +164,22 @@ function CallDataPage() {
 
                       {/* Time */}
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-white/55 font-medium flex items-center gap-2">
+                        <span className="text-muted-foreground font-medium flex items-center gap-2">
                           <Clock className="w-3.5 h-3.5 text-primary/80" />
                           Time
                         </span>
-                        <span className="font-semibold text-white/90 tabular-nums">
+                        <span className="font-semibold text-foreground/90 tabular-nums">
                           {new Date(call.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
 
                       {/* Messages */}
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-white/55 font-medium flex items-center gap-2">
+                        <span className="text-muted-foreground font-medium flex items-center gap-2">
                           <MessageSquare className="w-3.5 h-3.5 text-primary/80" />
                           Messages
                         </span>
-                        <span className="font-semibold text-white/90 tabular-nums">
+                        <span className="font-semibold text-foreground/90 tabular-nums">
                           {call.messageCount || 0}
                         </span>
                       </div>
@@ -188,11 +187,11 @@ function CallDataPage() {
                       {/* Cost — de-emphasised but visible */}
                       {call.cost && (
                         <div className="flex items-center justify-between text-sm border-t border-white/8 pt-2.5 mt-1">
-                          <span className="text-white/45 font-medium flex items-center gap-2">
-                            <Zap className="w-3.5 h-3.5 text-white/30" />
+                          <span className="text-muted-foreground/90 font-medium flex items-center gap-2">
+                            <Zap className="w-3.5 h-3.5 text-muted-foreground/80" />
                             API Cost
                           </span>
-                          <span className="font-mono text-white/55 text-xs">${call.cost.toFixed(4)}</span>
+                          <span className="font-mono text-foreground/80 text-xs">${call.cost.toFixed(4)}</span>
                         </div>
                       )}
                     </div>
@@ -202,7 +201,7 @@ function CallDataPage() {
                   <div className="grid grid-cols-2 gap-3 mt-auto">
                     <Link
                       href={`/call-data/${call.id}`}
-                      className="flex items-center justify-center gap-2 bg-white/6 text-white/85 font-semibold py-3 px-4 rounded-xl border border-white/12 hover:bg-white/12 hover:text-white hover:border-white/20 transition-all text-xs"
+                      className="flex items-center justify-center gap-2 bg-white/8 text-foreground/90 font-semibold py-3 px-4 rounded-xl border border-white/15 hover:bg-white/12 hover:text-foreground hover:border-white/25 transition-all text-xs"
                     >
                       <FileText className="w-4 h-4" />
                       Details
@@ -222,9 +221,9 @@ function CallDataPage() {
 
           {callData.length === 0 && (
             <div className="text-center py-20 px-6 glass-card rounded-3xl mt-12 max-w-2xl mx-auto border border-white/10 border-dashed">
-              <Briefcase className="w-16 h-16 mx-auto text-white/20 mb-6" />
-              <p className="text-white/90 font-semibold text-xl mb-3 tracking-wide">No sessions found</p>
-              <p className="text-white/50 font-light leading-relaxed">Start a new simulated interview to begin tracking your performance and detailed metrics.</p>
+              <Briefcase className="w-16 h-16 mx-auto text-muted-foreground/60 mb-6" />
+              <p className="text-foreground font-semibold text-xl mb-3 tracking-wide">No sessions found</p>
+              <p className="text-muted-foreground font-light leading-relaxed">Start a new simulated interview to begin tracking your performance and detailed metrics.</p>
             </div>
           )}
         </div>

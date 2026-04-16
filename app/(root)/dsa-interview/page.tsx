@@ -1,28 +1,33 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, Clock, Code, Send, Shuffle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Send, Code, Clock } from "lucide-react";
-import Link from "next/link";
+import PageLayout from "@/components/PageLayout";
 import { cn } from "@/lib/utils";
 import { useStreamingChat } from "@/hooks/useStreamingChat";
-import PageLayout from "@/components/PageLayout";
+import {
+  POPULAR_DSA_QUESTIONS,
+  PRACTICE_COMPANY_PROFILES,
+  PracticeCompanyKey,
+} from "@/constants/practice";
 
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
-  isStreaming?: boolean;
 }
 
 interface DSAQuestion {
   title: string;
   difficulty: "Easy" | "Medium" | "Hard";
   problem: string;
-  constraints?: string[];
-  examples?: { input: string; output: string; explanation?: string }[];
+  topic?: string;
 }
+
+const difficultyOptions = ["Any", "Easy", "Medium", "Hard"] as const;
 
 export default function DSAInterviewPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -33,8 +38,41 @@ export default function DSAInterviewPage() {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState("");
+
+  const [selectedCompany, setSelectedCompany] = useState<PracticeCompanyKey>("microsoft");
+  const [selectedDifficulty, setSelectedDifficulty] = useState<(typeof difficultyOptions)[number]>("Any");
+  const [selectedTopic, setSelectedTopic] = useState("Any");
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const availableTopics = useMemo(() => {
+    const topics = new Set<string>();
+    POPULAR_DSA_QUESTIONS.forEach((q) => {
+      if (q.companies.includes(selectedCompany) || q.companies.includes("generic")) {
+        topics.add(q.topic);
+      }
+    });
+    return ["Any", ...Array.from(topics).sort()];
+  }, [selectedCompany]);
+
+  const companyName = useMemo(() => {
+    return PRACTICE_COMPANY_PROFILES.find((company) => company.key === selectedCompany)?.name || "General Tech";
+  }, [selectedCompany]);
+
+  const filteredQuestions = useMemo(() => {
+    return POPULAR_DSA_QUESTIONS.filter((q) => {
+      const companyOk = q.companies.includes(selectedCompany) || q.companies.includes("generic");
+      const difficultyOk = selectedDifficulty === "Any" || q.difficulty === selectedDifficulty;
+      const topicOk = selectedTopic === "Any" || q.topic === selectedTopic;
+      return companyOk && difficultyOk && topicOk;
+    });
+  }, [selectedCompany, selectedDifficulty, selectedTopic]);
+
+  const pickQuestion = () => {
+    const pool = filteredQuestions.length > 0 ? filteredQuestions : POPULAR_DSA_QUESTIONS;
+    return pool[Math.floor(Math.random() * pool.length)];
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -47,66 +85,97 @@ export default function DSAInterviewPage() {
   useEffect(() => {
     if (timerActive) {
       timerRef.current = setInterval(() => {
-        setTimeElapsed(prev => prev + 1);
+        setTimeElapsed((prev) => prev + 1);
       }, 1000);
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
     }
 
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [timerActive]);
+
+  useEffect(() => {
+    if (!availableTopics.includes(selectedTopic)) {
+      setSelectedTopic("Any");
+    }
+  }, [availableTopics, selectedTopic]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const parseQuestionFromResponse = (response: string): DSAQuestion | null => {
+    try {
+      const lines = response.split("\n");
+      let title = "";
+      let difficulty: "Easy" | "Medium" | "Hard" = "Medium";
+      let problem = "";
+      let currentSection = "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.includes("**Problem:**") || trimmed.includes("Problem:")) {
+          currentSection = "problem";
+          title = trimmed.replace(/\*\*Problem:\*\*|Problem:/, "").trim();
+        } else if (trimmed.includes("**Difficulty:**") || trimmed.includes("Difficulty:")) {
+          const diffMatch = trimmed.match(/(Easy|Medium|Hard)/i);
+          if (diffMatch) difficulty = diffMatch[1] as "Easy" | "Medium" | "Hard";
+        } else if (currentSection === "problem" && trimmed) {
+          problem += `${trimmed}\n`;
+        }
+      }
+
+      if (!title || !problem.trim()) return null;
+      return {
+        title,
+        difficulty,
+        problem: problem.trim(),
+      };
+    } catch (error) {
+      console.error("Error parsing question:", error);
+      return null;
+    }
   };
 
   const { sendStreamingMessage, isStreaming } = useStreamingChat({
-    onMessage: (delta) => {
-      setStreamingMessage(prev => prev + delta);
-    },
+    onMessage: (delta) => setStreamingMessage((prev) => prev + delta),
     onComplete: (fullMessage, newChatId) => {
-      // Add the complete message to chat history
-      const assistantMessage: ChatMessage = {
-        role: "assistant",
-        content: fullMessage,
-        timestamp: new Date(),
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: fullMessage,
+          timestamp: new Date(),
+        },
+      ]);
       setStreamingMessage("");
-      
-      if (newChatId) {
-        setChatId(newChatId);
-      }
 
-      // Parse response for question data and stage updates
-      const questionData = parseQuestionFromResponse(fullMessage);
-      if (questionData) {
-        setCurrentQuestion(questionData);
+      if (newChatId) setChatId(newChatId);
+
+      const parsed = parseQuestionFromResponse(fullMessage);
+      if (parsed) {
+        setCurrentQuestion(parsed);
         setInterviewStage("question");
         setTimerActive(true);
-        setTimeElapsed(0);
-      } else if (fullMessage.includes("feedback") || fullMessage.includes("analysis")) {
+      } else if (/feedback|analysis/i.test(fullMessage)) {
         setInterviewStage("feedback");
         setTimerActive(false);
       }
     },
     onError: (error) => {
       console.error("Streaming error:", error);
-      const errorMessage: ChatMessage = {
-        role: "assistant",
-        content: "Sorry, I encountered an error. Please try again.",
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Sorry, I hit an error while generating the response. Please try again.",
+          timestamp: new Date(),
+        },
+      ]);
       setStreamingMessage("");
     },
   });
@@ -114,282 +183,249 @@ export default function DSAInterviewPage() {
   const sendMessage = async (message: string) => {
     if (!message.trim() || isStreaming) return;
 
-    const userMessage: ChatMessage = {
-      role: "user",
-      content: message,
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "user",
+        content: message,
+        timestamp: new Date(),
+      },
+    ]);
     setCurrentInput("");
 
-    // Start streaming response
     await sendStreamingMessage(message, chatId || undefined, interviewStage);
   };
 
-  const startInterview = () => {
-    sendMessage("I'm ready to start the DSA interview. Please give me a coding problem to solve.");
+  const startInterview = async () => {
+    const picked = pickQuestion();
+    setCurrentQuestion({
+      title: picked.title,
+      difficulty: picked.difficulty,
+      problem: picked.prompt,
+      topic: picked.topic,
+    });
+    setInterviewStage("question");
+    setTimerActive(true);
+    setTimeElapsed(0);
+
+    const kickoff = [
+      `Start a ${companyName}-style DSA round.`,
+      `Use this selected popular question as the main problem: ${picked.title}.`,
+      `Difficulty: ${picked.difficulty}. Topic: ${picked.topic}.`,
+      `Problem statement: ${picked.prompt}`,
+      "Act like a real interviewer: ask clarifying questions, evaluate approach, then discuss optimal solution and trade-offs.",
+      "Keep answers concise and practical.",
+    ].join(" ");
+
+    await sendMessage(kickoff);
   };
 
   const getDifficultyColor = (difficulty: "Easy" | "Medium" | "Hard") => {
-    switch (difficulty) {
-      case "Easy": return "text-green-600 bg-green-100";
-      case "Medium": return "text-orange-600 bg-orange-100";
-      case "Hard": return "text-red-600 bg-red-100";
-    }
-  };
-
-  const parseQuestionFromResponse = (response: string): DSAQuestion | null => {
-    try {
-      const lines = response.split('\n');
-      let title = "";
-      let difficulty: "Easy" | "Medium" | "Hard" = "Medium";
-      let problem = "";
-      let constraints: string[] = [];
-      let examples: { input: string; output: string; explanation?: string }[] = [];
-
-      let currentSection = "";
-      
-      for (const line of lines) {
-        const trimmedLine = line.trim();
-        
-        if (trimmedLine.includes("**Problem:**") || trimmedLine.includes("Problem:")) {
-          currentSection = "problem";
-          title = trimmedLine.replace(/\*\*Problem:\*\*|Problem:/, "").trim();
-        } else if (trimmedLine.includes("**Difficulty:**") || trimmedLine.includes("Difficulty:")) {
-          const diffMatch = trimmedLine.match(/(Easy|Medium|Hard)/i);
-          if (diffMatch) {
-            difficulty = diffMatch[1] as "Easy" | "Medium" | "Hard";
-          }
-        } else if (trimmedLine.includes("**Examples:**") || trimmedLine.includes("Examples:")) {
-          currentSection = "examples";
-        } else if (trimmedLine.includes("**Constraints:**") || trimmedLine.includes("Constraints:")) {
-          currentSection = "constraints";
-        } else if (currentSection === "problem" && trimmedLine) {
-          problem += trimmedLine + "\n";
-        } else if (currentSection === "constraints" && (trimmedLine.startsWith("-") || trimmedLine.startsWith("•"))) {
-          constraints.push(trimmedLine.replace(/^[-•]\s*/, ""));
-        }
-      }
-
-      if (title && problem) {
-        return {
-          title: title || "Coding Problem",
-          difficulty,
-          problem: problem.trim(),
-          constraints: constraints.length > 0 ? constraints : undefined,
-          examples: examples.length > 0 ? examples : undefined,
-        };
-      }
-
-      return null;
-    } catch (error) {
-      console.error("Error parsing question:", error);
-      return null;
-    }
+    if (difficulty === "Easy") return "text-green-300 bg-green-500/20 border border-green-500/30";
+    if (difficulty === "Medium") return "text-amber-300 bg-amber-500/20 border border-amber-500/30";
+    return "text-red-300 bg-red-500/20 border border-red-500/30";
   };
 
   return (
     <PageLayout>
-    <div className="min-h-screen bg-[#f5f5f7]  border border-none flex flex-col pt-24">
-      {/* Header */}
-      <div className="bg-[#f5f5f7]  text-black border-b border-gray-200 px-4 py-3">
-        <div className="flex items-center justify-between max-w-6xl mx-auto">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-gray-800">
-              <ArrowLeft className="w-5 h-5" />
-              Back to Dashboard
-            </Link>
-            <div className="h-6 w-px bg-gray-300" />
-            <div className="flex items-center gap-2">
-              <Code className="w-5 h-5 text-blue-600" />
-              <h1 className="text-black text-black text-lg font-semibold text-gray-900">DSA Interview</h1>
+      <div className="min-h-screen bg-background text-foreground flex flex-col pt-24">
+        <div className="border-b border-white/10 px-4 py-3 bg-background/95 backdrop-blur-md">
+          <div className="flex items-center justify-between max-w-6xl mx-auto gap-3">
+            <div className="flex items-center gap-4 flex-wrap">
+              <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+                <ArrowLeft className="w-5 h-5" />
+                Back to Dashboard
+              </Link>
+              <div className="h-6 w-px bg-white/15" />
+              <div className="flex items-center gap-2">
+                <Code className="w-5 h-5 text-primary" />
+                <h1 className="text-lg font-semibold text-foreground">Company-Focused DSA Practice</h1>
+              </div>
+            </div>
+
+            {timerActive && (
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground/90">
+                <Clock className="w-4 h-4" />
+                {formatTime(timeElapsed)}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="max-w-6xl mx-auto w-full px-4 pt-4">
+          <div className="glass-card p-4 rounded-2xl border border-white/10">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <select
+                value={selectedCompany}
+                onChange={(e) => setSelectedCompany(e.target.value as PracticeCompanyKey)}
+                className="h-10 rounded-md border border-input bg-background px-3 text-foreground"
+              >
+                {PRACTICE_COMPANY_PROFILES.map((company) => (
+                  <option key={company.key} value={company.key}>
+                    {company.name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={selectedDifficulty}
+                onChange={(e) => setSelectedDifficulty(e.target.value as (typeof difficultyOptions)[number])}
+                className="h-10 rounded-md border border-input bg-background px-3 text-foreground"
+              >
+                {difficultyOptions.map((option) => (
+                  <option key={option} value={option}>
+                    Difficulty: {option}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={selectedTopic}
+                onChange={(e) => setSelectedTopic(e.target.value)}
+                className="h-10 rounded-md border border-input bg-background px-3 text-foreground"
+              >
+                {availableTopics.map((topic) => (
+                  <option key={topic} value={topic}>
+                    Topic: {topic}
+                  </option>
+                ))}
+              </select>
+
+              <div className="flex gap-2">
+                <Button onClick={startInterview} disabled={isStreaming} className="flex-1">
+                  Start
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const picked = pickQuestion();
+                    setCurrentQuestion({
+                      title: picked.title,
+                      difficulty: picked.difficulty,
+                      problem: picked.prompt,
+                      topic: picked.topic,
+                    });
+                  }}
+                  className="px-3"
+                >
+                  <Shuffle className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Question pool: {filteredQuestions.length} popular DSA problems for {companyName}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex-1 flex max-w-6xl mx-auto w-full px-4 pb-6 pt-4 gap-4">
+          <div className="flex-1 flex flex-col glass-card rounded-2xl border border-white/10 overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-primary/15 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/25">
+                    <Code className="w-8 h-8 text-primary" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-foreground mb-2">Ready for targeted DSA prep?</h2>
+                  <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                    Select your company and filters, then start. The interview will use popular questions asked in that company style.
+                  </p>
+                </div>
+              ) : (
+                messages.map((message, index) => (
+                  <div
+                    key={index}
+                    className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}
+                  >
+                    <div
+                      className={cn(
+                        "max-w-2xl px-4 py-3 rounded-2xl",
+                        message.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-white/5 text-foreground border border-white/10"
+                      )}
+                    >
+                      <div className="whitespace-pre-wrap text-sm md:text-base">{message.content}</div>
+                      <div
+                        className={cn(
+                          "text-xs mt-2 opacity-80",
+                          message.role === "user" ? "text-primary-foreground/80" : "text-muted-foreground"
+                        )}
+                      >
+                        {message.timestamp.toLocaleTimeString()}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+
+              {streamingMessage && (
+                <div className="flex justify-start">
+                  <div className="max-w-2xl px-4 py-3 rounded-2xl bg-white/5 text-foreground border border-white/10">
+                    <div className="whitespace-pre-wrap text-sm md:text-base">{streamingMessage}</div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <div className="flex space-x-1">
+                        <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" />
+                        <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
+                        <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
+                      </div>
+                      <span className="text-xs text-muted-foreground">AI is typing...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            <div className="border-t border-white/10 bg-background/70 p-4">
+              <div className="flex gap-3">
+                <Input
+                  value={currentInput}
+                  onChange={(e) => setCurrentInput(e.target.value)}
+                  placeholder={
+                    interviewStage === "greeting"
+                      ? "Start the interview..."
+                      : interviewStage === "question"
+                        ? "Share your approach or paste your solution..."
+                        : "Ask for feedback or discuss optimizations..."
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage(currentInput);
+                    }
+                  }}
+                  disabled={isStreaming}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={() => sendMessage(currentInput)}
+                  disabled={isStreaming || !currentInput.trim()}
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </div>
-          
-          {timerActive && (
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <Clock className="w-4 h-4" />
-              {formatTime(timeElapsed)}
+
+          {currentQuestion && (
+            <div className="w-[340px] glass-card rounded-2xl border border-white/10 p-4 overflow-y-auto hidden lg:block">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="font-semibold text-foreground">Current Problem</h3>
+                <span className={cn("px-2 py-1 rounded text-xs font-medium", getDifficultyColor(currentQuestion.difficulty))}>
+                  {currentQuestion.difficulty}
+                </span>
+              </div>
+              <h4 className="text-lg font-bold text-foreground mb-2">{currentQuestion.title}</h4>
+              {currentQuestion.topic && (
+                <p className="text-xs text-muted-foreground mb-3 uppercase tracking-wider">Topic: {currentQuestion.topic}</p>
+              )}
+              <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">{currentQuestion.problem}</p>
             </div>
           )}
         </div>
       </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex max-w-6xl mx-auto w-full">
-        {/* Chat Section */}
-        <div className="flex-1 flex flex-col">
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Code className="w-8 h-8 text-blue-600" />
-                </div>
-                <h2 className="text-black text-black text-xl font-semibold text-gray-900 mb-2">
-                  Ready for your DSA Interview?
-                </h2>
-                <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                  I'll give you coding problems to solve. You can type your solution and approach, 
-                  and I'll provide feedback and guidance.
-                </p>
-                <Button onClick={startInterview} className="bg-blue-600 hover:bg-blue-700" disabled={isStreaming}>
-                  Start Interview
-                </Button>
-              </div>
-            ) : (
-              messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={cn(
-                    "flex",
-                    message.role === "user" ? "justify-end" : "justify-start"
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "max-w-2xl px-4 py-3 rounded-2xl",
-                      message.role === "user"
-                        ? "bg-blue-600 text-black"
-                        : "bg-[#f5f5f7]  text-black border border-gray-200"
-                    )}
-                  >
-                    <div className="whitespace-pre-wrap">{message.content}</div>
-                    <div
-                      className={cn(
-                        "text-xs mt-2 opacity-70",
-                        message.role === "user" ? "text-blue-100" : "text-gray-500"
-                      )}
-                    >
-                      {message.timestamp.toLocaleTimeString()}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-            
-            {/* Streaming message */}
-            {streamingMessage && (
-              <div className="flex justify-start">
-                <div className="max-w-2xl px-4 py-3 rounded-2xl bg-[#f5f5f7]  text-black border border-gray-200">
-                  <div className="whitespace-pre-wrap">{streamingMessage}</div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="flex space-x-1">
-                      <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" />
-                      <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
-                      <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
-                    </div>
-                    <span className="text-xs text-gray-500">AI is typing...</span>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input */}
-          <div className="border-t border-gray-200 bg-[#f5f5f7]  text-black p-4">
-            <div className="flex gap-3">
-              <Input
-                value={currentInput}
-                onChange={(e) => setCurrentInput(e.target.value)}
-                placeholder={
-                  interviewStage === "greeting" 
-                    ? "Say hello to start the interview..."
-                    : interviewStage === "question"
-                    ? "Describe your approach or paste your solution..."
-                    : "Ask questions or discuss the solution..."
-                }
-                onKeyPress={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage(currentInput);
-                  }
-                }}
-                disabled={isStreaming}
-                className="flex-1"
-              />
-              <Button
-                onClick={() => sendMessage(currentInput)}
-                disabled={isStreaming || !currentInput.trim()}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
-            </div>
-            <div className="text-xs text-gray-500 mt-2">
-              Press Enter to send, Shift+Enter for new line
-            </div>
-          </div>
-        </div>
-
-        {/* Question Panel */}
-        {currentQuestion && (
-          <div className="w-96 border-l border-gray-200 bg-[#f5f5f7]  text-black p-4 overflow-y-auto">
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-black text-black font-semibold text-gray-900">Current Problem</h3>
-                <span className={cn(
-                  "px-2 py-1 rounded text-xs font-medium",
-                  getDifficultyColor(currentQuestion.difficulty)
-                )}>
-                  {currentQuestion.difficulty}
-                </span>
-              </div>
-              <h4 className="text-lg font-bold text-gray-800 mb-3">
-                {currentQuestion.title}
-              </h4>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <h5 className="font-medium text-gray-700 mb-2">Problem Statement</h5>
-                <div className="text-sm text-gray-600 whitespace-pre-wrap">
-                  {currentQuestion.problem}
-                </div>
-              </div>
-
-              {currentQuestion.examples && currentQuestion.examples.length > 0 && (
-                <div>
-                  <h5 className="font-medium text-gray-700 mb-2">Examples</h5>
-                  {currentQuestion.examples.map((example, index) => (
-                    <div key={index} className="bg-[#f5f5f7]  border border-none rounded p-3 mb-2 text-sm">
-                      <div className="mb-1">
-                        <span className="font-medium">Input:</span> {example.input}
-                      </div>
-                      <div className="mb-1">
-                        <span className="font-medium">Output:</span> {example.output}
-                      </div>
-                      {example.explanation && (
-                        <div className="text-gray-600">
-                          <span className="font-medium">Explanation:</span> {example.explanation}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {currentQuestion.constraints && currentQuestion.constraints.length > 0 && (
-                <div>
-                  <h5 className="font-medium text-gray-700 mb-2">Constraints</h5>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    {currentQuestion.constraints.map((constraint, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <span className="text-gray-400 mt-1">•</span>
-                        {constraint}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
     </PageLayout>
   );
 }

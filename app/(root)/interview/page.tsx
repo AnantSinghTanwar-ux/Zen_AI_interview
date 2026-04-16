@@ -1,4 +1,4 @@
-import Agent from "@/components/Agent";
+import PracticeSessionBuilder from "@/components/PracticeSessionBuilder";
 import PageLayout from "@/components/PageLayout";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { redirect } from "next/navigation";
@@ -40,10 +40,9 @@ async function InterviewPage({
     <>
       <PageLayout showFooter={false}>
         <div className="w-full">
-          <Agent
+          <PracticeSessionBuilder
             userName={user.name}
             userId={user.id}
-            type="generate"
             jobContextJson={jobContextJson}
           />
         </div>

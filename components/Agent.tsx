@@ -52,7 +52,13 @@ interface DSAQuestion {
 
 const ASSISTANT = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID;
 
-function Agent({ userName, userId, type, jobContextJson }: AgentProps & { jobContextJson?: string }) {
+function Agent({
+  userName,
+  userId,
+  type,
+  jobContextJson,
+  practiceContextJson,
+}: AgentProps & { jobContextJson?: string; practiceContextJson?: string }) {
   const router = useRouter();
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
@@ -69,6 +75,7 @@ function Agent({ userName, userId, type, jobContextJson }: AgentProps & { jobCon
   const [isSavingCall, setIsSavingCall] = useState(false);
   const [resumeText, setResumeText] = useState("");
   const [isJobContextInjected, setIsJobContextInjected] = useState(false);
+  const [isPracticeContextInjected, setIsPracticeContextInjected] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
@@ -357,6 +364,24 @@ function Agent({ userName, userId, type, jobContextJson }: AgentProps & { jobCon
     const onCallEnd = async () => {
       setCallStatus(CallStatus.FINISHED);
       setShowChat(false);
+      if (practiceContextJson && !isPracticeContextInjected) {
+        try {
+          vapi.send({
+            type: "add-message",
+            message: {
+              role: "system",
+              content:
+                `Use this PRACTICE_PROFILE_JSON to tailor interview style, topic emphasis, and follow-up depth. ` +
+                `Prefer company-specific question framing while keeping responses concise.
+\n\nPRACTICE_PROFILE_JSON:\n${practiceContextJson}`,
+            },
+          });
+          setIsPracticeContextInjected(true);
+          toast.success("Practice profile shared with interviewer");
+        } catch (error) {
+          console.warn("Failed to inject practice context", error);
+        }
+      }
       setChatMessages([]);
       setFullAssistantMessage("");
       setIsJobContextInjected(false);
@@ -509,7 +534,16 @@ function Agent({ userName, userId, type, jobContextJson }: AgentProps & { jobCon
       vapi.off("speech-end", onSpeechEnd);
       vapi.off("error", onErr);
     };
-  }, [saveCallLog, userId, router, currentCallId, jobContextJson, isJobContextInjected]);
+  }, [
+    saveCallLog,
+    userId,
+    router,
+    currentCallId,
+    jobContextJson,
+    isJobContextInjected,
+    practiceContextJson,
+    isPracticeContextInjected,
+  ]);
 
   useEffect(() => {
     if (callStatus === CallStatus.FINISHED && !isSavingCall) {
@@ -558,6 +592,7 @@ function Agent({ userName, userId, type, jobContextJson }: AgentProps & { jobCon
           dsaChatEnabled: "true",
           resumeContent: resumeText,
           jobDetailsJson: jobContextJson || "",
+          practiceProfileJson: practiceContextJson || "",
         },
       });
 

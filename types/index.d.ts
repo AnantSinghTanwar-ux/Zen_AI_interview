@@ -57,6 +57,8 @@ interface AgentProps {
   feedbackId?: string;
   type: "generate" | "interview";
   questions?: string[];
+  jobContextJson?: string;
+  practiceContextJson?: string;
 }
 
 interface RouteParams {
