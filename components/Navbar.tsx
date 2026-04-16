@@ -44,6 +44,7 @@ const Navbar = () => {
             <Link href="/interview" className="text-foreground/80 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Practice</Link>
             <Link href="/feedback" className="text-foreground/80 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Feedback</Link>
             <Link href="/call-data" className="text-foreground/80 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Interviews</Link>
+            <Link href="/recruiter" className="text-foreground/80 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Recruiter</Link>
             {!loading && (
               isAuthenticated ? (
                 <LogoutButton />
@@ -90,6 +91,13 @@ const Navbar = () => {
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Interviews
+              </Link>
+              <Link 
+                href="/recruiter" 
+                className="text-foreground/90 font-medium text-lg w-full text-center py-3 hover:bg-white/5 rounded-2xl transition-all"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Recruiter
               </Link>
               <div className="flex justify-center pt-4 mt-2 border-t border-white/10">
                 {!loading && (

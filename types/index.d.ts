@@ -23,6 +23,7 @@ export interface Interview {
   userId: string;
   type: string;
   finalized: boolean;
+  jobId?: string; // Reference back to recruitment job if created by recruiter
 }
 
 interface CreateFeedbackParams {
@@ -36,6 +37,8 @@ interface User {
   name: string;
   email: string;
   id: string;
+  userType?: 'candidate' | 'recruiter';
+  recruiterId?: string;
 }
 
 interface InterviewCardProps {
@@ -81,6 +84,7 @@ interface SignUpParams {
   name: string;
   email: string;
   password: string;
+  userType?: 'candidate' | 'recruiter';
 }
 
 type FormType = "sign-in" | "sign-up";
@@ -98,7 +102,6 @@ interface TechIconProps {
   techStack: string[];
 }
 
-<<<<<<< HEAD
 // Interview Evaluation Types
 export interface InterviewEvaluation {
   overallRating: number; // 1-10
@@ -129,7 +132,8 @@ export interface EvaluationResponse {
   evaluation: InterviewEvaluation;
   callId: string;
   evaluatedAt: string;
-=======
+}
+
 interface CallLog {
   id: string;
   userId: string;
@@ -154,5 +158,4 @@ interface CallLog {
   analysis?: any;
   createdAt: any;
   updatedAt: any;
->>>>>>> 6d83f6dcc41bf7f07538eb9a4057b8c1015e20f1
 }

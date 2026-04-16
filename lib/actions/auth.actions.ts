@@ -43,7 +43,7 @@ const ensureUserProfile = async (params: {
 };
 
 export const signUp = async (params: SignUpParams) => {
-  const { uid, email, name } = params;
+  const { uid, email, name, userType } = params;
   try {
     const user = await db.collection("users").doc(uid).get();
 
@@ -54,6 +54,8 @@ export const signUp = async (params: SignUpParams) => {
     await db.collection("users").doc(uid).set({
       name,
       email,
+      userType: userType || "candidate",
+      createdAt: new Date().toISOString(),
     });
 
     return { success: true, message: "User created successfully" };

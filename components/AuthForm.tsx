@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
-import { Swords } from "lucide-react";
+import { Swords, Building2 } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -24,6 +24,7 @@ import {
 } from "firebase/auth";
 import { getClientAuth } from "@/services/firebase/client";
 import { signIn, signUp } from "@/lib/actions/auth.actions";
+import { useState } from "react";
 
 type FormType = "sign-in" | "sign-up";
 
@@ -44,6 +45,11 @@ function AuthForm({ type }: { type: FormType }) {
   });
 
   const isSignIn = type == "sign-in";
+
+  // Recruiter signup state
+  const [isRecruiterMode, setIsRecruiterMode] = useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const [industry, setIndustry] = useState("");
 
   const getSafeRedirectPath = () => {
     const redirectParam = searchParams.get("redirect");
@@ -76,6 +82,19 @@ function AuthForm({ type }: { type: FormType }) {
       },
       window.location.origin
     );
+  };
+
+  const createRecruiterProfile = async (companyName: string, industry: string) => {
+    try {
+      const res = await fetch("/api/v2/recruiter/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ companyName, industry }),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
   };
 
   // 2. Define a submit handler.
@@ -114,6 +133,18 @@ function AuthForm({ type }: { type: FormType }) {
       } else {
         const { name, email, password } = values;
 
+        // Validate recruiter fields
+        if (isRecruiterMode) {
+          if (!companyName.trim()) {
+            toast.error("Company name is required for recruiter signup");
+            return;
+          }
+          if (!industry.trim()) {
+            toast.error("Industry is required for recruiter signup");
+            return;
+          }
+        }
+
         const userCreds = await createUserWithEmailAndPassword(
           auth,
           email,
@@ -125,11 +156,26 @@ function AuthForm({ type }: { type: FormType }) {
           name: name!,
           email,
           password,
+          userType: isRecruiterMode ? "recruiter" : "candidate",
         });
 
         if (!success) {
           toast.error(message);
           return;
+        }
+
+        // If recruiter mode, auto sign-in and create profile
+        if (isRecruiterMode) {
+          const token = await userCreds.user.getIdToken();
+          const signInRes = await signIn({ email, idToken: token });
+
+          if (signInRes.success) {
+            await createRecruiterProfile(companyName.trim(), industry.trim());
+            toast.success("Recruiter account created!");
+            router.push("/recruiter");
+            form.reset();
+            return;
+          }
         }
 
         toast.success("Account Created Now Pls Log In");
@@ -162,6 +208,35 @@ function AuthForm({ type }: { type: FormType }) {
 
         {/* Form Section */}
         <div className="p-8 bg-[#f5f5f7]">
+
+            {/* Recruiter Toggle (signup only) */}
+            {!isSignIn && (
+              <div className="mb-6 flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsRecruiterMode(false)}
+                  className={`flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-full transition-all ${
+                    !isRecruiterMode
+                      ? "bg-primary text-white shadow-md"
+                      : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                  }`}
+                >
+                  <Swords className="w-4 h-4" /> Candidate
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsRecruiterMode(true)}
+                  className={`flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-full transition-all ${
+                    isRecruiterMode
+                      ? "bg-primary text-white shadow-md"
+                      : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                  }`}
+                >
+                  <Building2 className="w-4 h-4" /> Recruiter
+                </button>
+              </div>
+            )}
+
             <Form {...form}>
             <form
                 onSubmit={form.handleSubmit(onSubmit)}
@@ -225,9 +300,35 @@ function AuthForm({ type }: { type: FormType }) {
                 )}
                 />
 
+                {/* Recruiter-specific fields */}
+                {!isSignIn && isRecruiterMode && (
+                  <>
+                    <div>
+                      <label className="text-lg font-black text-black block mb-2">Company Name:</label>
+                      <Input
+                        placeholder="Acme Corp"
+                        className="input"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        type="text"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-lg font-black text-black block mb-2">Industry:</label>
+                      <Input
+                        placeholder="Technology, Finance, Healthcare..."
+                        className="input"
+                        value={industry}
+                        onChange={(e) => setIndustry(e.target.value)}
+                        type="text"
+                      />
+                    </div>
+                  </>
+                )}
+
                 <div className="flex justify-center pt-4">
                     <Button className="btn btn-primary text-lg py-6 px-12" type="submit">
-                         {isSignIn ? "Sign In" : "Sign Up"}
+                         {isSignIn ? "Sign In" : isRecruiterMode ? "Create Recruiter Account" : "Sign Up"}
                     </Button>
                 </div>
             </form>
