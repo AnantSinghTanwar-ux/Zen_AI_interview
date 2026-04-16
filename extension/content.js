@@ -378,19 +378,32 @@ const sendJobForAnalysis = () => {
 
   const actionType = isJobytJobPage() ? "START_ZSCORE_INTERVIEW" : "CHECK_MY_FIT";
 
-  chrome.runtime.sendMessage(
-    {
-      type: actionType,
-      payload
-    },
-    (response) => {
-      if (chrome.runtime.lastError) {
-        log("Message failed", chrome.runtime.lastError.message);
-        return;
-      }
-      log("Background response", response);
+  try {
+    if (!chrome.runtime?.id) {
+      alert("ZenAI Extension was updated. Please refresh this page to use this feature.");
+      return;
     }
-  );
+
+    chrome.runtime.sendMessage(
+      {
+        type: actionType,
+        payload
+      },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          log("Message failed", chrome.runtime.lastError.message);
+          return;
+        }
+        log("Background response", response);
+      }
+    );
+  } catch (error) {
+    if (error.message && error.message.includes("Extension context invalidated")) {
+      alert("ZenAI Extension context was invalidated. Please refresh the page and try again.");
+    } else {
+      log("Error sending message:", error);
+    }
+  }
 };
 
 const syncAuthTokenToExtension = (token) => {

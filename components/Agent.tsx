@@ -392,7 +392,7 @@ function Agent({ userName, userId, type, jobContextJson }: AgentProps & { jobCon
           // Add delay to ensure Vapi has processed the call data
           await new Promise((resolve) => setTimeout(resolve, 3000));
 
-          const res = await saveCallLog(callId);
+          const res = await saveCallLog(callId, jobContextJson || undefined);
           console.log(`Call log saved for call: ${callId}`);
           toast.success("Call data saved successfully!");
         } catch (error) {

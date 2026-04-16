@@ -60,22 +60,30 @@ export function useCallLogs(userId: string | null | undefined) {
     }
   };
 
-  const saveCallLog = async (vapiCallId: string) => {
+  const saveCallLog = async (vapiCallId: string, jobContext?: string) => {
     if (!userId || !vapiCallId) {
       console.log("No user or call Id");
       return;
     }
 
     try {
+      const body: Record<string, unknown> = {
+        vapiCallId,
+        userId,
+      };
+
+      // If job context is available (from extension), pass it so the API
+      // can auto-create an external_application for the recruiter pipeline.
+      if (jobContext) {
+        body.jobContext = jobContext;
+      }
+
       const response = await fetch("/api/call-logs", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          vapiCallId,
-          userId,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
