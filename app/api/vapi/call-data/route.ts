@@ -21,10 +21,13 @@ export async function GET(request: NextRequest) {
 
     const processedCalls = callLogs.map((log: any) => ({
       id: log.id,
+      vapiCallId: log.vapiCallId || null,  // Real Vapi UUID needed for API calls
       status: log.status || "unknown",
-      startedAt: log.startedAt || log.createdAt?._seconds
-        ? new Date(log.createdAt._seconds * 1000).toISOString()
-        : new Date().toISOString(),
+      startedAt: log.startedAt
+        ? log.startedAt
+        : log.createdAt?._seconds
+          ? new Date(log.createdAt._seconds * 1000).toISOString()
+          : new Date().toISOString(),
       endedAt: log.endedAt || null,
       cost: log.cost || null,
       costBreakdown: log.costBreakdown || null,

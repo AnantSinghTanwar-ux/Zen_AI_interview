@@ -7,11 +7,13 @@ import AudioPlayer from "@/components/AudioPlayer";
 import EmotionVisualization from "@/components/EmotionVisualization";
 import InterviewEvaluation from "@/components/InterviewEvaluation";
 import { EmotionData } from "@/services/emotion/emotion-detection.service";
-import { Activity, Brain, TrendingUp, Clock, MessageSquare, DollarSign, ChevronLeft } from "lucide-react";
+import { Activity, Brain, TrendingUp, Clock, MessageSquare, DollarSign, ChevronLeft, Cpu, FileText } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
+import { Badge } from "@/components/ui/badge";
 
 interface CallDetails {
   id: string;
+  vapiCallId?: string;
   status: string;
   startedAt: string;
   endedAt?: string;
@@ -83,7 +85,7 @@ export default function CallDetailsPage() {
       try {
         setLoading(true);
         const response = await fetch(`/api/vapi/call-data/${callId}`);
-        
+
         if (!response.ok) {
           throw new Error(`Failed to fetch call details: ${response.statusText}`);
         }
@@ -101,23 +103,27 @@ export default function CallDetailsPage() {
     fetchCallDetails();
   }, [callId]);
 
+  const BackLink = () => (
+    <Link
+      href="/call-data"
+      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-foreground/80 hover:text-foreground text-sm font-medium transition-all duration-200"
+    >
+      <ChevronLeft className="w-4 h-4" />
+      Back to Sessions
+    </Link>
+  );
+
   if (loading) {
     return (
       <PageLayout>
-        <div className="min-h-screen bg-[#f5f5f7]  text-black font-sans">
-          <div className="max-w-7xl mx-auto px-6 py-8">
-            <div className="mb-6">
-              <Link 
-                href="/call-data"
-                className="inline-flex items-center gap-2 px-4 py-2 border border-none shadow-neo bg-[#f5f5f7]  text-black font-bold text-black"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Back to Call Data
-              </Link>
-            </div>
-            <h1 className="text-black text-4xl font-black mb-8">Call Details</h1>
-            <div className="flex items-center justify-center h-64 border border-none bg-[#f5f5f7]  text-black shadow-neo">
-              <div className="text-xl font-bold">Loading call details...</div>
+        <div className="min-h-screen bg-background text-foreground py-20">
+          <div className="max-w-7xl mx-auto px-6 pt-16">
+            <div className="mb-8"><BackLink /></div>
+            <div className="h-10 bg-white/5 rounded-xl w-64 mb-10 animate-pulse" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="glass-card rounded-2xl h-48 animate-pulse" />
+              ))}
             </div>
           </div>
         </div>
@@ -128,20 +134,11 @@ export default function CallDetailsPage() {
   if (error) {
     return (
       <PageLayout>
-        <div className="min-h-screen bg-[#f5f5f7]  text-black font-sans">
-          <div className="max-w-7xl mx-auto px-6 py-8">
-            <div className="mb-6">
-              <Link 
-                href="/call-data"
-                className="inline-flex items-center gap-2 px-4 py-2 border border-none shadow-neo bg-[#f5f5f7]  text-black font-bold text-black"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Back to Call Data
-              </Link>
-            </div>
-            <h1 className="text-black text-4xl font-black mb-8">Call Details</h1>
-            <div className="bg-[#f5f5f7]  border border-none shadow-neo p-6">
-              <p className="text-black font-bold text-lg">Error: {error}</p>
+        <div className="min-h-screen bg-background text-foreground py-20">
+          <div className="max-w-7xl mx-auto px-6 pt-16">
+            <div className="mb-8"><BackLink /></div>
+            <div className="glass-card rounded-2xl p-8 border border-red-500/20">
+              <p className="text-red-400 font-semibold text-lg">Error: {error}</p>
             </div>
           </div>
         </div>
@@ -152,20 +149,11 @@ export default function CallDetailsPage() {
   if (!callDetails) {
     return (
       <PageLayout>
-        <div className="min-h-screen bg-[#f5f5f7]  text-black font-sans">
-          <div className="max-w-7xl mx-auto px-6 py-8">
-            <div className="mb-6">
-              <Link 
-                href="/call-data"
-                className="inline-flex items-center gap-2 px-4 py-2 border border-none shadow-neo bg-[#f5f5f7]  text-black font-bold text-black"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Back to Call Data
-              </Link>
-            </div>
-            <h1 className="text-black text-4xl font-black mb-8">Call Details</h1>
-            <div className="text-center py-12 border border-none bg-[#f5f5f7]  border border-none shadow-neo">
-              <p className="text-black font-bold text-lg">Call not found</p>
+        <div className="min-h-screen bg-background text-foreground py-20">
+          <div className="max-w-7xl mx-auto px-6 pt-16">
+            <div className="mb-8"><BackLink /></div>
+            <div className="glass-card rounded-2xl p-8 text-center">
+              <p className="text-muted-foreground text-lg">Call not found</p>
             </div>
           </div>
         </div>
@@ -173,87 +161,85 @@ export default function CallDetailsPage() {
     );
   }
 
+  const durationMins = callDetails.endedAt && callDetails.startedAt
+    ? Math.round((new Date(callDetails.endedAt).getTime() - new Date(callDetails.startedAt).getTime()) / 1000 / 60)
+    : null;
+
   return (
     <PageLayout>
-      <div className="min-h-screen bg-[#f5f5f7]  text-black font-sans">
-        <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+      <div className="min-h-screen bg-background text-foreground relative py-20 pb-40">
+        {/* Ambient background */}
+        <div className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80" aria-hidden="true">
+          <div className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#9d7df9] to-[#eca4ff] opacity-10 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]" />
+        </div>
+
+        <div className="max-w-7xl mx-auto px-6 pt-16 space-y-8 relative z-10">
           {/* Header */}
-          <div className="mb-6">
-            <Link 
-              href="/call-data"
-              className="inline-flex items-center gap-2 px-4 py-2 border border-none shadow-neo bg-[#f5f5f7]  text-black font-bold text-black"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Back to Call Data
-            </Link>
+          <div className="mb-2">
+            <BackLink />
           </div>
-          
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h1 className="text-black text-4xl font-black text-black">Call Details</h1>
-            <div className="flex items-center gap-2 bg-[#f5f5f7]  border border-none px-4 py-2 shadow-neo">
-              <span className="font-bold">ID:</span>
-              <span className="font-mono text-sm">{callDetails.id}</span>
+
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-white/10">
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent">
+                Call Details
+              </h1>
+              <p className="text-muted-foreground text-sm mt-1 font-mono">
+                {callDetails.vapiCallId || callDetails.id}
+              </p>
             </div>
+            <Badge
+              className={`font-medium tracking-wide border text-xs uppercase px-3 py-1.5 ${
+                callDetails.status === 'ended'
+                  ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                  : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+              }`}
+            >
+              {callDetails.status}
+            </Badge>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Left Column */}
-            <div className="space-y-8">
+            <div className="space-y-6">
               {/* Call Information */}
-              <div className="bg-[#f5f5f7]  text-black border border-none shadow-neo p-6">
-                <div className="flex items-center gap-3 mb-6 border-b-2 border-black pb-4">
-                  <Clock className="w-6 h-6" />
-                  <h2 className="text-black text-2xl font-black">Call Information</h2>
+              <div className="glass-card rounded-2xl p-6 border border-white/5">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/10">
+                  <div className="p-2 rounded-lg bg-primary/20 border border-primary/30">
+                    <Clock className="w-5 h-5 text-primary" />
+                  </div>
+                  <h2 className="text-foreground font-semibold text-xl">Call Information</h2>
                 </div>
-                
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-3 bg-[#f5f5f7]  border border-none border border-none">
-                    <span className="font-bold text-gray-600">Status</span>
-                    <span className={`px-3 py-1 border border-none text-sm font-bold shadow-neo uppercase ${
-                      callDetails.status === 'ended' ? 'bg-[#4ADE80] text-black' : 
-                      callDetails.status === 'in-progress' ? 'bg-[#60A5FA] text-black' : 'bg-[#f5f5f7]  text-black'
-                    }`}>
-                      {callDetails.status}
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center p-3 bg-[#f5f5f7]  border border-none border border-none">
-                    <span className="font-bold text-gray-600">Started At</span>
-                    <span className="font-medium">{new Date(callDetails.startedAt).toLocaleString()}</span>
-                  </div>
-                  
-                  {callDetails.endedAt && (
-                    <div className="flex justify-between items-center p-3 bg-[#f5f5f7]  border border-none border border-none">
-                      <span className="font-bold text-gray-600">Ended At</span>
-                      <span className="font-medium">{new Date(callDetails.endedAt).toLocaleString()}</span>
+
+                <div className="space-y-3">
+                  {[
+                    { label: 'Status', value: <Badge className={`text-xs uppercase ${callDetails.status === 'ended' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'}`}>{callDetails.status}</Badge> },
+                    { label: 'Started At', value: new Date(callDetails.startedAt).toLocaleString() },
+                    ...(callDetails.endedAt ? [{ label: 'Ended At', value: new Date(callDetails.endedAt).toLocaleString() }] : []),
+                    { label: 'Duration', value: durationMins !== null ? `${durationMins} minutes` : 'In progress' },
+                    { label: 'Messages', value: callDetails.messageCount || callDetails.messages?.length || 0 },
+                    ...(callDetails.endedReason ? [{ label: 'Ended Reason', value: callDetails.endedReason }] : []),
+                  ].map((row, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-white/3 rounded-xl border border-white/5">
+                      <span className="text-muted-foreground text-sm font-medium">{row.label}</span>
+                      <span className="text-foreground/90 text-sm font-medium">{row.value as any}</span>
                     </div>
-                  )}
-                  
-                  <div className="flex justify-between items-center p-3 bg-[#f5f5f7]  border border-none border border-none">
-                    <span className="font-bold text-gray-600">Duration</span>
-                    <span className="font-medium">
-                      {callDetails.endedAt && callDetails.startedAt 
-                        ? `${Math.round((new Date(callDetails.endedAt).getTime() - new Date(callDetails.startedAt).getTime()) / 1000 / 60)} minutes`
-                        : 'In progress'
-                      }
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center p-3 bg-[#f5f5f7]  border border-none border border-none">
-                    <span className="font-bold text-gray-600">Messages</span>
-                    <span className="font-medium">{callDetails.messageCount || callDetails.messages?.length || 0}</span>
-                  </div>
+                  ))}
                 </div>
               </div>
 
               {/* Audio Recordings */}
-              {(callDetails.artifact?.recordingUrl || 
-                callDetails.artifact?.stereoRecordingUrl || 
+              {(callDetails.artifact?.recordingUrl ||
+                callDetails.artifact?.stereoRecordingUrl ||
                 callDetails.artifact?.recording?.mono?.combinedUrl) && (
-                <div className="bg-[#f5f5f7]  border border-none shadow-neo p-6">
-                  <h2 className="text-black text-2xl font-black mb-6 border-b-2 border-black pb-4">Audio Recordings</h2>
-                  <div className="space-y-6">
-                    {/* Combined Recording */}
+                <div className="glass-card rounded-2xl p-6 border border-white/5">
+                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/10">
+                    <div className="p-2 rounded-lg bg-blue-500/20 border border-blue-500/30">
+                      <Activity className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <h2 className="text-foreground font-semibold text-xl">Audio Recordings</h2>
+                  </div>
+                  <div className="space-y-4">
                     {(callDetails.artifact?.recordingUrl || callDetails.artifact?.recording?.mono?.combinedUrl) && (
                       <AudioPlayer
                         src={callDetails.artifact.recordingUrl || callDetails.artifact.recording?.mono?.combinedUrl!}
@@ -261,8 +247,6 @@ export default function CallDetailsPage() {
                         subtitle="Full conversation recording"
                       />
                     )}
-                    
-                    {/* Stereo Recording */}
                     {callDetails.artifact?.stereoRecordingUrl && (
                       <AudioPlayer
                         src={callDetails.artifact.stereoRecordingUrl}
@@ -277,24 +261,23 @@ export default function CallDetailsPage() {
 
             {/* Right Column */}
             <div className="h-full flex flex-col">
-              {/* Emotion Analysis */}
               {callDetails.emotionAnalysis && callDetails.emotionAnalysis.emotions.length > 0 && (
-                <div className="bg-[#f5f5f7]  border border-none shadow-neo p-6 h-full flex flex-col">
-                  <div className="flex items-center gap-3 mb-6 border-b-2 border-black pb-4 flex-shrink-0">
-                    <Brain className="w-6 h-6 text-purple-700" />
-                    <h2 className="text-black text-2xl font-black text-purple-900">Emotion Analysis</h2>
-                    <div className="flex items-center gap-2 ml-auto bg-purple-200 border border-none px-3 py-1 shadow-neo">
-                      <Activity className="w-4 h-4 text-purple-900" />
-                      <span className="text-sm font-bold text-purple-900">
+                <div className="glass-card rounded-2xl p-6 border border-white/5 h-full flex flex-col">
+                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/10 flex-shrink-0">
+                    <div className="p-2 rounded-lg bg-violet-500/20 border border-violet-500/30">
+                      <Brain className="w-5 h-5 text-violet-400" />
+                    </div>
+                    <h2 className="text-foreground font-semibold text-xl">Emotion Analysis</h2>
+                    <div className="ml-auto flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 px-3 py-1 rounded-full">
+                      <Activity className="w-3.5 h-3.5 text-violet-400" />
+                      <span className="text-xs font-medium text-violet-400">
                         {callDetails.emotionAnalysis.emotions.length} readings
                       </span>
                     </div>
                   </div>
-
-                  {/* Full Emotion Visualization */}
-                  <div className="border border-none bg-[#f5f5f7]  text-black shadow-neo flex-grow overflow-hidden flex flex-col">
+                  <div className="flex-grow overflow-hidden flex flex-col">
                     <div className="flex-grow overflow-y-auto">
-                      <EmotionVisualization 
+                      <EmotionVisualization
                         emotionAnalysis={callDetails.emotionAnalysis}
                         className="w-full min-h-0"
                       />
@@ -305,106 +288,105 @@ export default function CallDetailsPage() {
             </div>
           </div>
 
-
-
-        {/* Messages/Conversation */}
-        {callDetails.messages && callDetails.messages.length > 0 && (
-          <div className="bg-[#f5f5f7]  text-black border border-none shadow-neo p-6">
-            <div className="flex items-center gap-3 mb-6 border-b-2 border-black pb-4">
-              <MessageSquare className="w-6 h-6" />
-              <h2 className="text-black text-2xl font-black">
-                Conversation ({callDetails.messages.length} messages)
-              </h2>
-            </div>
-            
-            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-4 custom-scrollbar">
-              {callDetails.messages
-                .filter(message => message.role !== 'system')
-                .map((message, index) => (
-                <div key={index} className={`border border-none p-4 shadow-neo ${
-                  message.role === 'bot' || message.role === 'assistant' 
-                    ? 'bg-[#f5f5f7]  ml-0 mr-8' 
-                    : 'bg-green-50 ml-8 mr-0'
-                }`}>
-                  <div className="flex justify-between items-start mb-3 border-b-2 border-gray-200 pb-2">
-                    <div className="flex items-center gap-3">
-                      <span className={`font-black text-sm uppercase px-2 py-0.5 border border-none ${
-                        message.role === 'bot' || message.role === 'assistant' 
-                          ? 'bg-blue-200 text-black' 
-                          : 'bg-green-200 text-black'
-                      }`}>
-                        {message.role === 'bot' || message.role === 'assistant' ? 'AI Interviewer' : 'Candidate'}
-                      </span>
-                      
-                      {/* Emotion indicator for user messages */}
-                      {message.role === 'user' && message.emotionData && (
-                        <div className="flex items-center gap-2 px-2 py-0.5 bg-purple-100 border border-none rounded-full text-xs">
-                          <span className="font-bold text-purple-900 capitalize">
-                            {message.emotionData.emotion}
-                          </span>
-                          <span className="font-mono text-purple-700">
-                            {Math.round(message.emotionData.confidence * 100)}%
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="text-right text-xs font-mono font-bold text-gray-500">
-                      {message.timestamp && (
-                        <span className="mr-2">{new Date(message.timestamp).toLocaleTimeString()}</span>
-                      )}
-                      {message.secondsFromStart && (
-                        <span>+{message.secondsFromStart.toFixed(1)}s</span>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-black leading-relaxed font-medium">{message.message}</p>
+          {/* Messages / Conversation */}
+          {callDetails.messages && callDetails.messages.length > 0 && (
+            <div className="glass-card rounded-2xl p-6 border border-white/5">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/10">
+                <div className="p-2 rounded-lg bg-primary/20 border border-primary/30">
+                  <MessageSquare className="w-5 h-5 text-primary" />
                 </div>
-              ))}
+                <h2 className="text-foreground font-semibold text-xl">
+                  Conversation
+                </h2>
+                <span className="ml-auto text-xs text-muted-foreground font-medium bg-white/5 px-3 py-1 rounded-full border border-white/10">
+                  {callDetails.messages.filter(m => m.role !== 'system' && m.message).length} messages
+                </span>
+              </div>
+
+              <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                {callDetails.messages
+                  .filter(message => message.role !== 'system' && message.message)
+                  .map((message, index) => (
+                    <div
+                      key={index}
+                      className={`p-4 rounded-2xl border transition-all ${
+                        message.role === 'bot' || message.role === 'assistant'
+                          ? 'bg-white/3 border-white/5 mr-8'
+                          : 'bg-primary/5 border-primary/10 ml-8'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+                            message.role === 'bot' || message.role === 'assistant'
+                              ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                              : 'bg-primary/10 text-primary border-primary/20'
+                          }`}>
+                            {message.role === 'bot' || message.role === 'assistant' ? 'AI Interviewer' : 'Candidate'}
+                          </span>
+
+                          {message.role === 'user' && message.emotionData && (
+                            <span className="flex items-center gap-1.5 px-2 py-0.5 bg-violet-500/10 border border-violet-500/20 rounded-full text-xs text-violet-400 font-medium capitalize">
+                              {message.emotionData.emotion} · {Math.round(message.emotionData.confidence * 100)}%
+                            </span>
+                          )}
+                        </div>
+
+                        <span className="text-muted-foreground text-xs font-mono">
+                          {message.timestamp && new Date(message.timestamp).toLocaleTimeString()}
+                          {message.secondsFromStart && ` +${message.secondsFromStart.toFixed(1)}s`}
+                        </span>
+                      </div>
+                      <p className="text-foreground/85 leading-relaxed text-sm">{message.message}</p>
+                    </div>
+                  ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
           {/* AI Interview Evaluation */}
-          <div className="bg-[#f5f5f7]  border border-none shadow-neo p-6">
-             <InterviewEvaluation 
+          <div className="glass-card rounded-2xl p-6 border border-white/5">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/10">
+              <div className="p-2 rounded-lg bg-primary/20 border border-primary/30">
+                <Cpu className="w-5 h-5 text-primary" />
+              </div>
+              <h2 className="text-foreground font-semibold text-xl">AI Evaluation</h2>
+            </div>
+            <InterviewEvaluation
               callId={callId}
               messages={callDetails.messages || []}
               callDetails={callDetails}
             />
           </div>
 
-          {/* Cost Information - Moved to Bottom */}
+          {/* Cost Information */}
           {callDetails.cost && (
-            <div className="bg-[#f5f5f7]  text-black border border-none shadow-neo p-6">
-              <div className="flex items-center gap-3 mb-6 border-b-2 border-black pb-4">
-                <DollarSign className="w-6 h-6 text-green-700" />
-                <h2 className="text-black text-2xl font-black">Cost Breakdown</h2>
+            <div className="glass-card rounded-2xl p-6 border border-white/5">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/10">
+                <div className="p-2 rounded-lg bg-green-500/20 border border-green-500/30">
+                  <DollarSign className="w-5 h-5 text-green-400" />
+                </div>
+                <h2 className="text-foreground font-semibold text-xl">Cost Breakdown</h2>
               </div>
-              
+
               <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-[#f5f5f7]  border border-none border border-none">
-                  <span className="font-bold text-gray-600">Total Cost</span>
-                  <span className="text-green-700 font-black text-xl">${callDetails.cost.toFixed(4)}</span>
+                <div className="flex items-center justify-between p-3 bg-white/3 rounded-xl border border-white/5">
+                  <span className="text-muted-foreground text-sm font-medium">Total Cost</span>
+                  <span className="text-green-400 font-bold text-lg">${callDetails.cost.toFixed(4)}</span>
                 </div>
                 {callDetails.costBreakdown && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div className="flex justify-between items-center p-3 border border-none border-dashed">
-                      <span className="font-bold text-gray-500">LLM</span>
-                      <span className="font-mono font-bold">${callDetails.costBreakdown.llm?.toFixed(4) || '0.0000'}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 border border-none border-dashed">
-                      <span className="font-bold text-gray-500">STT (Speech-to-Text)</span>
-                      <span className="font-mono font-bold">${callDetails.costBreakdown.stt?.toFixed(4) || '0.0000'}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 border border-none border-dashed">
-                      <span className="font-bold text-gray-500">TTS (Text-to-Speech)</span>
-                      <span className="font-mono font-bold">${callDetails.costBreakdown.tts?.toFixed(4) || '0.0000'}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 border border-none border-dashed">
-                      <span className="font-bold text-gray-500">Vapi Platform</span>
-                      <span className="font-mono font-bold">${callDetails.costBreakdown.vapi?.toFixed(4) || '0.0000'}</span>
-                    </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
+                    {[
+                      { label: 'LLM', val: callDetails.costBreakdown.llm },
+                      { label: 'STT', val: callDetails.costBreakdown.stt },
+                      { label: 'TTS', val: callDetails.costBreakdown.tts },
+                      { label: 'Vapi', val: callDetails.costBreakdown.vapi },
+                    ].map((item) => (
+                      <div key={item.label} className="flex flex-col gap-1 p-3 bg-white/3 rounded-xl border border-white/5 text-center">
+                        <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">{item.label}</span>
+                        <span className="text-foreground/80 text-sm font-mono">${item.val?.toFixed(4) || '0.0000'}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

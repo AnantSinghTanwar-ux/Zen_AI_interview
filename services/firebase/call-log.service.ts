@@ -117,6 +117,19 @@ export class CallLogService {
     }
   }
 
+  async getCallLogById(
+    docId: string
+  ): Promise<(CallLogData & { id: string }) | null> {
+    try {
+      const doc = await db.collection(this.COLLECTION).doc(docId).get();
+      if (!doc.exists) return null;
+      return { ...doc.data(), id: doc.id } as CallLogData & { id: string };
+    } catch (error) {
+      console.error("Error fetching call log by doc ID:", error);
+      throw error;
+    }
+  }
+
   async getCallLogByVapiId(
     vapiCallId: string
   ): Promise<(CallLogData & { id: string }) | null> {

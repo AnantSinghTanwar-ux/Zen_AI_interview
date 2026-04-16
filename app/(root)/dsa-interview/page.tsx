@@ -203,7 +203,7 @@ export default function DSAInterviewPage() {
             <div className="h-6 w-px bg-gray-300" />
             <div className="flex items-center gap-2">
               <Code className="w-5 h-5 text-blue-600" />
-              <h1 className="text-black text-lg font-semibold text-gray-900">DSA Interview</h1>
+              <h1 className="text-black text-black text-lg font-semibold text-gray-900">DSA Interview</h1>
             </div>
           </div>
           
@@ -227,7 +227,7 @@ export default function DSAInterviewPage() {
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Code className="w-8 h-8 text-blue-600" />
                 </div>
-                <h2 className="text-black text-xl font-semibold text-gray-900 mb-2">
+                <h2 className="text-black text-black text-xl font-semibold text-gray-900 mb-2">
                   Ready for your DSA Interview?
                 </h2>
                 <p className="text-gray-600 mb-6 max-w-md mx-auto">
@@ -330,7 +330,7 @@ export default function DSAInterviewPage() {
           <div className="w-96 border-l border-gray-200 bg-[#f5f5f7]  text-black p-4 overflow-y-auto">
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-black font-semibold text-gray-900">Current Problem</h3>
+                <h3 className="text-black text-black font-semibold text-gray-900">Current Problem</h3>
                 <span className={cn(
                   "px-2 py-1 rounded text-xs font-medium",
                   getDifficultyColor(currentQuestion.difficulty)

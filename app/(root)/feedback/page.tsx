@@ -70,10 +70,10 @@ function FeedbackPageContent() {
       <PageLayout>
         <div className="min-h-screen p-6 pt-32">
           <div className="animate-pulse space-y-6">
-            <div className="h-10 bg-[#f5f5f7]  border border-none rounded w-64 mb-8"></div>
+            <div className="h-10 bg-white/5 border border-white/10 rounded w-64 mb-8"></div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-32 bg-[#f5f5f7]  border border-none rounded-2xl"></div>
+                <div key={i} className="h-32 bg-white/5 border border-white/10 rounded-2xl"></div>
               ))}
             </div>
           </div>
@@ -87,7 +87,7 @@ function FeedbackPageContent() {
       <PageLayout>
         <div className="min-h-screen p-6 pt-32 flex items-center justify-center">
             <div className="glass-card p-10 text-center max-w-md animate-stagger-1">
-                <h1 className="text-black text-3xl font-bold mb-4 bg-gradient-to-r from-primary to-primary-dim bg-clip-text text-transparent">Access Denied</h1>
+                <h1 className="text-3xl font-bold mb-4 bg-gradient-to-r from-primary to-[#ba9eff] bg-clip-text text-transparent">Access Denied</h1>
                 <p className="text-muted-foreground font-medium">You must be logged in to view feedback.</p>
             </div>
         </div>
@@ -103,7 +103,7 @@ function FeedbackPageContent() {
             <div className="bg-white/5 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/10 shadow-[0_0_30px_rgba(157,125,249,0.2)]">
               <Activity className="w-10 h-10 text-primary" />
             </div>
-            <h1 className="text-black text-3xl font-bold text-black mb-4">No Interview Data</h1>
+            <h1 className="text-foreground text-3xl font-bold mb-4">No Interview Data</h1>
             <p className="text-muted-foreground font-medium text-lg leading-relaxed">Complete an interview session to see detailed feedback and analytics.</p>
           </div>
         </div>
@@ -117,9 +117,9 @@ function FeedbackPageContent() {
         <div className="space-y-12">
           {/* Header section with refined typography */}
           <div className="animate-stagger-1">
-            <h1 className="text-black text-5xl font-bold text-black mb-4 tracking-tight flex items-center gap-4">
+            <h1 className="text-5xl font-bold mb-4 tracking-tight flex items-center gap-4">
               <span className="bg-gradient-to-r from-primary to-[#ba9eff] text-transparent bg-clip-text">Feedback</span>
-              <span className="text-black/90 font-light">& Analysis</span>
+              <span className="text-foreground/70 font-light">& Analysis</span>
             </h1>
             <p className="text-muted-foreground text-lg ml-1 font-medium max-w-2xl">
               AI-powered insights extracted from your interview sessions. Review your performance with precision.
@@ -133,7 +133,7 @@ function FeedbackPageContent() {
                  <div className="w-10 h-10 rounded-full bg-primary/20 flex-center border border-primary/30">
                    <Clock className="w-5 h-5 text-primary" />
                  </div>
-                 <h3 className="text-black text-black font-semibold text-xl tracking-wide">
+                 <h3 className="text-foreground font-semibold text-xl tracking-wide">
                    Session History
                  </h3>
               </div>
@@ -155,28 +155,28 @@ function FeedbackPageContent() {
                     )}
                     
                     <div className="flex items-center justify-between mb-3">
-                       <div className={`font-semibold text-lg ${selectedCall?.id === call.id ? 'text-black' : 'text-black/80'}`}>
+                       <div className={`font-semibold text-lg ${selectedCall?.id === call.id ? 'text-foreground' : 'text-foreground/80'}`}>
                         {new Date(call.startedAt).toLocaleDateString()}
                       </div>
-                      <ChevronRight className={`w-5 h-5 transition-transform duration-300 ${selectedCall?.id === call.id ? 'text-primary translate-x-1' : 'text-black/30 group-hover:text-black/70 group-hover:translate-x-1'}`} />
+                      <ChevronRight className={`w-5 h-5 transition-transform duration-300 ${selectedCall?.id === call.id ? 'text-primary translate-x-1' : 'text-foreground/30 group-hover:text-foreground/70 group-hover:translate-x-1'}`} />
                     </div>
                     
                     <div className="space-y-2">
                       <div className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-                         <Clock className="w-4 h-4 text-black/40" />
+                         <Clock className="w-4 h-4 text-muted-foreground/50" />
                          {new Date(call.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                       
                       <div className="flex items-center justify-between mt-4">
                         <div className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 px-2.5 py-1 rounded-md
-                          ${selectedCall?.id === call.id ? 'bg-primary/20 text-primary-foreground border border-primary/30' : 'bg-white/5 text-black/60 border border-white/10'}`}>
+                          ${selectedCall?.id === call.id ? 'bg-primary/20 text-primary border border-primary/30' : 'bg-white/5 text-muted-foreground border border-white/10'}`}>
                           <Activity className="w-3.5 h-3.5" />
                           {call.status}
                         </div>
                         
                         {call.messageCount && (
                           <div className={`text-xs font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded-md
-                            ${selectedCall?.id === call.id ? 'bg-primary/20 text-black border border-primary/30' : 'bg-white/5 text-black/50 border border-white/10'}`}>
+                            ${selectedCall?.id === call.id ? 'bg-primary/20 text-foreground border border-primary/30' : 'bg-white/5 text-muted-foreground border border-white/10'}`}>
                             <MessageSquare className="w-3.5 h-3.5" />
                             {call.messageCount} msg
                           </div>
@@ -202,7 +202,7 @@ function FeedbackPageContent() {
                 <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-6 border border-white/10">
                   <Activity className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-black text-black text-2xl font-semibold mb-3">Select a Session</h3>
+                <h3 className="text-foreground text-2xl font-semibold mb-3">Select a Session</h3>
                 <p className="text-muted-foreground text-lg max-w-md mx-auto">Choose an interview session from the history above to analyze your performance in high fidelity.</p>
               </div>
             )}
@@ -219,11 +219,11 @@ function FeedbackPageLoading() {
     <PageLayout>
       <div className="min-h-screen p-6 pt-32">
         <div className="animate-pulse space-y-8">
-          <div className="h-12 bg-[#f5f5f7]  border border-none rounded w-1/3 mb-8"></div>
-           <div className="h-64 bg-[#f5f5f7]  border border-none rounded-2xl mb-8"></div>
+          <div className="h-12 bg-white/5 border border-white/10 rounded w-1/3 mb-8"></div>
+           <div className="h-64 bg-white/5 border border-white/10 rounded-2xl mb-8"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-40 bg-[#f5f5f7]  border border-none rounded-2xl"></div>
+              <div key={i} className="h-40 bg-white/5 border border-white/10 rounded-2xl"></div>
             ))}
           </div>
         </div>

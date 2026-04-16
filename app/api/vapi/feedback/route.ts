@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { vapiCallDataService } from "@/services/vapi/call-data.service";
+import { callLogService } from "@/services/firebase/call-log.service";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || "");
@@ -204,10 +205,33 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`Generating feedback for call: ${callId}`);
+    console.log(`Generating feedback for Firestore call ID: ${callId}`);
 
-    // Fetch the specific call data
-    const callData = await vapiCallDataService.getCall(callId);
+    // The callId from the frontend may be a Firestore document ID OR a Vapi UUID.
+    // Strategy: try direct Firestore doc lookup first (O(1)), then try Vapi UUID lookup.
+    let vapiCallId: string = callId;
+
+    try {
+      // Step 1: try treating callId as a Firestore document ID
+      const firestoreLog = await callLogService.getCallLogById(callId).catch(() => null);
+      if (firestoreLog?.vapiCallId) {
+        vapiCallId = firestoreLog.vapiCallId;
+        console.log(`Resolved Firestore doc ID ${callId} → Vapi UUID ${vapiCallId}`);
+      } else {
+        // Step 2: callId might already be the Vapi UUID — verify by lookup
+        const byVapiId = await callLogService.getCallLogByVapiId(callId).catch(() => null);
+        if (byVapiId?.vapiCallId) {
+          vapiCallId = byVapiId.vapiCallId;
+        } else {
+          console.warn(`Could not resolve vapiCallId for "${callId}", using as-is`);
+        }
+      }
+    } catch (lookupError) {
+      console.warn("Firestore ID resolution failed, using callId directly:", lookupError);
+    }
+
+    // Fetch call data from Vapi using the real UUID
+    const callData = await vapiCallDataService.getCall(vapiCallId);
 
     if (!callData) {
       return NextResponse.json(
@@ -216,23 +240,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Extract conversation transcript - messages are on the call object directly
+    // Extract conversation transcript
+    // Vapi messages may use `message`, `content`, or `transcript` fields
     const messages = callData.messages || [];
     const transcript = extractConversationFromMessages(messages);
 
     console.log(`Call data structure:`, {
-      hasArtifact: !!callData.artifact,
+      hasArtifact: !!(callData as any).artifact,
       hasMessages: !!messages.length,
       messageCount: messages.length,
       transcriptLength: transcript.length,
       callStatus: callData.status,
-      firstMessageType: messages[0]?.type || 'none'
+      firstMessageType: messages[0]?.type || "none",
     });
 
     if (!transcript || transcript.trim().length === 0) {
-      console.log(`No transcript available for call ${callId}`);
+      console.log(`No transcript available for call ${vapiCallId}`);
       return NextResponse.json(
-        { error: "No conversation transcript available for analysis" },
+        { error: "No conversation transcript available for analysis. Please ensure the interview session has completed and has enough dialogue." },
         { status: 400 }
       );
     }
@@ -244,11 +269,12 @@ export async function GET(request: NextRequest) {
     const responseData = {
       id: `feedback_${callId}`,
       callId,
-      interviewId: callId, // Using callId as interviewId for now
-      userId: "current_user", // You can get this from authentication
+      vapiCallId,
+      interviewId: callId,
+      userId: "current_user",
       interviewType: "technical",
       createdAt: new Date().toISOString(),
-      ...feedback
+      ...feedback,
     };
 
     console.log(`Successfully generated feedback for call: ${callId}`);
@@ -257,13 +283,13 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error("Error generating feedback:", error);
-    
+
     const errorMessage = error instanceof Error ? error.message : "Failed to generate feedback";
-    
+
     return NextResponse.json({
       error: errorMessage,
       message: "Failed to generate feedback from call data",
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }, { status: 500 });
   }
 }

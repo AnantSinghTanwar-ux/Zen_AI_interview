@@ -15,7 +15,7 @@ export default async function ProgressPage() {
     <div className="container mx-auto px-4 py-8 pt-32">
       <div className="space-y-6">
         <div>
-          <h1 className="text-black text-2xl font-bold text-black mb-2">Progress Dashboard</h1>
+          <h1 className="text-foreground text-2xl font-bold text-foreground mb-2">Progress Dashboard</h1>
           <p className="text-gray-400">Track your achievements and progress</p>
         </div>
 
@@ -26,7 +26,7 @@ export default async function ProgressPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-400">Level</p>
-                  <p className="text-3xl font-bold text-black">5</p>
+                  <p className="text-3xl font-bold text-foreground">5</p>
                   <p className="text-xs text-gray-500">850 / 1000 XP</p>
                 </div>
                 <Trophy className="h-8 w-8 text-yellow-400" />
@@ -47,7 +47,7 @@ export default async function ProgressPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-400">Current Streak</p>
-                  <p className="text-3xl font-bold text-black">7</p>
+                  <p className="text-3xl font-bold text-foreground">7</p>
                   <p className="text-xs text-gray-500">Best: 12 days</p>
                 </div>
                 <Flame className="h-8 w-8 text-orange-400" />
@@ -60,7 +60,7 @@ export default async function ProgressPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-400">Total Points</p>
-                  <p className="text-3xl font-bold text-black">2,450</p>
+                  <p className="text-3xl font-bold text-foreground">2,450</p>
                   <p className="text-xs text-gray-500">Rank #42</p>
                 </div>
                 <Star className="h-8 w-8 text-primary-400" />
@@ -72,24 +72,24 @@ export default async function ProgressPage() {
         {/* Stats */}
         <Card className="bg-dark-200 border-gray-600">
           <CardHeader>
-            <CardTitle className="text-black">Your Statistics</CardTitle>
+            <CardTitle className="text-foreground">Your Statistics</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <p className="text-2xl font-bold text-black">12</p>
+                <p className="text-2xl font-bold text-foreground">12</p>
                 <p className="text-sm text-gray-400">Total Interviews</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-black">85%</p>
+                <p className="text-2xl font-bold text-foreground">85%</p>
                 <p className="text-sm text-gray-400">Average Score</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-black">24h</p>
+                <p className="text-2xl font-bold text-foreground">24h</p>
                 <p className="text-sm text-gray-400">Time Practiced</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-black">3</p>
+                <p className="text-2xl font-bold text-foreground">3</p>
                 <p className="text-sm text-gray-400">Badges Earned</p>
               </div>
             </div>
@@ -100,7 +100,7 @@ export default async function ProgressPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="bg-dark-200 border-gray-600">
             <CardHeader>
-              <CardTitle className="text-black flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <Award className="w-5 h-5" />
                 Earned Badges (3)
               </CardTitle>
@@ -109,19 +109,19 @@ export default async function ProgressPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <div className="text-center p-3 bg-dark-100 rounded-2xl border border-gray-600">
                   <div className="text-2xl mb-2">🎯</div>
-                  <h4 className="font-semibold text-black text-sm">First Steps</h4>
+                  <h4 className="font-semibold text-foreground text-sm">First Steps</h4>
                   <p className="text-xs text-gray-400 mt-1">Complete your first interview</p>
                   <Badge className="mt-2 bg-green-600 text-black text-xs">Common</Badge>
                 </div>
                 <div className="text-center p-3 bg-dark-100 rounded-2xl border border-gray-600">
                   <div className="text-2xl mb-2">🔥</div>
-                  <h4 className="font-semibold text-black text-sm">Hot Streak</h4>
+                  <h4 className="font-semibold text-foreground text-sm">Hot Streak</h4>
                   <p className="text-xs text-gray-400 mt-1">7 day practice streak</p>
                   <Badge className="mt-2 bg-blue-600 text-black text-xs">Rare</Badge>
                 </div>
                 <div className="text-center p-3 bg-dark-100 rounded-2xl border border-gray-600">
                   <div className="text-2xl mb-2">⭐</div>
-                  <h4 className="font-semibold text-black text-sm">High Scorer</h4>
+                  <h4 className="font-semibold text-foreground text-sm">High Scorer</h4>
                   <p className="text-xs text-gray-400 mt-1">Score above 90%</p>
                   <Badge className="mt-2 bg-yellow-600 text-black text-xs">Epic</Badge>
                 </div>
@@ -131,7 +131,7 @@ export default async function ProgressPage() {
 
           <Card className="bg-dark-200 border-gray-600">
             <CardHeader>
-              <CardTitle className="text-black flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <Users className="w-5 h-5" />
                 Top Performers
               </CardTitle>
@@ -160,12 +160,12 @@ export default async function ProgressPage() {
                         {user.rank}
                       </div>
                       <div>
-                        <p className="text-black font-medium">{user.name}</p>
+                        <p className="text-foreground font-medium">{user.name}</p>
                         <p className="text-sm text-gray-400">Level {user.level}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-black font-semibold">{user.points.toLocaleString()} pts</p>
+                      <p className="text-foreground font-semibold">{user.points.toLocaleString()} pts</p>
                     </div>
                   </div>
                 ))}
@@ -177,12 +177,12 @@ export default async function ProgressPage() {
         {/* Coming Soon */}
         <Card className="bg-dark-200 border-gray-600">
           <CardHeader>
-            <CardTitle className="text-black">Advanced Gamification</CardTitle>
+            <CardTitle className="text-foreground">Advanced Gamification</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-center py-8">
               <Trophy className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-black text-xl font-semibold text-black mb-2">More Features Coming Soon</h3>
+              <h3 className="text-foreground text-xl font-semibold text-foreground mb-2">More Features Coming Soon</h3>
               <p className="text-gray-400 mb-4">
                 We're building advanced gamification features including more badges, 
                 challenges, and personalized achievements.

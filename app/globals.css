@@ -8,7 +8,7 @@
   
   /* Void Black Foundation */
   --background: #0e0e11;
-  --foreground: #f0edf1;
+  --foreground: #f5f3f7;
   
   /* Glass Surfaces / Nested Sections */
   --card: rgba(37, 37, 42, 0.4);
@@ -25,7 +25,7 @@
   --secondary-foreground: #f0edf1;
   
   --muted: #131316;
-  --muted-foreground: #acaaae;
+  --muted-foreground: #c4c2c6;
   
   --accent: #25252a;
   --accent-foreground: #ba9eff;
@@ -34,7 +34,7 @@
   --destructive-foreground: #ffffff;
   
   /* Borders and Interactive Glows */
-  --border: rgba(118, 117, 121, 0.15); /* Ghost Border */
+  --border: rgba(180, 178, 184, 0.18); /* Ghost Border */
   --input: #131316;
   --ring: #ba9eff;
   
@@ -122,7 +122,8 @@
 @layer components {
   /* Cinematic Glass Styles */
   .neo-box, .glass, .glass-card, .card {
-    @apply bg-white/5 backdrop-blur-2xl border border-white/10 shadow-glass rounded-2xl relative overflow-hidden transition-all duration-300;
+    @apply bg-white/[0.06] backdrop-blur-2xl border border-white/[0.12] shadow-glass rounded-2xl relative overflow-hidden transition-all duration-300;
+    color: var(--foreground);
   }
   
   .glass-card::before {
@@ -167,7 +168,7 @@
 
   /* Form Elements */
   .form .label {
-     @apply text-foreground/70 font-medium mb-2 block uppercase tracking-wider text-xs;
+     @apply text-white/70 font-medium mb-2 block uppercase tracking-wider text-xs;
   }
   .form .input {
      @apply bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl min-h-12 px-4 text-foreground shadow-inner focus:ring-1 focus:ring-primary/50 transition-all;

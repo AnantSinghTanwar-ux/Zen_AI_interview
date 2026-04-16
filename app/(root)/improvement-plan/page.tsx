@@ -16,7 +16,7 @@ export default async function ImprovementPlanPage() {
     <div className="container mx-auto px-4 py-8 pt-32">
       <div className="space-y-6">
         <div>
-          <h1 className="text-black text-2xl font-bold text-black mb-2">Learning Plan</h1>
+          <h1 className="text-foreground text-2xl font-bold text-foreground mb-2">Learning Plan</h1>
           <p className="text-gray-400">Your personalized improvement roadmap</p>
         </div>
 
@@ -27,7 +27,7 @@ export default async function ImprovementPlanPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-400">Overall Progress</p>
-                  <p className="text-2xl font-bold text-black">65%</p>
+                  <p className="text-2xl font-bold text-foreground">65%</p>
                   <p className="text-xs text-gray-500">13 of 20 tasks</p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-primary-400" />
@@ -48,7 +48,7 @@ export default async function ImprovementPlanPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-400">Current Phase</p>
-                  <p className="text-2xl font-bold text-black">2</p>
+                  <p className="text-2xl font-bold text-foreground">2</p>
                   <p className="text-xs text-gray-500">of 3 phases</p>
                 </div>
                 <Target className="h-8 w-8 text-green-400" />
@@ -61,7 +61,7 @@ export default async function ImprovementPlanPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-400">Est. Duration</p>
-                  <p className="text-2xl font-bold text-black">4</p>
+                  <p className="text-2xl font-bold text-foreground">4</p>
                   <p className="text-xs text-gray-500">weeks</p>
                 </div>
                 <Clock className="h-8 w-8 text-yellow-400" />
@@ -74,11 +74,11 @@ export default async function ImprovementPlanPage() {
         <Card className="bg-dark-200 border-gray-600 border-primary-500">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-black flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <Target className="w-5 h-5 text-primary-400" />
                 Current Phase: Intermediate Problem Solving
               </CardTitle>
-              <Badge className="bg-primary-600 text-black">Active</Badge>
+              <Badge className="bg-primary-600 text-foreground">Active</Badge>
             </div>
             <p className="text-gray-400">Focus on algorithms and data structures fundamentals</p>
           </CardHeader>
@@ -96,7 +96,7 @@ export default async function ImprovementPlanPage() {
               </div>
 
               <div>
-                <h4 className="text-black font-semibold mb-3">Tasks</h4>
+                <h4 className="text-foreground font-semibold mb-3">Tasks</h4>
                 <div className="space-y-3">
                   {[
                     { id: 1, title: 'Array and String Problems', completed: true, type: 'Practice', difficulty: 'Easy' },
@@ -121,11 +121,11 @@ export default async function ImprovementPlanPage() {
                                 ? 'bg-green-600 border-green-600'
                                 : 'border-gray-500'
                             }`}>
-                              {task.completed && <CheckCircle className="w-3 h-3 text-black" />}
+                              {task.completed && <CheckCircle className="w-3 h-3 text-foreground" />}
                             </div>
                             <div className="flex-1">
                               <h5 className={`font-medium ${
-                                task.completed ? 'text-green-400 line-through' : 'text-black'
+                                task.completed ? 'text-green-400 line-through' : 'text-foreground'
                               }`}>
                                 {task.title}
                               </h5>
@@ -161,7 +161,7 @@ export default async function ImprovementPlanPage() {
         {/* Goals */}
         <Card className="bg-dark-200 border-gray-600">
           <CardHeader>
-            <CardTitle className="text-black flex items-center gap-2">
+            <CardTitle className="text-foreground flex items-center gap-2">
               <Target className="w-5 h-5" />
               Learning Goals
             </CardTitle>
@@ -169,7 +169,7 @@ export default async function ImprovementPlanPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h4 className="text-black font-semibold mb-3">Short-term Goals</h4>
+                <h4 className="text-foreground font-semibold mb-3">Short-term Goals</h4>
                 <div className="space-y-2">
                   {[
                     'Master basic data structures',
@@ -185,7 +185,7 @@ export default async function ImprovementPlanPage() {
               </div>
               
               <div>
-                <h4 className="text-black font-semibold mb-3">Long-term Goals</h4>
+                <h4 className="text-foreground font-semibold mb-3">Long-term Goals</h4>
                 <div className="space-y-2">
                   {[
                     'Land a software engineer role',
@@ -206,7 +206,7 @@ export default async function ImprovementPlanPage() {
         {/* Milestones */}
         <Card className="bg-dark-200 border-gray-600">
           <CardHeader>
-            <CardTitle className="text-black flex items-center gap-2">
+            <CardTitle className="text-foreground flex items-center gap-2">
               <Award className="w-5 h-5" />
               Milestones
             </CardTitle>
@@ -235,7 +235,7 @@ export default async function ImprovementPlanPage() {
                       )}
                       <div>
                         <h5 className={`font-medium ${
-                          milestone.completed ? 'text-green-400' : 'text-black'
+                          milestone.completed ? 'text-green-400' : 'text-foreground'
                         }`}>
                           {milestone.title}
                         </h5>
@@ -261,12 +261,12 @@ export default async function ImprovementPlanPage() {
         {/* Coming Soon */}
         <Card className="bg-dark-200 border-gray-600">
           <CardHeader>
-            <CardTitle className="text-black">AI-Powered Learning Plans</CardTitle>
+            <CardTitle className="text-foreground">AI-Powered Learning Plans</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-center py-8">
               <BookOpen className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-black text-xl font-semibold text-black mb-2">Coming Soon</h3>
+              <h3 className="text-foreground text-xl font-semibold text-foreground mb-2">Coming Soon</h3>
               <p className="text-gray-400 mb-4">
                 We're building AI-powered personalized learning plans that adapt to your progress 
                 and provide customized recommendations.
