@@ -33,6 +33,91 @@ function normalizeRoleCategory(raw: string): RoleCategory {
   return "other";
 }
 
+function cleanEntity(value: unknown, maxLen: number): string {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLen);
+}
+
+function cleanRoleTitle(value: unknown): string {
+  let v = cleanEntity(value, 220);
+  if (!v) return "";
+
+  const lower = v.toLowerCase();
+  const cutMarkers = [
+    " apply now",
+    " easy apply",
+    " resume",
+    " your current resume",
+    " see application",
+    " promoted",
+  ];
+
+  for (const marker of cutMarkers) {
+    const idx = lower.indexOf(marker);
+    if (idx > 0) {
+      v = v.slice(0, idx).trim();
+      break;
+    }
+  }
+
+  return cleanEntity(v, 160);
+}
+
+function cleanCompanyName(value: unknown): string {
+  let v = cleanEntity(value, 200);
+  if (!v) return "";
+
+  // Common non-company values accidentally extracted on LinkedIn/job boards.
+  // Only reject when it looks like a count/metric, not a legitimate company name.
+  if ((/\bemployees?\b/i.test(v) || /\bfollowers?\b/i.test(v)) && /\d/.test(v)) return "";
+  if (/\b\d+\s*[-–]\s*\d+\s*employees\b/i.test(v)) return "";
+  if (/\b\d+\+?\s*employees\b/i.test(v)) return "";
+  if (/\b\d+(?:,\d{3})+\+?\s*followers\b/i.test(v)) return "";
+
+  const lower = v.toLowerCase();
+  const cutMarkers = [
+    " apply now",
+    " easy apply",
+    " resume",
+    " your current resume",
+    " see application",
+    " promoted",
+  ];
+
+  for (const marker of cutMarkers) {
+    const idx = lower.indexOf(marker);
+    if (idx > 0) {
+      v = v.slice(0, idx).trim();
+      break;
+    }
+  }
+
+  // Split on common separators.
+  v = v.split(" · ")[0].split(" | ")[0].trim();
+
+  return cleanEntity(v, 120);
+}
+
+function normalizeForDisplay(app: ExternalApplication): ExternalApplication {
+  const cleanedCompany = cleanCompanyName(app.companyName);
+  const cleanedRoleTitle = cleanRoleTitle(app.roleTitle);
+  const rawCompany = String(app.companyName || "");
+
+  const looksLikeMetric =
+    ((/\bemployees?\b/i.test(rawCompany) || /\bfollowers?\b/i.test(rawCompany)) && /\d/.test(rawCompany)) ||
+    /\b\d+\s*[-–]\s*\d+\s*employees\b/i.test(rawCompany) ||
+    /\b\d+\+?\s*employees\b/i.test(rawCompany) ||
+    /\b\d+(?:,\d{3})+\+?\s*followers\b/i.test(rawCompany);
+
+  return {
+    ...app,
+    companyName: cleanedCompany || (looksLikeMetric ? "Unknown" : rawCompany || "Unknown"),
+    roleTitle: cleanedRoleTitle || app.roleTitle,
+  };
+}
+
 export async function importApplications(
   records: Array<{
     candidateName: string;
@@ -135,7 +220,6 @@ export async function getApplications(filters?: {
   let query: FirebaseFirestore.Query = db.collection(COLLECTION);
 
   if (filters?.roleCategory) query = query.where("roleCategory", "==", filters.roleCategory);
-  if (filters?.companyName) query = query.where("companyName", "==", filters.companyName);
   if (filters?.sourcePlatform) query = query.where("sourcePlatform", "==", filters.sourcePlatform);
   if (filters?.status) query = query.where("status", "==", filters.status);
   if (filters?.interviewStatus) query = query.where("interviewStatus", "==", filters.interviewStatus);
@@ -146,6 +230,16 @@ export async function getApplications(filters?: {
     id: doc.id,
     ...doc.data(),
   })) as ExternalApplication[];
+
+  // Normalize display fields for older/badly ingested records.
+  results = results.map(normalizeForDisplay);
+
+  // Filter companyName in memory so cleaned display values still match.
+  if (filters?.companyName) {
+    let target = cleanCompanyName(filters.companyName);
+    if (!target) target = "Unknown";
+    results = results.filter((r) => r.companyName === target);
+  }
 
   // Filter roleTitle in memory (Firestore doesn't support substring match)
   if (filters?.roleTitle) {
@@ -161,7 +255,8 @@ export async function getApplications(filters?: {
 export async function getApplication(id: string): Promise<ExternalApplication | null> {
   const doc = await db.collection(COLLECTION).doc(id).get();
   if (!doc.exists) return null;
-  return { id: doc.id, ...doc.data() } as ExternalApplication;
+  const app = { id: doc.id, ...doc.data() } as ExternalApplication;
+  return normalizeForDisplay(app);
 }
 
 export async function updateApplicationStatus(
@@ -187,7 +282,12 @@ export async function getDistinctValues(): Promise<{
   snapshot.docs.forEach((doc) => {
     const data = doc.data();
     if (data.roleCategory) roles.add(data.roleCategory);
-    if (data.companyName) companies.add(data.companyName);
+
+    if (data.companyName !== undefined) {
+      const normalizedCompany = cleanCompanyName(data.companyName);
+      companies.add(normalizedCompany || "Unknown");
+    }
+
     if (data.sourcePlatform) sources.add(data.sourcePlatform);
   });
 
