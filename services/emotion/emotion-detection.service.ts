@@ -60,7 +60,7 @@ class EmotionDetectionService {
   private readonly emotionCache = new Map<string, EmotionData>();
 
   constructor() {
-    const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_AI_API_KEY;
+    const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_AI_API_KEY || "AQ.Ab8RN6JuTm0PHJB3bCJjE1P-1p0_kXOrp_iwefhHb7LVxc8YIw";
     const fallbackOnly = process.env.EMOTION_DETECTION_FALLBACK_ONLY === 'true';
     
     if (!apiKey || fallbackOnly) {
@@ -170,7 +170,7 @@ class EmotionDetectionService {
   ): Promise<EmotionData> {
     // Check if fallback mode is enabled
     const fallbackOnly = process.env.EMOTION_DETECTION_FALLBACK_ONLY === 'true';
-    const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_AI_API_KEY;
+    const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_AI_API_KEY || "AQ.Ab8RN6JuTm0PHJB3bCJjE1P-1p0_kXOrp_iwefhHb7LVxc8YIw";
     
     if (fallbackOnly || !apiKey) {
       console.log('Using fallback emotion analysis (API disabled or unavailable)');

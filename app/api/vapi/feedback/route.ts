@@ -6,7 +6,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const GOOGLE_AI_KEY =
   process.env.GOOGLE_AI_API_KEY ||
   process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
-  "";
+  "AQ.Ab8RN6JuTm0PHJB3bCJjE1P-1p0_kXOrp_iwefhHb7LVxc8YIw";
 
 const genAI = GOOGLE_AI_KEY ? new GoogleGenerativeAI(GOOGLE_AI_KEY) : null;
 const FEEDBACK_MODEL_CANDIDATES = [
