@@ -193,7 +193,7 @@ export default function DSAInterviewPage() {
     <PageLayout>
     <div className="min-h-screen bg-[#f5f5f7]  border border-none flex flex-col pt-24">
       {/* Header */}
-      <div className="bg-[#f5f5f7]  text-foreground border-b border-gray-200 px-4 py-3">
+      <div className="bg-[#f5f5f7]  text-black border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between max-w-6xl mx-auto">
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-gray-800">
@@ -203,7 +203,7 @@ export default function DSAInterviewPage() {
             <div className="h-6 w-px bg-gray-300" />
             <div className="flex items-center gap-2">
               <Code className="w-5 h-5 text-blue-600" />
-              <h1 className="text-lg font-semibold text-gray-900">DSA Interview</h1>
+              <h1 className="text-black text-lg font-semibold text-gray-900">DSA Interview</h1>
             </div>
           </div>
           
@@ -227,7 +227,7 @@ export default function DSAInterviewPage() {
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Code className="w-8 h-8 text-blue-600" />
                 </div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                <h2 className="text-black text-xl font-semibold text-gray-900 mb-2">
                   Ready for your DSA Interview?
                 </h2>
                 <p className="text-gray-600 mb-6 max-w-md mx-auto">
@@ -251,8 +251,8 @@ export default function DSAInterviewPage() {
                     className={cn(
                       "max-w-2xl px-4 py-3 rounded-2xl",
                       message.role === "user"
-                        ? "bg-blue-600 text-white"
-                        : "bg-[#f5f5f7]  text-foreground border border-gray-200"
+                        ? "bg-blue-600 text-black"
+                        : "bg-[#f5f5f7]  text-black border border-gray-200"
                     )}
                   >
                     <div className="whitespace-pre-wrap">{message.content}</div>
@@ -272,7 +272,7 @@ export default function DSAInterviewPage() {
             {/* Streaming message */}
             {streamingMessage && (
               <div className="flex justify-start">
-                <div className="max-w-2xl px-4 py-3 rounded-2xl bg-[#f5f5f7]  text-foreground border border-gray-200">
+                <div className="max-w-2xl px-4 py-3 rounded-2xl bg-[#f5f5f7]  text-black border border-gray-200">
                   <div className="whitespace-pre-wrap">{streamingMessage}</div>
                   <div className="flex items-center gap-2 mt-2">
                     <div className="flex space-x-1">
@@ -290,7 +290,7 @@ export default function DSAInterviewPage() {
           </div>
 
           {/* Input */}
-          <div className="border-t border-gray-200 bg-[#f5f5f7]  text-foreground p-4">
+          <div className="border-t border-gray-200 bg-[#f5f5f7]  text-black p-4">
             <div className="flex gap-3">
               <Input
                 value={currentInput}
@@ -327,10 +327,10 @@ export default function DSAInterviewPage() {
 
         {/* Question Panel */}
         {currentQuestion && (
-          <div className="w-96 border-l border-gray-200 bg-[#f5f5f7]  text-foreground p-4 overflow-y-auto">
+          <div className="w-96 border-l border-gray-200 bg-[#f5f5f7]  text-black p-4 overflow-y-auto">
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold text-gray-900">Current Problem</h3>
+                <h3 className="text-black font-semibold text-gray-900">Current Problem</h3>
                 <span className={cn(
                   "px-2 py-1 rounded text-xs font-medium",
                   getDifficultyColor(currentQuestion.difficulty)

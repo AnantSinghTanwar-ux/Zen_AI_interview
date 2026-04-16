@@ -104,19 +104,19 @@ export default function CallDetailsPage() {
   if (loading) {
     return (
       <PageLayout>
-        <div className="min-h-screen bg-[#f5f5f7]  text-foreground font-sans">
+        <div className="min-h-screen bg-[#f5f5f7]  text-black font-sans">
           <div className="max-w-7xl mx-auto px-6 py-8">
             <div className="mb-6">
               <Link 
                 href="/call-data"
-                className="inline-flex items-center gap-2 px-4 py-2 border border-none shadow-neo bg-[#f5f5f7]  text-foreground font-bold text-black"
+                className="inline-flex items-center gap-2 px-4 py-2 border border-none shadow-neo bg-[#f5f5f7]  text-black font-bold text-black"
               >
                 <ChevronLeft className="w-4 h-4" />
                 Back to Call Data
               </Link>
             </div>
-            <h1 className="text-4xl font-black mb-8">Call Details</h1>
-            <div className="flex items-center justify-center h-64 border border-none bg-[#f5f5f7]  text-foreground shadow-neo">
+            <h1 className="text-black text-4xl font-black mb-8">Call Details</h1>
+            <div className="flex items-center justify-center h-64 border border-none bg-[#f5f5f7]  text-black shadow-neo">
               <div className="text-xl font-bold">Loading call details...</div>
             </div>
           </div>
@@ -128,20 +128,20 @@ export default function CallDetailsPage() {
   if (error) {
     return (
       <PageLayout>
-        <div className="min-h-screen bg-[#f5f5f7]  text-foreground font-sans">
+        <div className="min-h-screen bg-[#f5f5f7]  text-black font-sans">
           <div className="max-w-7xl mx-auto px-6 py-8">
             <div className="mb-6">
               <Link 
                 href="/call-data"
-                className="inline-flex items-center gap-2 px-4 py-2 border border-none shadow-neo bg-[#f5f5f7]  text-foreground font-bold text-black"
+                className="inline-flex items-center gap-2 px-4 py-2 border border-none shadow-neo bg-[#f5f5f7]  text-black font-bold text-black"
               >
                 <ChevronLeft className="w-4 h-4" />
                 Back to Call Data
               </Link>
             </div>
-            <h1 className="text-4xl font-black mb-8">Call Details</h1>
+            <h1 className="text-black text-4xl font-black mb-8">Call Details</h1>
             <div className="bg-[#f5f5f7]  border border-none shadow-neo p-6">
-              <p className="text-white font-bold text-lg">Error: {error}</p>
+              <p className="text-black font-bold text-lg">Error: {error}</p>
             </div>
           </div>
         </div>
@@ -152,18 +152,18 @@ export default function CallDetailsPage() {
   if (!callDetails) {
     return (
       <PageLayout>
-        <div className="min-h-screen bg-[#f5f5f7]  text-foreground font-sans">
+        <div className="min-h-screen bg-[#f5f5f7]  text-black font-sans">
           <div className="max-w-7xl mx-auto px-6 py-8">
             <div className="mb-6">
               <Link 
                 href="/call-data"
-                className="inline-flex items-center gap-2 px-4 py-2 border border-none shadow-neo bg-[#f5f5f7]  text-foreground font-bold text-black"
+                className="inline-flex items-center gap-2 px-4 py-2 border border-none shadow-neo bg-[#f5f5f7]  text-black font-bold text-black"
               >
                 <ChevronLeft className="w-4 h-4" />
                 Back to Call Data
               </Link>
             </div>
-            <h1 className="text-4xl font-black mb-8">Call Details</h1>
+            <h1 className="text-black text-4xl font-black mb-8">Call Details</h1>
             <div className="text-center py-12 border border-none bg-[#f5f5f7]  border border-none shadow-neo">
               <p className="text-black font-bold text-lg">Call not found</p>
             </div>
@@ -175,13 +175,13 @@ export default function CallDetailsPage() {
 
   return (
     <PageLayout>
-      <div className="min-h-screen bg-[#f5f5f7]  text-foreground font-sans">
+      <div className="min-h-screen bg-[#f5f5f7]  text-black font-sans">
         <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
           {/* Header */}
           <div className="mb-6">
             <Link 
               href="/call-data"
-              className="inline-flex items-center gap-2 px-4 py-2 border border-none shadow-neo bg-[#f5f5f7]  text-foreground font-bold text-black"
+              className="inline-flex items-center gap-2 px-4 py-2 border border-none shadow-neo bg-[#f5f5f7]  text-black font-bold text-black"
             >
               <ChevronLeft className="w-4 h-4" />
               Back to Call Data
@@ -189,7 +189,7 @@ export default function CallDetailsPage() {
           </div>
           
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h1 className="text-4xl font-black text-black">Call Details</h1>
+            <h1 className="text-black text-4xl font-black text-black">Call Details</h1>
             <div className="flex items-center gap-2 bg-[#f5f5f7]  border border-none px-4 py-2 shadow-neo">
               <span className="font-bold">ID:</span>
               <span className="font-mono text-sm">{callDetails.id}</span>
@@ -200,10 +200,10 @@ export default function CallDetailsPage() {
             {/* Left Column */}
             <div className="space-y-8">
               {/* Call Information */}
-              <div className="bg-[#f5f5f7]  text-foreground border border-none shadow-neo p-6">
+              <div className="bg-[#f5f5f7]  text-black border border-none shadow-neo p-6">
                 <div className="flex items-center gap-3 mb-6 border-b-2 border-black pb-4">
                   <Clock className="w-6 h-6" />
-                  <h2 className="text-2xl font-black">Call Information</h2>
+                  <h2 className="text-black text-2xl font-black">Call Information</h2>
                 </div>
                 
                 <div className="space-y-4">
@@ -251,7 +251,7 @@ export default function CallDetailsPage() {
                 callDetails.artifact?.stereoRecordingUrl || 
                 callDetails.artifact?.recording?.mono?.combinedUrl) && (
                 <div className="bg-[#f5f5f7]  border border-none shadow-neo p-6">
-                  <h2 className="text-2xl font-black mb-6 border-b-2 border-black pb-4">Audio Recordings</h2>
+                  <h2 className="text-black text-2xl font-black mb-6 border-b-2 border-black pb-4">Audio Recordings</h2>
                   <div className="space-y-6">
                     {/* Combined Recording */}
                     {(callDetails.artifact?.recordingUrl || callDetails.artifact?.recording?.mono?.combinedUrl) && (
@@ -282,7 +282,7 @@ export default function CallDetailsPage() {
                 <div className="bg-[#f5f5f7]  border border-none shadow-neo p-6 h-full flex flex-col">
                   <div className="flex items-center gap-3 mb-6 border-b-2 border-black pb-4 flex-shrink-0">
                     <Brain className="w-6 h-6 text-purple-700" />
-                    <h2 className="text-2xl font-black text-purple-900">Emotion Analysis</h2>
+                    <h2 className="text-black text-2xl font-black text-purple-900">Emotion Analysis</h2>
                     <div className="flex items-center gap-2 ml-auto bg-purple-200 border border-none px-3 py-1 shadow-neo">
                       <Activity className="w-4 h-4 text-purple-900" />
                       <span className="text-sm font-bold text-purple-900">
@@ -292,7 +292,7 @@ export default function CallDetailsPage() {
                   </div>
 
                   {/* Full Emotion Visualization */}
-                  <div className="border border-none bg-[#f5f5f7]  text-foreground shadow-neo flex-grow overflow-hidden flex flex-col">
+                  <div className="border border-none bg-[#f5f5f7]  text-black shadow-neo flex-grow overflow-hidden flex flex-col">
                     <div className="flex-grow overflow-y-auto">
                       <EmotionVisualization 
                         emotionAnalysis={callDetails.emotionAnalysis}
@@ -309,10 +309,10 @@ export default function CallDetailsPage() {
 
         {/* Messages/Conversation */}
         {callDetails.messages && callDetails.messages.length > 0 && (
-          <div className="bg-[#f5f5f7]  text-foreground border border-none shadow-neo p-6">
+          <div className="bg-[#f5f5f7]  text-black border border-none shadow-neo p-6">
             <div className="flex items-center gap-3 mb-6 border-b-2 border-black pb-4">
               <MessageSquare className="w-6 h-6" />
-              <h2 className="text-2xl font-black">
+              <h2 className="text-black text-2xl font-black">
                 Conversation ({callDetails.messages.length} messages)
               </h2>
             </div>
@@ -376,10 +376,10 @@ export default function CallDetailsPage() {
 
           {/* Cost Information - Moved to Bottom */}
           {callDetails.cost && (
-            <div className="bg-[#f5f5f7]  text-foreground border border-none shadow-neo p-6">
+            <div className="bg-[#f5f5f7]  text-black border border-none shadow-neo p-6">
               <div className="flex items-center gap-3 mb-6 border-b-2 border-black pb-4">
                 <DollarSign className="w-6 h-6 text-green-700" />
-                <h2 className="text-2xl font-black">Cost Breakdown</h2>
+                <h2 className="text-black text-2xl font-black">Cost Breakdown</h2>
               </div>
               
               <div className="space-y-3">

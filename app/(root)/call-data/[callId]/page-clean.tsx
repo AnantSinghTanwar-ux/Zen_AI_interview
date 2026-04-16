@@ -112,7 +112,7 @@ export default function CallDetailsPage() {
               ← Back to Call Data
             </Link>
           </div>
-          <h1 className="text-white text-3xl font-bold mb-8">Call Details</h1>
+          <h1 className="text-black text-black text-3xl font-bold mb-8">Call Details</h1>
           <div className="flex items-center justify-center h-64">
             <div className="text-gray-400">Loading call details...</div>
           </div>
@@ -133,7 +133,7 @@ export default function CallDetailsPage() {
               ← Back to Call Data
             </Link>
           </div>
-          <h1 className="text-white text-3xl font-bold mb-8">Call Details</h1>
+          <h1 className="text-black text-black text-3xl font-bold mb-8">Call Details</h1>
           <div className="bg-[#f5f5f7] border border-red-500 rounded-2xl p-4">
             <p className="text-red-400">Error: {error}</p>
           </div>
@@ -154,7 +154,7 @@ export default function CallDetailsPage() {
               ← Back to Call Data
             </Link>
           </div>
-          <h1 className="text-white text-3xl font-bold mb-8">Call Details</h1>
+          <h1 className="text-black text-black text-3xl font-bold mb-8">Call Details</h1>
           <div className="text-center py-12">
             <p className="text-gray-400 text-lg">Call not found</p>
           </div>
@@ -177,7 +177,7 @@ export default function CallDetailsPage() {
         </div>
         
         <div className="flex items-center justify-between">
-          <h1 className="text-white text-3xl font-bold">Call Details</h1>
+          <h1 className="text-black text-black text-3xl font-bold">Call Details</h1>
           <div className="text-sm text-gray-400">
             Call ID: <span className="font-mono">{callDetails.id}</span>
           </div>
@@ -188,7 +188,7 @@ export default function CallDetailsPage() {
           <div className="space-y-8">
             {/* Call Information */}
             <div className="bg-dark-200 border border-gray-600 rounded-2xl p-6">
-              <h2 className="text-white text-xl font-semibold mb-4">Call Information</h2>
+              <h2 className="text-black text-black text-xl font-semibold mb-4">Call Information</h2>
               <div className="space-y-3">
                 <div>
                   <label className="text-gray-400 text-sm">Status</label>
@@ -201,17 +201,17 @@ export default function CallDetailsPage() {
                 </div>
                 <div>
                   <label className="text-gray-400 text-sm">Started At</label>
-                  <p className="text-white text-sm">{new Date(callDetails.startedAt).toLocaleString()}</p>
+                  <p className="text-black text-sm">{new Date(callDetails.startedAt).toLocaleString()}</p>
                 </div>
                 {callDetails.endedAt && (
                   <div>
                     <label className="text-gray-400 text-sm">Ended At</label>
-                    <p className="text-white text-sm">{new Date(callDetails.endedAt).toLocaleString()}</p>
+                    <p className="text-black text-sm">{new Date(callDetails.endedAt).toLocaleString()}</p>
                   </div>
                 )}
                 <div>
                   <label className="text-gray-400 text-sm">Duration</label>
-                  <p className="text-white text-sm">
+                  <p className="text-black text-sm">
                     {callDetails.endedAt && callDetails.startedAt 
                       ? `${Math.round((new Date(callDetails.endedAt).getTime() - new Date(callDetails.startedAt).getTime()) / 1000 / 60)} minutes`
                       : 'In progress'
@@ -220,7 +220,7 @@ export default function CallDetailsPage() {
                 </div>
                 <div>
                   <label className="text-gray-400 text-sm">Messages</label>
-                  <p className="text-white text-sm">{callDetails.messageCount || callDetails.messages?.length || 0}</p>
+                  <p className="text-black text-sm">{callDetails.messageCount || callDetails.messages?.length || 0}</p>
                 </div>
               </div>
             </div>
@@ -230,7 +230,7 @@ export default function CallDetailsPage() {
               callDetails.artifact?.stereoRecordingUrl || 
               callDetails.artifact?.recording?.mono?.combinedUrl) && (
               <div className="bg-dark-200 border border-gray-600 rounded-2xl p-6">
-                <h2 className="text-white text-xl font-semibold mb-4">Audio Recordings</h2>
+                <h2 className="text-black text-black text-xl font-semibold mb-4">Audio Recordings</h2>
                 <div className="space-y-4">
                   {/* Combined Recording */}
                   {(callDetails.artifact?.recordingUrl || callDetails.artifact?.recording?.mono?.combinedUrl) && (
@@ -261,7 +261,7 @@ export default function CallDetailsPage() {
               <div className="bg-dark-200 border border-gray-600 rounded-2xl p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <Brain className="w-6 h-6 text-purple-400" />
-                  <h2 className="text-white text-xl font-semibold">Emotion Analysis</h2>
+                  <h2 className="text-black text-black text-xl font-semibold">Emotion Analysis</h2>
                   <div className="flex items-center gap-2 ml-auto">
                     <Activity className="w-4 h-4 text-purple-400" />
                     <span className="text-sm text-gray-400">
@@ -285,7 +285,7 @@ export default function CallDetailsPage() {
       {/* Messages/Conversation */}
       {callDetails.messages && callDetails.messages.length > 0 && (
         <div className="bg-dark-200 border border-gray-600 rounded-2xl p-6">
-          <h2 className="text-white text-xl font-semibold mb-4">
+          <h2 className="text-black text-black text-xl font-semibold mb-4">
             Conversation ({callDetails.messages.length} messages)
           </h2>
           <div className="space-y-4 max-h-96 overflow-y-auto">
@@ -346,7 +346,7 @@ export default function CallDetailsPage() {
         {/* Cost Information - Moved to Bottom */}
         {callDetails.cost && (
           <div className="bg-dark-200 border border-gray-600 rounded-2xl p-6">
-            <h2 className="text-white text-xl font-semibold mb-4">Cost Breakdown</h2>
+            <h2 className="text-black text-black text-xl font-semibold mb-4">Cost Breakdown</h2>
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-400">Total Cost</span>
@@ -356,19 +356,19 @@ export default function CallDetailsPage() {
                 <>
                   <div className="flex justify-between">
                     <span className="text-gray-400">LLM</span>
-                    <span className="text-white">${callDetails.costBreakdown.llm?.toFixed(4) || '0.0000'}</span>
+                    <span className="text-black">${callDetails.costBreakdown.llm?.toFixed(4) || '0.0000'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">STT (Speech-to-Text)</span>
-                    <span className="text-white">${callDetails.costBreakdown.stt?.toFixed(4) || '0.0000'}</span>
+                    <span className="text-black">${callDetails.costBreakdown.stt?.toFixed(4) || '0.0000'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">TTS (Text-to-Speech)</span>
-                    <span className="text-white">${callDetails.costBreakdown.tts?.toFixed(4) || '0.0000'}</span>
+                    <span className="text-black">${callDetails.costBreakdown.tts?.toFixed(4) || '0.0000'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Vapi Platform</span>
-                    <span className="text-white">${callDetails.costBreakdown.vapi?.toFixed(4) || '0.0000'}</span>
+                    <span className="text-black">${callDetails.costBreakdown.vapi?.toFixed(4) || '0.0000'}</span>
                   </div>
                 </>
               )}
