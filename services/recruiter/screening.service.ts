@@ -119,11 +119,13 @@ Return ONLY a JSON array of strings, each being one interview question. Example:
 
 Make questions specific, practical, and relevant to the role and skills listed.`;
 
-    const modelCandidates = [
-      process.env.GOOGLE_AI_FEEDBACK_MODEL || "gemini-2.0-flash-lite",
-      "gemini-1.5-flash",
-      "gemini-2.0-flash",
-    ].filter(Boolean);
+    const modelCandidates = Array.from(
+      new Set([
+        process.env.GOOGLE_AI_FEEDBACK_MODEL || "gemini-3-flash",
+        "gemini-3-flash",
+        "gemini-1.5-flash",
+      ])
+    ).filter(Boolean);
 
     let lastError: unknown = null;
 

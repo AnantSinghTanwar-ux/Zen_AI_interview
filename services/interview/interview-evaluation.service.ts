@@ -45,9 +45,9 @@ class InterviewEvaluationService {
     } else {
       try {
         this.genAI = new GoogleGenerativeAI(apiKey);
-        // Use gemini-2.5-flash
+        // Use gemini-3-flash
         this.model = this.genAI.getGenerativeModel({ 
-          model: 'gemini-2.5-flash',
+          model: 'gemini-3-flash',
           generationConfig: {
             maxOutputTokens: 8192,
             temperature: 0.1,

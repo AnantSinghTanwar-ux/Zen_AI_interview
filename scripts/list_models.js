@@ -19,7 +19,7 @@ async function listModels() {
     // But typically we can just try to fetch a known model or correct the name.
     
     // In 0.24.1, we might not have listModels directly on genAI. It's usually a separate call.
-    // But let's try to just run a simple generateContent with gemini-2.0-flash-exp and gemini-1.5-flash-8b
+    // But let's try to just run a simple generateContent with gemini-3-flash and gemini-1.5-flash-8b
     
     // Instead of listing (which requires checking docs/source), let's just try 2-3 standard names.
     
@@ -28,8 +28,7 @@ async function listModels() {
         "gemini-1.5-flash-latest",
         "gemini-1.5-flash-001",
         "gemini-flash-1.5",
-        "gemini-2.0-flash-exp",
-        "gemini-2.0-flash"
+      "gemini-3-flash"
     ];
     
     console.log("Testing models...");

@@ -52,12 +52,13 @@ class FeedbackService {
   private readonly COLLECTION = 'interview_feedback';
   private readonly USER_FEEDBACK_COLLECTION = 'user_feedback';
   private genAI: GoogleGenerativeAI | null = null;
-  private readonly modelCandidates = [
-    process.env.GOOGLE_AI_FEEDBACK_MODEL || 'gemini-2.0-flash-lite',
-    'gemini-1.5-flash',
-    'gemini-2.0-flash',
-    'gemini-2.5-flash',
-  ].filter(Boolean);
+  private readonly modelCandidates = Array.from(
+    new Set([
+      process.env.GOOGLE_AI_FEEDBACK_MODEL || 'gemini-3-flash',
+      'gemini-3-flash',
+      'gemini-1.5-flash',
+    ])
+  ).filter(Boolean);
 
   constructor() {
     const apiKey = process.env.GOOGLE_AI_API_KEY;
