@@ -16,22 +16,22 @@ export function CallLogs({ userId }: CallLogsProps) {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <h2 className="text-2xl font-black text-black">Call History</h2>
+      <div className="space-y-6">
+        <h2 className="text-2xl font-semibold tracking-tight text-[#EAEAF0]">Call History</h2>
         <div className="grid gap-4">
            {[1, 2, 3].map((i) => (
-             <Card key={i} className="p-6 bg-[#f5f5f7]  text-foreground border border-none shadow-neo">
+             <Card key={i} className="neo-box p-6 border-none">
                 <div className="flex items-start justify-between">
                    <div className="flex-1 space-y-4">
                       <div className="flex items-center gap-3">
-                         <Skeleton className="h-5 w-5 rounded-full bg-[#f5f5f7] " />
-                         <Skeleton className="h-4 w-32 bg-[#f5f5f7] " />
-                         <Skeleton className="h-5 w-20 rounded-full bg-[#f5f5f7] " />
+                         <Skeleton className="h-5 w-5 rounded-full bg-[#1F1F2B]" />
+                         <Skeleton className="h-4 w-32 bg-[#1F1F2B]" />
+                         <Skeleton className="h-5 w-20 rounded-full bg-[#1F1F2B]" />
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <Skeleton className="h-4 w-24 bg-[#f5f5f7] " />
-                          <Skeleton className="h-4 w-24 bg-[#f5f5f7] " />
-                          <Skeleton className="h-4 w-24 bg-[#f5f5f7] " />
+                          <Skeleton className="h-4 w-24 bg-[#1F1F2B]" />
+                          <Skeleton className="h-4 w-24 bg-[#1F1F2B]" />
+                          <Skeleton className="h-4 w-24 bg-[#1F1F2B]" />
                       </div>
                    </div>
                 </div>
@@ -44,19 +44,21 @@ export function CallLogs({ userId }: CallLogsProps) {
 
   if (error) {
     return (
-      <div className="text-center p-8 bg-[#f5f5f7]  rounded-3xl border-2 border-red-600 shadow-neo">
-        <p className="text-red-700 font-bold">Error loading call logs: {error}</p>
+      <div className="text-center p-8 bg-[#111118] rounded-2xl border border-red-900/50">
+        <p className="text-red-400 font-medium">Error loading call logs: {error}</p>
       </div>
     );
   }
 
   if (callLogs.length === 0) {
     return (
-      <div className="text-center p-8 border-2 border-dashed border-gray-400 rounded-3xl bg-[#f5f5f7]  border border-none">
-        <Phone className="mx-auto h-12 w-12 text-gray-400" />
-        <h3 className="mt-2 text-lg font-black text-black">No call logs</h3>
-        <p className="mt-1 text-gray-600 font-medium">
-          Start a call to see your call history here.
+      <div className="text-center py-16 px-6 border border-dashed border-[#1F1F2B] rounded-2xl bg-[#0B0B0F]">
+        <div className="bg-[#111118] h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#1F1F2B]">
+          <Phone className="h-6 w-6 text-[#9CA3AF]" />
+        </div>
+        <h3 className="text-xl font-semibold text-[#EAEAF0] mb-2">No call history</h3>
+        <p className="text-[#9CA3AF] max-w-sm mx-auto">
+          Start a new interview session to see your past logs, performance metrics, and actionable feedback here.
         </p>
       </div>
     );
@@ -78,89 +80,89 @@ export function CallLogs({ userId }: CallLogsProps) {
     });
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusStyle = (status: string) => {
     switch (status.toLowerCase()) {
       case "completed":
       case "ended":
-        return "bg-green-100 text-green-700 border-green-700 border-2 font-bold";
+        return "bg-[#111118] text-[#FACC15] border-[#FACC15]/30";
       case "active":
-        return "bg-blue-100 text-blue-700 border-blue-700 border-2 font-bold";
+        return "bg-[#111118] text-[#A855F7] border-[#A855F7]/30";
       case "failed":
-        return "bg-red-100 text-red-700 border-red-700 border-2 font-bold";
+        return "bg-[#111118] text-red-500 border-red-500/30";
       default:
-        return "bg-[#f5f5f7]  border border-none text-gray-700 border-gray-700 border-2 font-bold";
+        return "bg-[#111118] text-[#9CA3AF] border-[#1F1F2B]";
     }
   };
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-black text-black">Call History</h2>
+    <div className="space-y-6">
+      <h2 className="text-2xl font-semibold tracking-tight text-[#EAEAF0]">Session Logs</h2>
 
       <div className="grid gap-4">
         {callLogs.map((callLog) => (
-          <Card key={callLog.id} className="p-6 bg-[#f5f5f7]  text-foreground border border-none shadow-neo">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <Phone className="h-5 w-5 text-gray-600" />
-                  <span className="text-sm text-gray-600 font-bold">
-                    {formatDate(callLog.startedAt)}
-                  </span>
-                  <Badge variant="outline" className={getStatusColor(callLog.status)}>
-                    {callLog.status}
+          <div key={callLog.id} className="neo-box p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+              <div className="flex items-center gap-3">
+                <div className="bg-[#1A1A24] p-2 rounded-full border border-[#1F1F2B]">
+                  <Phone className="h-4 w-4 text-[#FACC15]" />
+                </div>
+                <span className="text-base font-medium text-[#EAEAF0]">
+                  {formatDate(callLog.startedAt)}
+                </span>
+                <Badge variant="outline" className={`ml-2 px-3 py-0.5 rounded-full font-medium ${getStatusStyle(callLog.status)}`}>
+                  {callLog.status}
+                </Badge>
+              </div>
+              
+              <div className="flex gap-2">
+                {callLog.hasRecording && (
+                  <Badge variant="outline" className="bg-[#1A1A24] text-[#9CA3AF] border-[#1F1F2B] font-medium rounded-full">
+                    Recording
                   </Badge>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm text-gray-600 font-medium">
-                      {formatDuration(callLog.duration)}
-                    </span>
-                  </div>
-
-                  {callLog.cost && (
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600 font-medium">
-                        ${callLog.cost.toFixed(4)}
-                      </span>
-                    </div>
-                  )}
-
-                  {callLog.messageCount !== undefined && (
-                    <div className="flex items-center gap-2">
-                      <MessageCircle className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600 font-medium">
-                        {callLog.messageCount} messages
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="flex gap-1">
-                    {callLog.hasRecording && (
-                      <Badge variant="outline" className="text-xs border-2 border-gray-300 text-gray-600 font-bold">
-                        Recording
-                      </Badge>
-                    )}
-                    {callLog.hasTranscript && (
-                      <Badge variant="outline" className="text-xs border-2 border-gray-300 text-gray-600 font-bold">
-                        Transcript
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                {callLog.summary && (
-                  <div className="mt-3 p-3 bg-[#f5f5f7]  border border-none border-2 border-gray-200 rounded-2xl">
-                    <p className="text-sm text-gray-800 line-clamp-2 font-medium">
-                      {callLog.summary}
-                    </p>
-                  </div>
+                )}
+                {callLog.hasTranscript && (
+                  <Badge variant="outline" className="bg-[#1A1A24] text-[#9CA3AF] border-[#1F1F2B] font-medium rounded-full">
+                    Transcript
+                  </Badge>
                 )}
               </div>
             </div>
-          </Card>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 py-4 border-y border-[#1F1F2B]">
+              <div className="flex items-center gap-3">
+                <Clock className="h-4 w-4 text-[#9CA3AF]" />
+                <span className="text-sm font-medium text-[#EAEAF0]">
+                  {formatDuration(callLog.duration)}
+                </span>
+              </div>
+
+              {callLog.cost !== undefined && (
+                <div className="flex items-center gap-3">
+                  <DollarSign className="h-4 w-4 text-[#9CA3AF]" />
+                  <span className="text-sm font-medium text-[#EAEAF0]">
+                    ${callLog.cost.toFixed(4)}
+                  </span>
+                </div>
+              )}
+
+              {callLog.messageCount !== undefined && (
+                <div className="flex items-center gap-3">
+                  <MessageCircle className="h-4 w-4 text-[#9CA3AF]" />
+                  <span className="text-sm font-medium text-[#EAEAF0]">
+                    {callLog.messageCount} messages
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {callLog.summary && (
+              <div className="mt-5 bg-[#1A1A24] p-4 rounded-xl border border-[#1F1F2B]">
+                <p className="text-sm text-[#9CA3AF] leading-relaxed">
+                  {callLog.summary}
+                </p>
+              </div>
+            )}
+          </div>
         ))}
       </div>
     </div>

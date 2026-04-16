@@ -1,55 +1,45 @@
 @import "tailwindcss";
 
 :root {
-  --radius: 0px; /* Sharp corners for Brutalism */
+  --radius: 1rem;
   
-  /* Bright Foundations */
-  --background: #FFFFFF;
-  --foreground: #000000;
+  /* Near-Black Foundation */
+  --background: #0B0B0F;
+  --foreground: #EAEAF0;
   
-  /* Bold Neobrutalist Cards */
-  --card: #FFFFFF;
-  --card-foreground: #000000;
-  --popover: #FFFFFF;
-  --popover-foreground: #000000;
+  /* Dark Cards / Secondary Surfaces */
+  --card: #111118;
+  --card-foreground: #EAEAF0;
+  --popover: #111118;
+  --popover-foreground: #EAEAF0;
   
-  /* Loud Primary Accent (Yellow/Green) */
-  --primary: #FDE047; /* Tailwind yellow-300 or #FBFF00 */
+  /* Primary Accent: Soft Yellow */
+  --primary: #FACC15;
   --primary-foreground: #000000;
-  --primary-dim: rgba(253, 224, 71, 0.4);
   
-  --secondary: #E5E7EB; /* Light grey */
-  --secondary-foreground: #000000;
+  /* Secondary Surfaces */
+  --secondary: #111118;
+  --secondary-foreground: #EAEAF0;
   
-  --muted: #F3F4F6;
-  --muted-foreground: #4B5563; /* Darker grey for readability */
+  /* Muted Elements */
+  --muted: #111118;
+  --muted-foreground: #9CA3AF;
   
-  --accent: #A3E635; /* Electric lime */
-  --accent-foreground: #000000;
+  /* Secondary Accent/Animation: Subtle Purple */
+  --accent: #A855F7;
+  --accent-foreground: #EAEAF0;
   
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
   
-  /* Thick Dark Borders */
-  --border: #000000;
-  --input: #FFFFFF;
-  --ring: #000000;
-  
-  --sidebar: #FFFFFF;
-  --sidebar-foreground: #000000;
-  --sidebar-primary: #FDE047;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #F3F4F6;
-  --sidebar-accent-foreground: #000000;
-  --sidebar-border: #000000;
-  --sidebar-ring: #000000;
+  /* Soft Borders */
+  --border: #1F1F2B;
+  --input: #1F1F2B;
+  --ring: #FACC15;
 
-  --font-sans: "Space Grotesk", "Syne", "Inter", system-ui, sans-serif;
-  --font-mono: "Space Mono", "Courier New", monospace;
-
-  --text-high: #000000;
-  --text-body: #1F2937;
-  --text-muted-strong: #000000;
+  /* Typography Stacks */
+  --font-sans: "Inter", "Geist", system-ui, sans-serif;
+  --font-mono: "Mona Sans", monospace;
 }
 
 @theme {
@@ -72,13 +62,12 @@
   --color-ring: var(--ring);
 
   --radius-lg: var(--radius);
-  --radius-md: var(--radius);
-  --radius-sm: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
 
-  /* Solid brutal shadows instead of blurry glass shadows */
-  --shadow-neo: 4px 4px 0px #000000;
-  --shadow-neo-lg: 8px 8px 0px #000000;
-  --shadow-neo-hover: 2px 2px 0px #000000;
+  /* Light shadow for dark SaaS depth */
+  --shadow-neo: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --shadow-neo-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 @layer base {
@@ -86,103 +75,88 @@
     @apply text-foreground bg-background m-0 p-0 overflow-x-hidden antialiased;
     font-family: var(--font-sans);
     min-height: 100vh;
-    color: var(--text-body);
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    
-    /* Neobrutalist Grid Pattern (Dark dots on white) */
-    background-image: radial-gradient(#000000 1px, transparent 1px);
-    background-size: 24px 24px;
-    background-position: -12px -12px;
   }
   
   h1, h2, h3, h4, h5, h6 {
-    @apply text-foreground font-black tracking-tight uppercase;
+    @apply text-foreground font-semibold tracking-tight;
   }
   
   h1 {
-    @apply text-5xl md:text-6xl lg:text-7xl font-black;
+    @apply text-5xl md:text-6xl lg:text-7xl;
   }
 
   select option {
-    background-color: #FFFFFF;
-    color: #000000;
+    background-color: var(--card);
+    color: var(--foreground);
   }
 
   input,
   textarea,
   select {
-    color: var(--text-high);
-    background-color: var(--input);
-    border: 3px solid var(--border) !important;
-    border-radius: 0px !important;
-    box-shadow: 4px 4px 0px var(--border);
-    transition: all 0.15s ease;
+    color: var(--foreground);
+    background-color: var(--background);
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
+    transition: all 0.2s ease;
   }
   
   input:focus, textarea:focus, select:focus {
-    border-color: #000000 !important;
-    box-shadow: 2px 2px 0px var(--border);
-    transform: translate(2px, 2px);
+    border-color: var(--ring) !important;
+    box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.2); /* Soft yellow focus */
     outline: none;
   }
 
   input::placeholder,
   textarea::placeholder {
     color: var(--muted-foreground);
-    opacity: 0.8;
   }
 }
 
 @layer components {
-  /* Neobrutalist Universal Box Style */
+  /* Premium SaaS Card Style */
   .neo-box, .glass, .glass-card, .card-border, .card {
-    @apply bg-white border-[3px] border-black rounded-none relative transition-all duration-200 text-black;
-    box-shadow: var(--shadow-neo);
+    @apply bg-[#111118] border border-[#1F1F2B] rounded-2xl relative transition-all duration-300;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
   }
 
-  /* Sharp active/hover state for cards */
+  /* Soft card hover */
   .neo-box:hover, .glass:hover, .glass-card:hover, .card:hover, .card-border:hover {
-    transform: translate(-3px, -3px);
-    box-shadow: var(--shadow-neo-lg);
+    @apply border-[#2A2A3A];
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   }
   
-  /* Primary Action Buttons */
+  /* Primary Action Buttons - Pill Shaped */
   .btn-primary, .button-neo, .btn-get-started, button[type="submit"] {
-    @apply bg-primary text-black font-black uppercase border-[3px] border-black px-6 py-3 transition-all duration-100 ease-in-out inline-flex items-center justify-center rounded-none;
-    box-shadow: var(--shadow-neo);
+    @apply bg-primary text-black font-medium px-8 py-3 rounded-full transition-all duration-200 ease-in-out inline-flex items-center justify-center;
   }
 
   .btn-primary:hover, .button-neo:hover, .btn-get-started:hover, button[type="submit"]:hover {
-    @apply bg-primary;
-    transform: translate(-2px, -2px);
-    box-shadow: var(--shadow-neo-lg);
+    @apply bg-[#EAB308]; /* Slightly darker yellow */
+    transform: scale(1.02);
   }
 
   .btn-primary:active, .button-neo:active, .btn-get-started:active, button[type="submit"]:active {
-    transform: translate(4px, 4px);
-    box-shadow: 0px 0px 0px #000000;
+    transform: scale(0.98);
   }
 
   .btn-secondary {
-    @apply bg-white text-black font-bold uppercase border-[3px] border-black px-6 py-3 transition-all duration-100 ease-in-out inline-flex items-center justify-center rounded-none;
-    box-shadow: var(--shadow-neo);
+    @apply bg-[#111118] text-[#EAEAF0] font-medium border border-[#1F1F2B] px-8 py-3 rounded-full transition-all duration-200 ease-in-out inline-flex items-center justify-center;
   }
   
   .btn-secondary:hover {
-    @apply bg-secondary hover:translate-x-[-2px] hover:translate-y-[-2px];
-    box-shadow: var(--shadow-neo-lg);
+    @apply bg-[#1A1A24] border-[#2A2A3A];
+    transform: scale(1.02);
   }
 
   /* Status Badges */
   .badge-neo, .badge {
-    @apply bg-white border-[3px] border-black text-black font-black uppercase text-xs px-3 py-1 inline-flex items-center;
-    box-shadow: 2px 2px 0px #000000;
+    @apply bg-[#1A1A24] border border-[#1F1F2B] text-[#9CA3AF] font-medium text-xs px-3 py-1 rounded-full inline-flex items-center;
   }
 
-  /* Mesh to solid */
+  /* Subtle Purple accent for specific highlights - NO GLOW */
   .mesh-text, .mesh-gradient-text {
-    @apply bg-none text-black font-black uppercase;
-    text-shadow: 2px 2px 0px var(--primary);
+    @apply text-[#FACC15] font-semibold; /* Changed to flat solid yellow for premium look */
   }
 }
 
@@ -194,22 +168,22 @@
 
 /* Base tailwind elements override */
 button, a {
-  transition: all 0.15s ease-out;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Scrollbar styling for Brutalism */
+/* Scrollbar styling for Premium SaaS */
 ::-webkit-scrollbar {
-  width: 16px;
-  height: 16px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #FFFFFF;
-  border-left: 3px solid #000;
+  background: var(--background);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--primary);
-  border: 3px solid #000;
+  background: #1F1F2B;
+  border-radius: 9999px;
+  border: 2px solid var(--background);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
+  background: #2A2A3A;
 }

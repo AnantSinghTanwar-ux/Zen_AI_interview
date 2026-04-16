@@ -37,7 +37,7 @@ export default function GetStartedButton() {
   
   return (
     <Button 
-      className="bg-primary hover:bg-primary/90 text-white rounded-full px-10 py-4 h-auto border-none shadow-[0_0_20px_rgba(157,125,249,0.3)] hover:shadow-[0_0_30px_rgba(157,125,249,0.5)] active:scale-95 transition-all text-lg font-semibold tracking-wide" 
+      className="btn-primary w-full sm:w-auto text-lg tracking-wide rounded-full px-10 py-4 h-auto" 
       onClick={handleClick}
       disabled={isLoading}
     >
