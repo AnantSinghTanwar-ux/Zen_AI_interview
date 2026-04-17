@@ -13,7 +13,7 @@ const HeroSection = () => {
     <section className="relative min-h-[90vh] flex flex-col items-center justify-center pt-32 pb-12 overflow-hidden bg-[#0B0B0F]">
       
       {/* Subtle DotField background */}
-      <div className="absolute inset-0 z-0 pointer-events-auto select-none opacity-40 mix-blend-screen">
+      <div className="absolute inset-0 z-0 pointer-events-auto select-none opacity-50 mix-blend-screen">
         <DotField
           dotRadius={1.5}
           dotSpacing={16}
