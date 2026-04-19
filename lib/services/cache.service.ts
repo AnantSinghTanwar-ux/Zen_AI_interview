@@ -20,7 +20,7 @@ class CacheService {
     return (
       this.isCacheEnabled() &&
       process.env.NODE_ENV === "production" &&
-      process.env.REDIS_REQUIRED_IN_PRODUCTION !== "false"
+      process.env.REDIS_REQUIRED_IN_PRODUCTION === "true"
     );
   }
 
