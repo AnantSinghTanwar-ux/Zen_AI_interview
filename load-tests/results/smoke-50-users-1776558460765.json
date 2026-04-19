@@ -1,0 +1,229 @@
+{
+  "generatedAt": "2026-04-19T00:27:40.765Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "users": {
+    "requested": 10,
+    "authenticated": 10
+  },
+  "recruiter": {
+    "executed": 4,
+    "ok": false,
+    "message": "Recruiter endpoints executed"
+  },
+  "summary": {
+    "total": 94,
+    "ok": 93,
+    "fail": 1,
+    "passRate": "99%",
+    "perEndpoint": [
+      {
+        "endpoint": "GET /api/health",
+        "total": 10,
+        "ok": 10,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 1573,
+        "p95LatencyMs": 1890
+      },
+      {
+        "endpoint": "POST /api/premium/vapi-access",
+        "total": 10,
+        "ok": 10,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 3908,
+        "p95LatencyMs": 4278
+      },
+      {
+        "endpoint": "GET /api/vapi/call-data?limit=5",
+        "total": 10,
+        "ok": 10,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 2096,
+        "p95LatencyMs": 2614
+      },
+      {
+        "endpoint": "POST /api/vapi/call-data/sync",
+        "total": 10,
+        "ok": 10,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 3087,
+        "p95LatencyMs": 3387
+      },
+      {
+        "endpoint": "GET /api/v2/feedback-jobs",
+        "total": 10,
+        "ok": 10,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 3725,
+        "p95LatencyMs": 3940
+      },
+      {
+        "endpoint": "POST /api/v2/feedback-jobs",
+        "total": 10,
+        "ok": 10,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 2711,
+        "p95LatencyMs": 4021
+      },
+      {
+        "endpoint": "GET /api/v2/feedback-jobs/KarT1z1982mhx7WlS7Dg",
+        "total": 1,
+        "ok": 1,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 4297,
+        "p95LatencyMs": 4297
+      },
+      {
+        "endpoint": "GET /api/call-logs?limit=5",
+        "total": 10,
+        "ok": 10,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 3681,
+        "p95LatencyMs": 3930
+      },
+      {
+        "endpoint": "GET /api/vapi/test?limit=1",
+        "total": 10,
+        "ok": 10,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 3209,
+        "p95LatencyMs": 3794
+      },
+      {
+        "endpoint": "GET /api/v2/feedback-jobs/aPfWXfHjPZa2cnSEe4Au",
+        "total": 1,
+        "ok": 1,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 3543,
+        "p95LatencyMs": 3543
+      },
+      {
+        "endpoint": "GET /api/v2/feedback-jobs/zjRaetaJcohQhvMMrFbk",
+        "total": 1,
+        "ok": 1,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 4141,
+        "p95LatencyMs": 4141
+      },
+      {
+        "endpoint": "GET /api/v2/feedback-jobs/NAyec1rsEqZjH6dVRKdK",
+        "total": 1,
+        "ok": 1,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 5420,
+        "p95LatencyMs": 5420
+      },
+      {
+        "endpoint": "GET /api/v2/feedback-jobs/IRYryl5MAEMB2l1zDZoA",
+        "total": 1,
+        "ok": 1,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 4006,
+        "p95LatencyMs": 4006
+      },
+      {
+        "endpoint": "GET /api/v2/feedback-jobs/fS7lmPm3Doc0BeWSDwqH",
+        "total": 1,
+        "ok": 1,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 3887,
+        "p95LatencyMs": 3887
+      },
+      {
+        "endpoint": "GET /api/v2/feedback-jobs/leJM5UCQJ60iQ4lsbLcW",
+        "total": 1,
+        "ok": 1,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 4665,
+        "p95LatencyMs": 4665
+      },
+      {
+        "endpoint": "GET /api/v2/feedback-jobs/gsz2XmqYwbsUSTcMq6Gk",
+        "total": 1,
+        "ok": 1,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 4167,
+        "p95LatencyMs": 4167
+      },
+      {
+        "endpoint": "GET /api/v2/feedback-jobs/FB8Qobl8rGHFY27ZTjY4",
+        "total": 1,
+        "ok": 1,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 5521,
+        "p95LatencyMs": 5521
+      },
+      {
+        "endpoint": "GET /api/v2/feedback-jobs/KSymAGs3gj4odKIBnYIu",
+        "total": 1,
+        "ok": 1,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 4171,
+        "p95LatencyMs": 4171
+      },
+      {
+        "endpoint": "GET /api/v2/recruiter/dashboard",
+        "total": 1,
+        "ok": 1,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 5639,
+        "p95LatencyMs": 5639
+      },
+      {
+        "endpoint": "GET /api/v2/recruiter/leaderboard?limit=5",
+        "total": 1,
+        "ok": 1,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 4219,
+        "p95LatencyMs": 4219
+      },
+      {
+        "endpoint": "GET /api/v2/recruiter/applications?limit=10",
+        "total": 1,
+        "ok": 1,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 4383,
+        "p95LatencyMs": 4383
+      },
+      {
+        "endpoint": "GET /api/v2/recruiter/jobs",
+        "total": 1,
+        "ok": 0,
+        "fail": 1,
+        "passRate": "0%",
+        "avgLatencyMs": 4467,
+        "p95LatencyMs": 4467
+      }
+    ],
+    "failures": [
+      {
+        "user": "anantsa@gmail.com",
+        "endpoint": "/api/v2/recruiter/jobs",
+        "method": "GET",
+        "status": 500,
+        "ok": false,
+        "latencyMs": 4467
+      }
+    ]
+  }
+}

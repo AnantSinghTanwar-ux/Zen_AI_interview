@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/actions/auth.actions";
+import { checkRateLimit } from "@/lib/services/rate-limit.service";
+import {
+  checkPremiumAccessForFeature,
+  getPremiumRequiredErrorPayload,
+} from "@/lib/services/premium-access.service";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -24,10 +30,32 @@ interface DSAQuestion {
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, context, previousMessages, callId } = await request.json();
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { allowed, response: rateLimitResponse } = await checkRateLimit(request, user.id, "vapi-chat");
+    if (!allowed) return rateLimitResponse!;
+
+    const { message, context, previousMessages, callId, premiumUsageKey } = await request.json();
+
+    const premiumAccess = await checkPremiumAccessForFeature({
+      userId: user.id,
+      email: user.email,
+      featureKeys: [
+        premiumUsageKey,
+        callId,
+        context ? `vapi-chat:${context}` : null,
+      ],
+    });
+
+    if (!premiumAccess.allowed) {
+      return NextResponse.json(getPremiumRequiredErrorPayload(), { status: 402 });
+    }
 
     // Get Vapi private API key
-    const apiKey = "71617d6d-e8fe-4558-9980-513a135d0527";
+    const apiKey = process.env.VAPI_PRIVATE_API_KEY || "";
     if (!apiKey) {
       return NextResponse.json(
         { error: "Vapi API key not configured" },

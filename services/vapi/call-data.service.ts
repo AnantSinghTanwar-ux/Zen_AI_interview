@@ -26,7 +26,7 @@ class VapiCallDataService {
   private baseUrl: string = "https://api.vapi.ai";
 
   constructor() {
-    this.apiKey = "71617d6d-e8fe-4558-9980-513a135d0527";
+    this.apiKey = process.env.VAPI_PRIVATE_API_KEY || "";
     if (!this.apiKey) {
       console.warn("VAPI_PRIVATE_API_KEY not found in environment variables");
     }

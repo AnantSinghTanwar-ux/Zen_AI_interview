@@ -39,10 +39,24 @@ export function useCallData(): UseCallDataReturn {
       if (options.userId) queryParams.append('userId', options.userId);
       if (options.assistantId) queryParams.append('assistantId', options.assistantId);
 
-      const response = await fetch(`/api/vapi/call-data?${queryParams}`);
+      const response = await fetch(`/api/vapi/call-data?${queryParams}`, {
+        credentials: 'include',
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        setCallData([]);
+        return;
+      }
       
       if (!response.ok) {
-        throw new Error(`Failed to fetch call data: ${response.statusText}`);
+        let message = `Failed to fetch call data: ${response.statusText}`;
+        try {
+          const payload = await response.json();
+          message = payload?.error || payload?.message || payload?.details || message;
+        } catch {
+          // Ignore parse issues and keep default message.
+        }
+        throw new Error(message);
       }
 
       const data = await response.json();

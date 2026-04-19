@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.gitignore
+npm-debug.log
+bun.lockb
+.vscode
+.cache
+tmp
+coverage
+.env
+.env.*
+*.local

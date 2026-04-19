@@ -33,23 +33,39 @@ export function useCallLogs(userId: string | null | undefined) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchCallLogs = async (limit: number = 20) => {
-    console.log("Our userId is: ", userId ?? "Empty for now");
-    if (!userId) return;
+    if (!userId) {
+      setCallLogs([]);
+      setError(null);
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(
-        `/api/call-logs?userId=${userId}&limit=${limit}`
-      );
+      const response = await fetch(`/api/call-logs?limit=${limit}`, {
+        credentials: "include",
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        setCallLogs([]);
+        setError(null);
+        return;
+      }
 
       if (!response.ok) {
-        throw new Error("Failed to fetch call logs");
+        let message = "Failed to fetch call logs";
+        try {
+          const payload = await response.json();
+          message = payload?.error || payload?.details || message;
+        } catch {
+          // Ignore parse failures and keep generic message.
+        }
+        throw new Error(message);
       }
 
       const logs = await response.json();
-      setCallLogs(logs);
+      setCallLogs(Array.isArray(logs) ? logs : []);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to fetch call logs"
@@ -62,7 +78,7 @@ export function useCallLogs(userId: string | null | undefined) {
 
   const saveCallLog = async (vapiCallId: string, jobContext?: string) => {
     if (!userId || !vapiCallId) {
-      console.log("No user or call Id");
+      console.warn("Skipping call log save because userId or vapiCallId is missing");
       return;
     }
 
@@ -82,9 +98,19 @@ export function useCallLogs(userId: string | null | undefined) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-Idempotency-Key": `call-log:${userId}:${vapiCallId}`,
         },
         body: JSON.stringify(body),
       });
+
+      if (response.status === 409) {
+        // Idempotent request is already being processed by another in-flight call-end event.
+        await fetchCallLogs();
+        return {
+          success: true,
+          inProgress: true,
+        };
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

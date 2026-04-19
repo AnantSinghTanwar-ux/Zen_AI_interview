@@ -25,6 +25,10 @@ export default function LogoutButton() {
         },
         window.location.origin
       );
+
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem("zenai-auth-state", "guest");
+      }
       
       // Navigate directly
       window.location.href = "/sign-in";

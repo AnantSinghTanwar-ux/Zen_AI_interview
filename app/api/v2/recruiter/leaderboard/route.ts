@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { recruiterGuard } from "@/app/api/v2/recruiter/_guard";
 import { getLeaderboard } from "@/services/recruiter/application-score.service";
+import { checkRateLimit } from "@/lib/services/rate-limit.service";
 
 export async function GET(request: NextRequest) {
-  const { error } = await recruiterGuard();
+  const { user, error } = await recruiterGuard();
   if (error) return error;
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { allowed, response } = await checkRateLimit(request, user.id, "recruiter-read");
+  if (!allowed) return response!;
 
   try {
     const { searchParams } = new URL(request.url);

@@ -1,4 +1,4 @@
-const APP_BASE_URL = "https://zen-ai-wvo2-git-main-anantsinghtanwar-uxs-projects.vercel.app";
+const APP_BASE_URL = "https://zen-ai-szz1.vercel.app";
 const DASHBOARD_URL = `${APP_BASE_URL}/`;
 const STORAGE_KEY = "authToken";
 const EXTENSION_ENABLED_KEY = "extensionEnabled";
@@ -23,7 +23,7 @@ const sanitizeToken = (token) => {
 
 const getStorage = (key) =>
   new Promise((resolve) => {
-    chrome.storage.local.get([key], (result) => resolve(result[key] || ""));
+    chrome.storage.local.get([key], (result) => resolve(result[key]));
   });
 
 const setStorage = (key, value) =>
@@ -48,9 +48,10 @@ const setExtensionEnabledUI = (enabled) => {
 };
 
 const refreshUI = async () => {
-  const token = sanitizeToken(await getStorage(STORAGE_KEY));
+  const token = sanitizeToken(String((await getStorage(STORAGE_KEY)) || ""));
   const extensionEnabledRaw = await getStorage(EXTENSION_ENABLED_KEY);
-  const extensionEnabled = extensionEnabledRaw === "" ? true : Boolean(extensionEnabledRaw);
+  const extensionEnabled =
+    extensionEnabledRaw === undefined ? true : Boolean(extensionEnabledRaw);
   const loggedIn = Boolean(token);
 
   setStatus(loggedIn);

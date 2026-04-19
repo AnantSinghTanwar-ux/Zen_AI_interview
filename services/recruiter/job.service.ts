@@ -1,6 +1,48 @@
 import { db } from "@/services/firebase/admin";
 import { RecruitmentJob } from "@/types/recruiter";
 
+function isMissingIndexError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+
+  const maybeError = error as {
+    code?: unknown;
+    details?: unknown;
+    message?: unknown;
+  };
+
+  const code = typeof maybeError.code === "number" ? maybeError.code : null;
+  const details = typeof maybeError.details === "string" ? maybeError.details : "";
+  const message = typeof maybeError.message === "string" ? maybeError.message : "";
+
+  if (code !== 9) return false;
+
+  return (
+    details.toLowerCase().includes("query requires an index") ||
+    message.toLowerCase().includes("query requires an index")
+  );
+}
+
+function toMillis(value: unknown): number {
+  if (!value) return 0;
+
+  if (typeof value === "string" || typeof value === "number") {
+    const ms = new Date(value).getTime();
+    return Number.isNaN(ms) ? 0 : ms;
+  }
+
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "toDate" in value &&
+    typeof (value as { toDate?: unknown }).toDate === "function"
+  ) {
+    const date = (value as { toDate: () => Date }).toDate();
+    return date.getTime();
+  }
+
+  return 0;
+}
+
 class JobService {
   private readonly COLLECTION = "jobs";
 
@@ -22,20 +64,39 @@ class JobService {
   }
 
   async listJobsByRecruiter(recruiterId: string): Promise<RecruitmentJob[]> {
-    const snapshot = await db
-      .collection(this.COLLECTION)
-      .where("recruiterId", "==", recruiterId)
-      .get();
+    let snapshot;
 
-    const jobs = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as RecruitmentJob[];
+    try {
+      snapshot = await db
+        .collection(this.COLLECTION)
+        .where("recruiterId", "==", recruiterId)
+        .orderBy("createdAt", "desc")
+        .get();
+    } catch (error) {
+      if (!isMissingIndexError(error)) {
+        throw error;
+      }
 
-    // Sort in memory to avoid needing a composite Firestore index
-    return jobs.sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+      console.warn(
+        "[JobService] Missing Firestore index detected, falling back to in-memory sort for jobs."
+      );
+
+      snapshot = await db
+        .collection(this.COLLECTION)
+        .where("recruiterId", "==", recruiterId)
+        .get();
+    }
+
+    return snapshot.docs
+      .map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+      .sort(
+        (a, b) =>
+          toMillis((b as { createdAt?: unknown }).createdAt) -
+          toMillis((a as { createdAt?: unknown }).createdAt)
+      ) as RecruitmentJob[];
   }
 
   async updateJob(

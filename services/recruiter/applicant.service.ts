@@ -75,17 +75,14 @@ class ApplicantService {
       query = query.where("status", "==", status);
     }
 
+    query = query.orderBy("appliedAt", "desc");
+
     const snapshot = await query.get();
 
-    const applicants = snapshot.docs.map((doc) => ({
+    return snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     })) as Applicant[];
-
-    // Sort in memory to avoid composite Firestore index requirement
-    return applicants.sort((a, b) =>
-      new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
-    );
   }
 
   async getApplicant(applicantId: string): Promise<Applicant | null> {

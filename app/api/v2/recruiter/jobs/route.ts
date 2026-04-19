@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { recruiterService } from "@/services/recruiter/recruiter.service";
 import { jobService } from "@/services/recruiter/job.service";
+import { checkRateLimit } from "@/lib/services/rate-limit.service";
+import {
+  acquireIdempotencyLock,
+  completeIdempotencyLock,
+  failIdempotencyLock,
+  IdempotencyToken,
+} from "@/lib/services/idempotency.service";
 
 async function getOrCreateRecruiter(userId: string, companyName?: string, industry?: string) {
   let recruiter = await recruiterService.getRecruiterByUserId(userId);
@@ -25,15 +32,59 @@ async function getOrCreateRecruiter(userId: string, companyName?: string, indust
 }
 
 export async function POST(request: NextRequest) {
+  let idempotencyToken: IdempotencyToken | null = null;
+
   try {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { allowed, response } = await checkRateLimit(request, user.id, "recruiter-write");
+    if (!allowed) return response!;
+
+    const idempotency = await acquireIdempotencyLock({
+      request,
+      userId: user.id,
+      scope: "recruiter:jobs:create",
+    });
+
+    if (idempotency.state === "invalid") {
+      return NextResponse.json({ error: idempotency.error }, { status: 400 });
+    }
+
+    if (idempotency.state === "in-progress") {
+      return NextResponse.json(
+        {
+          error: "Idempotent request is already being processed",
+          retryAfter: idempotency.retryAfterSeconds,
+        },
+        {
+          status: 409,
+          headers: {
+            "Retry-After": String(idempotency.retryAfterSeconds),
+          },
+        }
+      );
+    }
+
+    if (idempotency.state === "replay") {
+      return NextResponse.json(idempotency.body, { status: idempotency.status });
+    }
+
+    if (idempotency.state === "acquired") {
+      idempotencyToken = idempotency.token;
+    }
+
     const data = await request.json();
 
     if (!data.title || !data.description) {
+      if (idempotencyToken) {
+        await failIdempotencyLock({
+          token: idempotencyToken,
+          error: "title and description are required",
+        });
+      }
       return NextResponse.json(
         { error: "title and description are required" },
         { status: 400 }
@@ -64,9 +115,27 @@ export async function POST(request: NextRequest) {
 
     await recruiterService.incrementJobCount(recruiter.id!);
 
-    return NextResponse.json({ jobId, success: true }, { status: 201 });
+    const payload = { jobId, success: true };
+
+    if (idempotencyToken) {
+      await completeIdempotencyLock({
+        token: idempotencyToken,
+        status: 201,
+        body: payload,
+      });
+    }
+
+    return NextResponse.json(payload, { status: 201 });
   } catch (error) {
     console.error("Error creating job:", error);
+
+    if (idempotencyToken) {
+      await failIdempotencyLock({
+        token: idempotencyToken,
+        error,
+      });
+    }
+
     return NextResponse.json(
       { error: "Failed to create job", details: (error as Error).message },
       { status: 500 }
@@ -80,6 +149,9 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, "recruiter-read");
+    if (!allowed) return response!;
 
     // Auto-create recruiter profile if needed
     const recruiter = await getOrCreateRecruiter(user.id);

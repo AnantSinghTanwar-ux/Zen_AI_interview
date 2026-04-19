@@ -22,7 +22,7 @@ interface UseEmotionDetectionReturn {
 export function useEmotionDetection({
   callId,
   enableRealTime = true,
-  debounceMs = 2000 // Reduced to 2 seconds for Gemini 2.5 Flash's better rate limits
+  debounceMs = 2000 // Reduced to 2 seconds for responsive OpenRouter-backed analysis
 }: UseEmotionDetectionProps = {}): UseEmotionDetectionReturn {
   const [currentEmotion, setCurrentEmotion] = useState<EmotionData | null>(null);
   const [emotionHistory, setEmotionHistory] = useState<EmotionData[]>([]);
@@ -34,6 +34,69 @@ export function useEmotionDetection({
   // Debounce references
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastProcessedTextRef = useRef<string>('');
+
+  const buildLocalAnalysis = useCallback((history: EmotionData[]): EmotionAnalysisResult => {
+    if (history.length === 0) {
+      return {
+        emotions: [],
+        dominantEmotion: 'neutral',
+        emotionalTrend: 'stable',
+        summary: {
+          averageConfidence: 0,
+          mostFrequentEmotion: 'neutral',
+          emotionalStability: 0,
+          stressIndicators: [],
+        },
+      };
+    }
+
+    const counts = history.reduce((acc, item) => {
+      acc[item.emotion] = (acc[item.emotion] || 0) + 1;
+      return acc;
+    }, {} as Record<EmotionData['emotion'], number>);
+
+    const mostFrequentEmotion = (Object.entries(counts)
+      .sort(([, a], [, b]) => b - a)[0]?.[0] || 'neutral') as EmotionData['emotion'];
+
+    const averageConfidence = history.reduce((sum, item) => sum + item.confidence, 0) / history.length;
+    const averageStress = history.reduce((sum, item) => sum + (item.additionalMetrics?.stress_level || 0), 0) / history.length;
+    const uniqueEmotions = new Set(history.map((item) => item.emotion)).size;
+    const emotionalStability = Math.max(0, 1 - (uniqueEmotions / history.length));
+
+    const stressIndicators: string[] = [];
+    if (averageStress > 0.6) {
+      stressIndicators.push('Elevated stress levels detected during responses.');
+    }
+    if (emotionalStability < 0.5) {
+      stressIndicators.push('High emotional volatility detected across responses.');
+    }
+
+    const midpoint = Math.floor(history.length / 2);
+    const firstHalf = history.slice(0, Math.max(midpoint, 1));
+    const secondHalf = history.slice(Math.max(midpoint, 1));
+    const positiveSet = new Set<EmotionData['emotion']>(['happy', 'confident', 'excited', 'calm']);
+
+    const firstHalfPositive = firstHalf.filter((item) => positiveSet.has(item.emotion)).length / firstHalf.length;
+    const secondHalfPositive = secondHalf.length
+      ? secondHalf.filter((item) => positiveSet.has(item.emotion)).length / secondHalf.length
+      : firstHalfPositive;
+
+    const delta = secondHalfPositive - firstHalfPositive;
+    const emotionalTrend: EmotionAnalysisResult['emotionalTrend'] =
+      delta > 0.1 ? 'improving' : delta < -0.1 ? 'declining' : 'stable';
+
+    return {
+      emotions: history,
+      dominantEmotion: mostFrequentEmotion,
+      emotionalTrend,
+      summary: {
+        averageConfidence,
+        mostFrequentEmotion,
+        emotionalStability,
+        stressIndicators,
+      },
+    };
+  }, []);
 
   // Add a new emotion reading with debouncing
   const addEmotionReading = useCallback(async (text: string, timestamp?: number) => {
@@ -66,26 +129,6 @@ export function useEmotionDetection({
         
         setCurrentEmotion(emotionData);
         setEmotionHistory(prev => [...prev, emotionData]);
-        
-        // Send to backend if we have a call ID
-        if (callId) {
-          try {
-            await fetch(`/api/vapi/call-data/${callId}/emotion`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                transcript: text,
-                timestamp: timestamp || Date.now(),
-                isPartial: false
-              }),
-            });
-          } catch (apiError) {
-            console.warn('Failed to send emotion data to backend:', apiError);
-            // Don't throw - continue with local processing
-          }
-        }
         
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to process emotion';
@@ -134,30 +177,10 @@ export function useEmotionDetection({
     setRealTimeEnabled(prev => !prev);
   }, []);
 
-  // Auto-update analysis when emotion history changes
+  // Keep real-time analysis local to avoid network churn during active calls.
   useEffect(() => {
-    if (emotionHistory.length > 0) {
-      // Create a mock analysis result for real-time updates
-      const mockMessages = emotionHistory.map((emotion, index) => ({
-        role: 'user',
-        message: `Emotion reading ${index + 1}`,
-        time: emotion.timestamp,
-        secondsFromStart: emotion.secondsFromStart
-      }));
-      
-      // Debounce the analysis update
-      const timer = setTimeout(async () => {
-        try {
-          const analysis = await emotionDetectionService.analyzeCompleteTranscript(mockMessages);
-          setEmotionAnalysis(analysis);
-        } catch (err) {
-          console.warn('Failed to update emotion analysis:', err);
-        }
-      }, 1000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [emotionHistory]);
+    setEmotionAnalysis(buildLocalAnalysis(emotionHistory));
+  }, [emotionHistory, buildLocalAnalysis]);
 
   return {
     currentEmotion,

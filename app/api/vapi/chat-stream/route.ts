@@ -1,10 +1,43 @@
 import { NextRequest } from "next/server";
+import { getCurrentUser } from "@/lib/actions/auth.actions";
+import { checkRateLimit } from "@/lib/services/rate-limit.service";
+import {
+  checkPremiumAccessForFeature,
+  getPremiumRequiredErrorPayload,
+} from "@/lib/services/premium-access.service";
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, previousChatId, stage } = await request.json();
+    const user = await getCurrentUser();
+    if (!user) {
+      return new Response("Unauthorized", { status: 401 });
+    }
 
-    const apiKey = "71617d6d-e8fe-4558-9980-513a135d0527";
+    const { allowed, response } = await checkRateLimit(request, user.id, "vapi-chat-stream");
+    if (!allowed) return response!;
+
+    const { message, previousChatId, stage, premiumUsageKey } = await request.json();
+
+    const premiumAccess = await checkPremiumAccessForFeature({
+      userId: user.id,
+      email: user.email,
+      featureKeys: [
+        premiumUsageKey,
+        previousChatId,
+        stage ? `vapi-chat-stream:${stage}` : null,
+      ],
+    });
+
+    if (!premiumAccess.allowed) {
+      return new Response(JSON.stringify(getPremiumRequiredErrorPayload()), {
+        status: 402,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    }
+
+    const apiKey = process.env.VAPI_PRIVATE_API_KEY || "";
     if (!apiKey) {
       return new Response("Vapi API key not configured", { status: 500 });
     }
@@ -27,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Send streaming request to Vapi
-    const response = await fetch("https://api.vapi.ai/chat", {
+    const vapiResponse = await fetch("https://api.vapi.ai/chat", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -36,12 +69,12 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(chatPayload),
     });
 
-    if (!response.ok) {
-      throw new Error(`Vapi API error: ${response.status}`);
+    if (!vapiResponse.ok) {
+      throw new Error(`Vapi API error: ${vapiResponse.status}`);
     }
 
     // Return streaming response
-    return new Response(response.body, {
+    return new Response(vapiResponse.body, {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",

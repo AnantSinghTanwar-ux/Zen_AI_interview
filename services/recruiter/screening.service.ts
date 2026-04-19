@@ -2,7 +2,11 @@ import { db } from "@/services/firebase/admin";
 import { Screening, ScreeningResult } from "@/types/recruiter";
 import { jobService } from "./job.service";
 import { applicantService } from "./applicant.service";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import {
+  generateOpenRouterJson,
+  getOpenRouterModelCandidates,
+  hasOpenRouterKey,
+} from "@/services/ai/openrouter-client";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://zen-ai-zeta.vercel.app";
 
@@ -10,12 +14,6 @@ class ScreeningService {
   private readonly SCREENINGS = "screenings";
   private readonly RESULTS = "screening_results";
   private readonly INTERVIEWS = "interviews";
-
-  private getGenAI(): GoogleGenerativeAI | null {
-    const apiKey = process.env.GOOGLE_AI_API_KEY;
-    if (!apiKey) return null;
-    return new GoogleGenerativeAI(apiKey);
-  }
 
   async assignInterviewsToApplicants(
     jobId: string,
@@ -29,8 +27,6 @@ class ScreeningService {
     if (!job) {
       return { assigned: 0, failed: applicantIds.length, errors: ["Job not found"] };
     }
-
-    const genAI = this.getGenAI();
 
     for (const applicantId of applicantIds) {
       try {
@@ -48,10 +44,10 @@ class ScreeningService {
           continue;
         }
 
-        // Generate questions using Gemini
+        // Generate questions using OpenRouter
         let questions: string[] = [];
         try {
-          questions = await this.generateQuestions(genAI, job);
+          questions = await this.generateQuestions(job);
         } catch (err) {
           console.error("Failed to generate questions via AI, using fallback:", err);
           questions = this.getFallbackQuestions(job.type, job.requiredSkills);
@@ -105,10 +101,9 @@ class ScreeningService {
   }
 
   private async generateQuestions(
-    genAI: GoogleGenerativeAI | null,
     job: { title: string; experienceLevel: string; requiredSkills: string[]; type: string }
   ): Promise<string[]> {
-    if (!genAI) throw new Error("AI service not configured");
+    if (!hasOpenRouterKey()) throw new Error("OPENROUTER_API_KEY is not configured");
 
     const prompt = `Generate 5 interview questions for a ${job.experienceLevel} ${job.title} position.
 Required skills: ${job.requiredSkills.join(", ")}.
@@ -119,43 +114,26 @@ Return ONLY a JSON array of strings, each being one interview question. Example:
 
 Make questions specific, practical, and relevant to the role and skills listed.`;
 
-        function normalizeFeedbackModel(model?: string): string {
-          const value = String(model || "").trim();
-          if (!value) return "gemini-3-flash";
-          if (value.includes("gemini-1.5-flash") || value.includes("gemini-2.0-flash")) {
-            return "gemini-3-flash";
-          }
-          if (value === "gemini-3.0-flash") {
-            return "gemini-3-flash";
-          }
-          return value;
-        }
+    const response = await generateOpenRouterJson<any>({
+      prompt: `${prompt}\nJSON format: {"questions": ["Question 1", "Question 2", "Question 3"]}`,
+      modelCandidates: getOpenRouterModelCandidates(
+        process.env.OPENROUTER_MODEL,
+        process.env.GOOGLE_AI_FEEDBACK_MODEL,
+        "openrouter/auto"
+      ),
+      temperature: 0.2,
+      maxTokens: 1_000,
+    });
 
-    const modelCandidates = Array.from(
-      new Set([
-            normalizeFeedbackModel(process.env.GOOGLE_AI_FEEDBACK_MODEL),
-        "gemini-3-flash",
-        "gemini-2.5-flash",
-      ])
-    ).filter(Boolean);
+    const questions = Array.isArray(response?.questions)
+      ? (response.questions as string[]).map((item) => String(item).trim()).filter(Boolean)
+      : [];
 
-    let lastError: unknown = null;
-
-    for (const modelName of modelCandidates) {
-      try {
-        const model = genAI.getGenerativeModel({ model: modelName });
-        const result = await model.generateContent(prompt);
-        const text = result.response.text();
-        const jsonMatch = text.match(/\[[\s\S]*\]/);
-        if (!jsonMatch) throw new Error("No JSON array in response");
-        const questions = JSON.parse(jsonMatch[0]) as string[];
-        if (questions.length >= 3) return questions;
-      } catch (err) {
-        lastError = err;
-      }
+    if (questions.length < 3) {
+      throw new Error("OpenRouter returned insufficient interview questions");
     }
 
-    throw lastError || new Error("All AI models failed to generate questions");
+    return questions;
   }
 
   private getFallbackQuestions(type: string, skills: string[]): string[] {

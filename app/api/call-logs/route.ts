@@ -2,34 +2,44 @@ import { NextRequest, NextResponse } from "next/server";
 import { callLogService } from "@/services/firebase/call-log.service";
 import { vapiCallDataService } from "@/services/vapi/call-data.service";
 import { db } from "@/services/firebase/admin";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getCurrentUser } from "@/lib/actions/auth.actions";
+import { checkRateLimit } from "@/lib/services/rate-limit.service";
+import {
+  acquireIdempotencyLock,
+  completeIdempotencyLock,
+  failIdempotencyLock,
+  IdempotencyToken,
+} from "@/lib/services/idempotency.service";
+import { enqueueRecruiterScoreJob } from "@/services/recruiter/recruiter-score-queue.service";
 
-const GOOGLE_AI_KEY =
-  process.env.GOOGLE_AI_API_KEY ||
-  process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
-  "";
+type TranscriptMessage = {
+  type?: string;
+  transcriptType?: string;
+  role?: string;
+  content?: string;
+  message?: string;
+  transcript?: string;
+};
 
-const genAI = GOOGLE_AI_KEY ? new GoogleGenerativeAI(GOOGLE_AI_KEY) : null;
-
-function normalizeFeedbackModel(model?: string): string {
-  const value = String(model || "").trim();
-  if (!value) return "gemini-3-flash";
-  if (value.includes("gemini-1.5-flash") || value.includes("gemini-2.0-flash")) {
-    return "gemini-3-flash";
-  }
-  if (value === "gemini-3.0-flash") {
-    return "gemini-3-flash";
-  }
-  return value;
-}
-
-const SCORE_MODEL_CANDIDATES = Array.from(
-  new Set([
-    normalizeFeedbackModel(process.env.GOOGLE_AI_FEEDBACK_MODEL),
-    "gemini-3-flash",
-    "gemini-2.5-flash",
-  ])
-).filter(Boolean);
+type VapiCallDataLike = {
+  id?: string;
+  assistant?: { id?: string };
+  status?: string;
+  startedAt?: string;
+  endedAt?: string;
+  cost?: number;
+  costBreakdown?: unknown;
+  summary?: string;
+  analysis?: unknown;
+  transcript?: string;
+  recordingUrl?: string;
+  messages?: TranscriptMessage[];
+  artifact?: {
+    transcript?: string;
+    recordingUrl?: string;
+    messages?: TranscriptMessage[];
+  };
+};
 
 /**
  * Auto-create an external_application record when a candidate completes
@@ -37,14 +47,31 @@ const SCORE_MODEL_CANDIDATES = Array.from(
  * Returns the created document ID so we can attach a score to it.
  */
 async function createExternalApplicationFromJobContext(
-  jobContextJson: string,
+  jobContextPayload: string | Record<string, unknown>,
   userId: string,
   vapiCallId: string,
   userName?: string,
   userEmail?: string
 ): Promise<string | null> {
   try {
-    const jobContext = JSON.parse(jobContextJson);
+    let parsedJobContext: Record<string, unknown> | null = null;
+
+    if (typeof jobContextPayload === "string") {
+      try {
+        parsedJobContext = JSON.parse(jobContextPayload) as Record<string, unknown>;
+      } catch (error) {
+        console.warn("Invalid jobContext JSON, skipping external_application creation", error);
+        return null;
+      }
+    } else if (jobContextPayload && typeof jobContextPayload === "object") {
+      parsedJobContext = jobContextPayload as Record<string, unknown>;
+    }
+
+    if (!parsedJobContext) {
+      return null;
+    }
+
+    const jobContext = parsedJobContext;
     const job = jobContext.job || jobContext;
 
     const cleanEntity = (value: string, maxLen: number) =>
@@ -150,6 +177,7 @@ async function createExternalApplicationFromJobContext(
     if (!existing.empty) {
       const docId = existing.docs[0].id;
       await db.collection("external_applications").doc(docId).update({
+        candidateUserId: userId,
         interviewStatus: "completed",
         interviewId: vapiCallId,
         status: "completed",
@@ -161,6 +189,7 @@ async function createExternalApplicationFromJobContext(
 
     const now = new Date().toISOString();
     const docRef = await db.collection("external_applications").add({
+      candidateUserId: userId,
       candidateName: userName || userEmail?.split("@")[0] || "Candidate",
       candidateEmail: (userEmail || "").toLowerCase(),
       resumeUrl: "",
@@ -187,199 +216,129 @@ async function createExternalApplicationFromJobContext(
   }
 }
 
-/**
- * Auto-generate a recruiter score from the interview transcript using Gemini.
- * Writes to `application_scores` and updates the external_application's scoreStatus.
- */
-async function generateRecruiterScore(
-  applicationId: string,
-  vapiCallId: string,
-  vapiCallData: any
-) {
-  if (!genAI) {
-    console.warn("GOOGLE_AI_API_KEY not set, skipping auto-score generation");
-    return;
-  }
-
-  try {
-    const artifactTranscript =
-      typeof vapiCallData?.artifact?.transcript === "string"
-        ? String(vapiCallData.artifact.transcript)
-        : "";
-
-    // Extract transcript from Vapi messages (fallback when artifact transcript isn't present)
-    const messages = vapiCallData?.artifact?.messages || vapiCallData?.messages || [];
-    const transcriptFromMessages = (messages as any[])
-      .filter((msg: any) => {
-        if (msg.type === "transcript" && msg.transcriptType === "final") return true;
-        if ((msg.role === "user" || msg.role === "assistant" || msg.role === "bot") && (msg.content || msg.message || msg.transcript)) return true;
-        return false;
-      })
-      .map((msg: any) => {
-        const role = msg.role === "user" ? "Candidate" : "Interviewer";
-        const content = msg.transcript || msg.content || msg.message || "";
-        return `${role}: ${content}`;
-      })
-      .join("\n");
-
-    const transcript = artifactTranscript.trim().length >= 50
-      ? artifactTranscript.trim()
-      : transcriptFromMessages;
-
-    if (!transcript || transcript.trim().length < 50) {
-      console.warn("Transcript too short for scoring, skipping");
-      return;
-    }
-
-    // Update scoreStatus to processing
-    await db.collection("external_applications").doc(applicationId).update({
-      scoreStatus: "processing",
-      updatedAt: new Date().toISOString(),
-    });
-
-    const prompt = `
-You are a recruiter evaluating an interview candidate. Analyze this interview transcript and provide a scoring assessment.
-
-Transcript:
-${transcript}
-
-Respond in ONLY valid JSON with this exact structure:
-{
-  "overallScore": <number 0-100>,
-  "technicalScore": <number 0-100>,
-  "communicationScore": <number 0-100>,
-  "problemSolvingScore": <number 0-100>,
-  "recommendation": "<one of: strong_hire, hire, maybe, no_hire>",
-  "strengths": ["<strength1>", "<strength2>", "<strength3>"],
-  "weaknesses": ["<weakness1>", "<weakness2>"],
-  "feedbackSummary": "<2-3 sentence overall assessment>"
-}
-
-Be realistic and constructive. Return ONLY JSON.
-`;
-
-    let result: any = null;
-    let lastError: unknown = null;
-
-    for (const modelName of SCORE_MODEL_CANDIDATES) {
-      const model = genAI.getGenerativeModel({ model: modelName });
-      let retries = 2;
-      let delay = 1500;
-
-      while (retries >= 0) {
-        try {
-          console.log(`[AutoScore] Trying model: ${modelName}, retries left: ${retries}`);
-          result = await model.generateContent(prompt);
-          console.log(`[AutoScore] Model succeeded: ${modelName}`);
-          break;
-        } catch (e: any) {
-          lastError = e;
-          const msg = String(e?.message || "").toLowerCase();
-          const transient =
-            msg.includes("429") ||
-            msg.includes("503") ||
-            msg.includes("quota") ||
-            msg.includes("high demand") ||
-            msg.includes("service unavailable") ||
-            msg.includes("too many requests");
-
-          if (!transient || retries === 0) break;
-
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          retries -= 1;
-          delay *= 2;
-        }
-      }
-
-      if (result) break;
-    }
-
-    if (!result) {
-      throw lastError || new Error("All scoring models failed");
-    }
-
-    const text = result.response.text();
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("Invalid AI scoring response");
-
-    const scoreData = JSON.parse(jsonMatch[0]);
-
-    // Save to application_scores collection
-    const scoreDoc = await db.collection("application_scores").add({
-      applicationId,
-      interviewId: vapiCallId,
-      overallScore: Math.min(100, Math.max(0, scoreData.overallScore || 0)),
-      technicalScore: Math.min(100, Math.max(0, scoreData.technicalScore || 0)),
-      communicationScore: Math.min(100, Math.max(0, scoreData.communicationScore || 0)),
-      problemSolvingScore: Math.min(100, Math.max(0, scoreData.problemSolvingScore || 0)),
-      recommendation: scoreData.recommendation || "maybe",
-      strengths: scoreData.strengths || [],
-      weaknesses: scoreData.weaknesses || [],
-      feedbackSummary: scoreData.feedbackSummary || "",
-      generatedBy: "gemini",
-      createdAt: new Date().toISOString(),
-    });
-
-    // Update the external_application with score info
-    await db.collection("external_applications").doc(applicationId).update({
-      scoreStatus: "available",
-      scoreId: scoreDoc.id,
-      updatedAt: new Date().toISOString(),
-    });
-
-    console.log(`[AutoScore] Score saved: ${scoreDoc.id} for application ${applicationId} (overall: ${scoreData.overallScore})`);
-  } catch (error) {
-    console.error("[AutoScore] Error generating recruiter score:", error);
-    // Mark as failed so the UI can show an error state
-    try {
-      await db.collection("external_applications").doc(applicationId).update({
-        scoreStatus: "failed",
-        updatedAt: new Date().toISOString(),
-      });
-    } catch (_) {
-      // ignore
-    }
-  }
-}
-
 export async function POST(request: NextRequest) {
+  let idempotencyToken: IdempotencyToken | null = null;
+
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, "call-logs-write");
+    if (!allowed) return response!;
+
+    const idempotency = await acquireIdempotencyLock({
+      request,
+      userId: user.id,
+      scope: "call-logs:create",
+    });
+
+    if (idempotency.state === "invalid") {
+      return NextResponse.json({ error: idempotency.error }, { status: 400 });
+    }
+
+    if (idempotency.state === "in-progress") {
+      return NextResponse.json(
+        {
+          error: "Idempotent request is already being processed",
+          retryAfter: idempotency.retryAfterSeconds,
+        },
+        {
+          status: 409,
+          headers: {
+            "Retry-After": String(idempotency.retryAfterSeconds),
+          },
+        }
+      );
+    }
+
+    if (idempotency.state === "replay") {
+      return NextResponse.json(idempotency.body, { status: idempotency.status });
+    }
+
+    if (idempotency.state === "acquired") {
+      idempotencyToken = idempotency.token;
+    }
+
     const { vapiCallId, userId, jobContext } = await request.json();
 
-    if (!vapiCallId || !userId) {
+    if (!vapiCallId) {
+      if (idempotencyToken) {
+        await failIdempotencyLock({
+          token: idempotencyToken,
+          error: "vapiCallId is required",
+        });
+      }
       return NextResponse.json(
-        { error: "vapiCallId and userId are required" },
+        { error: "vapiCallId is required" },
         { status: 400 }
+      );
+    }
+
+    if (userId && userId !== user.id) {
+      if (idempotencyToken) {
+        await failIdempotencyLock({
+          token: idempotencyToken,
+          error: "User mismatch",
+        });
+      }
+      return NextResponse.json(
+        { error: "User mismatch" },
+        { status: 403 }
       );
     }
 
     // Check if call log already exists
     const existingLog = await callLogService.getCallLogByVapiId(vapiCallId);
     if (existingLog) {
-      return NextResponse.json(
-        { message: "Call log already exists", id: existingLog.id },
-        { status: 200 }
-      );
+      const payload = {
+        message: "Call log already exists",
+        id: existingLog.id,
+      };
+
+      if (idempotencyToken) {
+        await completeIdempotencyLock({
+          token: idempotencyToken,
+          status: 200,
+          body: payload,
+        });
+      }
+
+      return NextResponse.json(payload, { status: 200 });
     }
 
-    // Fetch call data from Vapi
-    const vapiCallData = await vapiCallDataService.getCall(vapiCallId);
+    // Fetch call data from Vapi. If unavailable, still persist a minimal call log.
+    let vapiCallData: VapiCallDataLike | null = null;
+    try {
+      vapiCallData = await vapiCallDataService.getCall(vapiCallId);
+    } catch (vapiError) {
+      console.warn(
+        `[CallLogs] Could not fetch Vapi call ${vapiCallId}. Saving minimal call log fallback.`,
+        vapiError
+      );
+    }
 
     const artifactTranscript =
       typeof vapiCallData?.artifact?.transcript === "string"
         ? String(vapiCallData.artifact.transcript)
         : "";
 
-    const rawMessages = vapiCallData.artifact?.messages || vapiCallData.messages || [];
-    const transcriptFromMessages = (rawMessages as any[])
-      .filter((msg: any) => {
+    const rawMessages: TranscriptMessage[] =
+      vapiCallData?.artifact?.messages || vapiCallData?.messages || [];
+    const transcriptFromMessages = rawMessages
+      .filter((msg) => {
         if (msg.type === "transcript" && msg.transcriptType === "final") return true;
         if ((msg.role === "user" || msg.role === "assistant" || msg.role === "bot") && (msg.content || msg.message || msg.transcript)) return true;
         return false;
       })
-      .map((msg: any) => {
+      .map((msg) => {
         const role = msg.role === "user" ? "Candidate" : "Interviewer";
-        const content = msg.transcript || msg.content || msg.message || "";
+        const content =
+          (typeof msg.transcript === "string" && msg.transcript) ||
+          (typeof msg.content === "string" && msg.content) ||
+          (typeof msg.message === "string" && msg.message) ||
+          "";
         return `${role}: ${content}`;
       })
       .join("\n");
@@ -390,44 +349,44 @@ export async function POST(request: NextRequest) {
 
     // Extract relevant data for Firestore
     const callLogData = {
-      userId,
-      vapiCallId: vapiCallData.id,
-      assistantId: vapiCallData.assistant?.id || null,
-      status: vapiCallData.status || "unknown",
-      startedAt: vapiCallData.startedAt || new Date().toISOString(),
-      endedAt: vapiCallData.endedAt || null,
+      userId: user.id,
+      vapiCallId: vapiCallData?.id || vapiCallId,
+      assistantId: vapiCallData?.assistant?.id || null,
+      status: vapiCallData?.status || "completed",
+      startedAt: vapiCallData?.startedAt || new Date().toISOString(),
+      endedAt: vapiCallData?.endedAt || null,
       duration:
-        vapiCallData.endedAt && vapiCallData.startedAt
+        vapiCallData?.endedAt && vapiCallData?.startedAt
           ? Math.round(
               (new Date(vapiCallData.endedAt).getTime() -
                 new Date(vapiCallData.startedAt).getTime()) /
                 1000
             )
           : null,
-      cost: vapiCallData.cost || null,
-      costBreakdown: vapiCallData.costBreakdown || null,
-      messageCount: vapiCallData.artifact?.messages?.length || 0,
+      cost: vapiCallData?.cost || null,
+      costBreakdown: vapiCallData?.costBreakdown || null,
+      messageCount: vapiCallData?.artifact?.messages?.length || 0,
       hasRecording: !!(
-        vapiCallData.artifact?.recordingUrl ||
-        (vapiCallData as any).recordingUrl
+        vapiCallData?.artifact?.recordingUrl ||
+        vapiCallData?.recordingUrl
       ),
       hasTranscript: !!(
-        vapiCallData.artifact?.transcript || (vapiCallData as any).transcript
+        vapiCallData?.artifact?.transcript || vapiCallData?.transcript
       ),
       transcript: transcript || null,
-      summary: (vapiCallData as any).summary || null,
-      analysis: (vapiCallData as any).analysis || null,
+      summary: vapiCallData?.summary || null,
+      analysis: vapiCallData?.analysis || null,
     };
 
     const logId = await callLogService.saveCallLog(callLogData);
 
     // If job context was provided (from extension), auto-create an external_application
-    // and auto-generate a recruiter score using Gemini
+    // and enqueue recruiter score generation asynchronously.
     if (jobContext) {
       let userName = "";
       let userEmail = "";
       try {
-        const userDoc = await db.collection("users").doc(userId).get();
+        const userDoc = await db.collection("users").doc(user.id).get();
         if (userDoc.exists) {
           const userData = userDoc.data();
           userName = userData?.name || "";
@@ -439,33 +398,53 @@ export async function POST(request: NextRequest) {
 
       const applicationId = await createExternalApplicationFromJobContext(
         jobContext,
-        userId,
+        user.id,
         vapiCallId,
         userName,
         userEmail
       );
 
-      // Auto-score in the background (don't block the response)
+      // Queue score generation in the background (don't block the response)
       if (applicationId) {
-        generateRecruiterScore(applicationId, vapiCallId, vapiCallData).catch((err) =>
-          console.error("[AutoScore] Background scoring failed:", err)
-        );
+        enqueueRecruiterScoreJob({
+          applicationId,
+          interviewId: vapiCallId,
+        }).catch((err) => {
+          console.error("[AutoScoreQueue] Failed to enqueue recruiter score job:", err);
+        });
       }
     }
 
-    return NextResponse.json({
+    const payload = {
       success: true,
       message: "Call log saved successfully",
       id: logId,
-    });
+    };
+
+    if (idempotencyToken) {
+      await completeIdempotencyLock({
+        token: idempotencyToken,
+        status: 200,
+        body: payload,
+      });
+    }
+
+    return NextResponse.json(payload);
   } catch (error) {
     console.error("Error saving call log:", error);
+
+    if (idempotencyToken) {
+      await failIdempotencyLock({
+        token: idempotencyToken,
+        error,
+      });
+    }
 
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error occurred";
     const errorCode =
-      error instanceof Error && "code" in error
-        ? (error as any).code
+      typeof error === "object" && error !== null && "code" in error
+        ? (error as { code?: unknown }).code
         : undefined;
 
     return NextResponse.json(
@@ -481,24 +460,35 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-    const limit = parseInt(searchParams.get("limit") || "20");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "userId is required" },
-        { status: 400 }
-      );
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, "call-logs");
+    if (!allowed) return response!;
+
+    const { searchParams } = new URL(request.url);
+    // Users can only fetch their own call logs
+    const userId = user.id;
+    const rawLimit = Number(searchParams.get("limit"));
+    const limit =
+      Number.isFinite(rawLimit) && rawLimit > 0
+        ? Math.min(Math.floor(rawLimit), 100)
+        : 20;
 
     const callLogs = await callLogService.getCallLogsByUser(userId, limit);
 
     return NextResponse.json(callLogs);
   } catch (error) {
     console.error("Error fetching call logs:", error);
+    const message = error instanceof Error ? error.message : "Failed to fetch call logs";
+
     return NextResponse.json(
-      { error: "Failed to fetch call logs" },
+      {
+        error: "Failed to fetch call logs",
+        details: process.env.NODE_ENV === "development" ? message : undefined,
+      },
       { status: 500 }
     );
   }

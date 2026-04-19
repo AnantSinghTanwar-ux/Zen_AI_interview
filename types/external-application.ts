@@ -55,7 +55,7 @@ export interface ApplicationScore {
   weaknesses: string[];
   feedbackSummary: string;
 
-  generatedBy: "gemini";
+  generatedBy: "gemini" | "openrouter" | "local" | "cached";
   createdAt: string;
 }
 

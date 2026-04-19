@@ -10,6 +10,7 @@ import {
   AlertCircle, Lightbulb, ArrowRight
 } from 'lucide-react';
 import { feedbackService, InterviewFeedback } from '@/services/feedback/feedback.service';
+import PremiumAccessPopup from '@/components/PremiumAccessPopup';
 
 interface FeedbackDisplayProps {
   interviewId?: string;
@@ -25,6 +26,13 @@ export default function FeedbackDisplay({ interviewId, callId, userId, callData 
   const [userFeedbackSubmitted, setUserFeedbackSubmitted] = useState(false);
   const [userRating, setUserRating] = useState(0);
   const [userComments, setUserComments] = useState('');
+  const [showPremiumPopup, setShowPremiumPopup] = useState(false);
+  const [premiumMessage, setPremiumMessage] = useState<string | undefined>(undefined);
+
+  const openPremiumPopup = (message?: string) => {
+    setPremiumMessage(message || 'Premium is required to continue using this Vapi AI feature.');
+    setShowPremiumPopup(true);
+  };
 
   useEffect(() => {
     fetchFeedback();
@@ -47,6 +55,24 @@ export default function FeedbackDisplay({ interviewId, callId, userId, callData 
       
       // Fetch real-time feedback from call data
       const response = await fetch(`/api/vapi/feedback?callId=${targetCallId}`);
+
+      if (response.status === 402) {
+        const payload = await response.json().catch(() => ({}));
+        openPremiumPopup(payload?.message);
+        setError(payload?.message || 'Premium subscription required');
+        setFeedback(null);
+        return;
+      }
+
+      if (response.status === 429) {
+        const payload = await response.json().catch(() => ({}));
+        const limitMessage =
+          payload?.message ||
+          'Daily usage limit reached. Please try again tomorrow.';
+        setError(limitMessage);
+        setFeedback(null);
+        return;
+      }
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -139,64 +165,100 @@ export default function FeedbackDisplay({ interviewId, callId, userId, callData 
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-8 bg-white/5 border border-white/10 rounded w-64 mb-8"></div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-24 bg-white/5 border border-white/10 rounded-2xl"></div>
-          ))}
+      <>
+        <div className="space-y-6 animate-pulse">
+          <div className="h-8 bg-white/5 border border-white/10 rounded w-64 mb-8"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-24 bg-white/5 border border-white/10 rounded-2xl"></div>
+            ))}
+          </div>
+          <div className="h-40 bg-white/5 border border-white/10 rounded-2xl mt-8"></div>
         </div>
-        <div className="h-40 bg-white/5 border border-white/10 rounded-2xl mt-8"></div>
-      </div>
+
+        <PremiumAccessPopup
+          open={showPremiumPopup}
+          message={premiumMessage}
+          onClose={() => setShowPremiumPopup(false)}
+          onActivated={() => {
+            setError(null);
+            fetchFeedback();
+          }}
+        />
+      </>
     );
   }
 
   if (error) {
     return (
-      <Card className="glass-card border-destructive/50 overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-1 bg-destructive"></div>
-        <CardContent className="pt-8">
-          <div className="text-center py-8">
-            <div className="mx-auto w-16 h-16 rounded-full bg-destructive/20 flex flex-center mb-6 shadow-[0_0_20px_rgba(215,51,87,0.3)]">
-              <AlertCircle className="w-8 h-8 text-destructive" />
+      <>
+        <Card className="glass-card border-destructive/50 overflow-hidden">
+          <div className="absolute inset-x-0 top-0 h-1 bg-destructive"></div>
+          <CardContent className="pt-8">
+            <div className="text-center py-8">
+              <div className="mx-auto w-16 h-16 rounded-full bg-destructive/20 flex flex-center mb-6 shadow-[0_0_20px_rgba(215,51,87,0.3)]">
+                <AlertCircle className="w-8 h-8 text-destructive" />
+              </div>
+              <h3 className="text-foreground tracking-tight font-bold text-2xl mb-2">Error Loading Feedback</h3>
+              <p className="text-destructive font-medium mb-4">{error}</p>
+              <p className="text-muted-foreground text-sm mb-8 max-w-lg mx-auto">
+                This might happen if the interview session doesn't have enough conversation data 
+                or if there was an issue processing the interview.
+              </p>
+              <Button 
+                onClick={() => {
+                  setError(null);
+                  fetchFeedback();
+                }}
+                className="bg-white/5 text-foreground backdrop-blur-lg border border-white/10 rounded-xl px-8 py-3 font-medium transition-all duration-300 hover:bg-white/10 hover:border-white/20"
+              >
+                Try Again
+              </Button>
             </div>
-            <h3 className="text-foreground tracking-tight font-bold text-2xl mb-2">Error Loading Feedback</h3>
-            <p className="text-destructive font-medium mb-4">{error}</p>
-            <p className="text-muted-foreground text-sm mb-8 max-w-lg mx-auto">
-              This might happen if the interview session doesn't have enough conversation data 
-              or if there was an issue processing the interview.
-            </p>
-            <Button 
-              onClick={() => {
-                setError(null);
-                fetchFeedback();
-              }}
-              className="bg-white/5 text-foreground backdrop-blur-lg border border-white/10 rounded-xl px-8 py-3 font-medium transition-all duration-300 hover:bg-white/10 hover:border-white/20"
-            >
-              Try Again
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <PremiumAccessPopup
+          open={showPremiumPopup}
+          message={premiumMessage}
+          onClose={() => setShowPremiumPopup(false)}
+          onActivated={() => {
+            setError(null);
+            fetchFeedback();
+          }}
+        />
+      </>
     );
   }
 
   if (!feedback) {
     return (
-      <Card className="glass-card">
-        <CardContent className="pt-8">
-          <div className="text-center py-12">
-            <div className="mx-auto w-16 h-16 rounded-full bg-white/5 border border-white/10 flex flex-center mb-6">
-              <MessageSquare className="w-8 h-8 text-muted-foreground" />
+      <>
+        <Card className="glass-card">
+          <CardContent className="pt-8">
+            <div className="text-center py-12">
+              <div className="mx-auto w-16 h-16 rounded-full bg-white/5 border border-white/10 flex flex-center mb-6">
+                <MessageSquare className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <p className="text-foreground font-semibold tracking-tight text-xl mb-4">Feedback Unavailable</p>
+              <p className="text-muted-foreground text-sm max-w-md mx-auto leading-relaxed">
+                This interview session may not have enough conversation data to generate feedback, 
+                or there might have been an issue processing the transcript.
+              </p>
             </div>
-            <p className="text-foreground font-semibold tracking-tight text-xl mb-4">Feedback Unavailable</p>
-            <p className="text-muted-foreground text-sm max-w-md mx-auto leading-relaxed">
-              This interview session may not have enough conversation data to generate feedback, 
-              or there might have been an issue processing the transcript.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <PremiumAccessPopup
+          open={showPremiumPopup}
+          message={premiumMessage}
+          onClose={() => setShowPremiumPopup(false)}
+          onActivated={() => {
+            setError(null);
+            fetchFeedback();
+          }}
+        />
+      </>
     );
   }
 
@@ -445,6 +507,16 @@ export default function FeedbackDisplay({ interviewId, callId, userId, callData 
           </CardContent>
         </Card>
       )}
+
+      <PremiumAccessPopup
+        open={showPremiumPopup}
+        message={premiumMessage}
+        onClose={() => setShowPremiumPopup(false)}
+        onActivated={() => {
+          setError(null);
+          fetchFeedback();
+        }}
+      />
     </div>
   );
 }

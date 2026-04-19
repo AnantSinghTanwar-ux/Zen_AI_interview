@@ -12,12 +12,16 @@ interface UseStreamingChatProps {
   onMessage?: (message: string) => void;
   onComplete?: (fullMessage: string, chatId?: string) => void;
   onError?: (error: string) => void;
+  onPremiumRequired?: (message?: string) => void;
+  premiumUsageKey?: string;
 }
 
 export function useStreamingChat({
   onMessage,
   onComplete,
   onError,
+  onPremiumRequired,
+  premiumUsageKey,
 }: UseStreamingChatProps = {}) {
   const [isStreaming, setIsStreaming] = useState(false);
 
@@ -43,10 +47,17 @@ export function useStreamingChat({
             message,
             previousChatId,
             stage,
+            premiumUsageKey,
           }),
         });
 
         if (!response.ok) {
+          if (response.status === 402) {
+            const payload = await response.json().catch(() => ({}));
+            onPremiumRequired?.(payload?.message);
+            return "";
+          }
+
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
@@ -97,7 +108,7 @@ export function useStreamingChat({
         setIsStreaming(false);
       }
     },
-    [isStreaming, onMessage, onComplete, onError]
+    [isStreaming, onMessage, onComplete, onError, onPremiumRequired, premiumUsageKey]
   );
 
   return {

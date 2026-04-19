@@ -1,0 +1,16 @@
+
+> ai_mock_interview_platform@0.1.0 build
+> next build
+
+   ▲ Next.js 15.3.6
+   - Environments: .env
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 34.0s
+   Skipping validation of types
+   Skipping linting
+   Collecting page data ...
+
+> Build error occurred
+SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)

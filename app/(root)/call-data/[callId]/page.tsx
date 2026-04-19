@@ -6,6 +6,7 @@ import Link from "next/link";
 import AudioPlayer from "@/components/AudioPlayer";
 import EmotionVisualization from "@/components/EmotionVisualization";
 import InterviewEvaluation from "@/components/InterviewEvaluation";
+import PremiumAccessPopup from "@/components/PremiumAccessPopup";
 import { EmotionData } from "@/services/emotion/emotion-detection.service";
 import { Activity, Brain, TrendingUp, Clock, MessageSquare, DollarSign, ChevronLeft, Cpu, FileText } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
@@ -73,6 +74,8 @@ export default function CallDetailsPage() {
   const [callDetails, setCallDetails] = useState<CallDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showPremiumPopup, setShowPremiumPopup] = useState(false);
+  const [premiumMessage, setPremiumMessage] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (!callId) {
@@ -85,6 +88,16 @@ export default function CallDetailsPage() {
       try {
         setLoading(true);
         const response = await fetch(`/api/vapi/call-data/${callId}`);
+
+        if (response.status === 402) {
+          const payload = await response.json().catch(() => ({}));
+          setPremiumMessage(
+            payload?.message ||
+              "Premium is required to continue using this Vapi AI feature."
+          );
+          setShowPremiumPopup(true);
+          throw new Error(payload?.message || "Premium subscription required");
+        }
 
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
@@ -148,6 +161,19 @@ export default function CallDetailsPage() {
               </button>
             </div>
           </div>
+
+          <PremiumAccessPopup
+            open={showPremiumPopup}
+            message={premiumMessage}
+            onClose={() => setShowPremiumPopup(false)}
+            onActivated={() => {
+              setError(null);
+              setLoading(true);
+              setTimeout(() => {
+                window.location.reload();
+              }, 0);
+            }}
+          />
         </div>
       </PageLayout>
     );
@@ -400,6 +426,19 @@ export default function CallDetailsPage() {
             </div>
           )}
         </div>
+
+        <PremiumAccessPopup
+          open={showPremiumPopup}
+          message={premiumMessage}
+          onClose={() => setShowPremiumPopup(false)}
+          onActivated={() => {
+            setError(null);
+            setLoading(true);
+            setTimeout(() => {
+              window.location.reload();
+            }, 0);
+          }}
+        />
       </div>
     </PageLayout>
   );

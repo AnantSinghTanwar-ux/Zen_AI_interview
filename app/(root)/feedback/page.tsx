@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import PageLayout from "@/components/PageLayout";
 import FeedbackDisplay from "@/components/FeedbackDisplay";
+import PremiumAccessPopup from "@/components/PremiumAccessPopup";
 import { User } from "@/types";
 import { Clock, MessageSquare, ChevronRight, Activity } from "lucide-react";
 
@@ -26,6 +27,8 @@ function FeedbackPageContent() {
   const [callData, setCallData] = useState<CallData[]>([]);
   const [selectedCall, setSelectedCall] = useState<CallData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showPremiumPopup, setShowPremiumPopup] = useState(false);
+  const [premiumMessage, setPremiumMessage] = useState<string | undefined>(undefined);
   const searchParams = useSearchParams();
   
   // Get callId from URL parameters if provided
@@ -34,12 +37,29 @@ function FeedbackPageContent() {
   useEffect(() => {
     const initializePage = async () => {
       try {
-        // Check user authentication
-        const currentUser = await getCurrentUser();
+        const [currentUser, response] = await Promise.all([
+          getCurrentUser(),
+          fetch('/api/vapi/call-data?limit=10', { credentials: 'include' }),
+        ]);
+
         setUser(currentUser);
 
-        // Fetch recent call data
-        const response = await fetch('/api/vapi/call-data?limit=10');
+        if (!currentUser) {
+          setCallData([]);
+          return;
+        }
+
+        if (response.status === 402) {
+          const payload = await response.json().catch(() => ({}));
+          setPremiumMessage(
+            payload?.message ||
+              'Premium is required to continue using this Vapi AI feature.'
+          );
+          setShowPremiumPopup(true);
+          setCallData([]);
+          return;
+        }
+
         if (response.ok) {
           const calls = await response.json();
           setCallData(calls);
@@ -106,6 +126,15 @@ function FeedbackPageContent() {
             <h1 className="text-foreground text-3xl font-bold mb-4">No Interview Data</h1>
             <p className="text-muted-foreground font-medium text-lg leading-relaxed">Complete an interview session to see detailed feedback and analytics.</p>
           </div>
+
+          <PremiumAccessPopup
+            open={showPremiumPopup}
+            message={premiumMessage}
+            onClose={() => setShowPremiumPopup(false)}
+            onActivated={() => {
+              window.location.reload();
+            }}
+          />
         </div>
       </PageLayout>
     );
@@ -208,6 +237,15 @@ function FeedbackPageContent() {
             )}
           </div>
         </div>
+
+        <PremiumAccessPopup
+          open={showPremiumPopup}
+          message={premiumMessage}
+          onClose={() => setShowPremiumPopup(false)}
+          onActivated={() => {
+            window.location.reload();
+          }}
+        />
       </div>
     </PageLayout>
   );

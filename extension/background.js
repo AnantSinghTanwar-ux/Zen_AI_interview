@@ -1,4 +1,4 @@
-const APP_BASE_URL = "https://zen-ai-wvo2-git-main-anantsinghtanwar-uxs-projects.vercel.app";
+const APP_BASE_URL = "https://zen-ai-szz1.vercel.app/";
 
 const LOGIN_URL = `${APP_BASE_URL}/sign-in`;
 const ANALYZE_URL = `${APP_BASE_URL}/analyze`;
@@ -8,10 +8,16 @@ const STORAGE_KEYS = {
   AUTH_TOKEN: "authToken",
   RESUME_TEXT: "resumeText",
   RESUME_ID: "resumeId",
-  EXTENSION_ENABLED: "extensionEnabled"
+  EXTENSION_ENABLED: "extensionEnabled",
+  DEBUG_LOGS: "debugLogs"
 };
 
+let debugLogsEnabled = false;
+
 const log = (...args) => {
+  if (!debugLogsEnabled) {
+    return;
+  }
   console.log("[ZenAI Background]", ...args);
 };
 
@@ -28,6 +34,20 @@ const setToStorage = (data) =>
 const openTab = (url) => {
   chrome.tabs.create({ url });
 };
+
+chrome.storage.local.get([STORAGE_KEYS.DEBUG_LOGS], (result) => {
+  debugLogsEnabled = Boolean(result?.[STORAGE_KEYS.DEBUG_LOGS]);
+});
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== "local") {
+    return;
+  }
+
+  if (changes[STORAGE_KEYS.DEBUG_LOGS]) {
+    debugLogsEnabled = Boolean(changes[STORAGE_KEYS.DEBUG_LOGS].newValue);
+  }
+});
 
 const sanitizeString = (value, max = 8000) => {
   if (typeof value !== "string") {

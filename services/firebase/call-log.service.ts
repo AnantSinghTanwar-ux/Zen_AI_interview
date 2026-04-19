@@ -30,13 +30,88 @@ interface CallLogData {
 export class CallLogService {
   private readonly COLLECTION = "callLogs";
 
+  private sanitizeValue(value: unknown): unknown {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => this.sanitizeValue(item))
+        .filter((item) => item !== undefined);
+    }
+
+    if (value instanceof Timestamp || value instanceof Date) {
+      return value;
+    }
+
+    if (value && typeof value === "object") {
+      const cleanedObject: Record<string, unknown> = {};
+
+      for (const [key, nestedValue] of Object.entries(
+        value as Record<string, unknown>
+      )) {
+        const cleanedNestedValue = this.sanitizeValue(nestedValue);
+        if (cleanedNestedValue !== undefined) {
+          cleanedObject[key] = cleanedNestedValue;
+        }
+      }
+
+      return cleanedObject;
+    }
+
+    return value;
+  }
+
+  private toMillis(value: unknown): number {
+    if (!value) return 0;
+
+    if (typeof value === "string" || typeof value === "number") {
+      const parsed = new Date(value).getTime();
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    if (value instanceof Timestamp) {
+      return value.toMillis();
+    }
+
+    if (typeof value === "object") {
+      const candidate = value as {
+        toDate?: () => Date;
+        _seconds?: number;
+        seconds?: number;
+      };
+
+      if (typeof candidate.toDate === "function") {
+        const parsed = candidate.toDate().getTime();
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+
+      const seconds =
+        typeof candidate._seconds === "number"
+          ? candidate._seconds
+          : candidate.seconds;
+
+      if (typeof seconds === "number") {
+        return seconds * 1000;
+      }
+    }
+
+    return 0;
+  }
+
+  private getSortTimestamp(log: Record<string, unknown>): number {
+    return this.toMillis(log.startedAt) || this.toMillis(log.createdAt) || 0;
+  }
+
   // Helper function to remove undefined values
   private cleanData(obj: CallLogData): Record<string, unknown> {
     const cleaned: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(obj)) {
-      if (value !== undefined) {
-        cleaned[key] = value;
+      const cleanedValue = this.sanitizeValue(value);
+      if (cleanedValue !== undefined) {
+        cleaned[key] = cleanedValue;
       }
     }
 
@@ -88,33 +163,59 @@ export class CallLogService {
     userId: string,
     limit: number = 20
   ): Promise<CallLogData[]> {
+    const safeLimit =
+      Number.isFinite(limit) && limit > 0 ? Math.min(Math.floor(limit), 100) : 20;
+
     try {
+      // Uses composite index: (userId ASC, createdAt DESC)
+      // See firestore.indexes.json — deploy via: firebase deploy --only firestore:indexes
       const snapshot = await db
         .collection(this.COLLECTION)
         .where("userId", "==", userId)
+        .orderBy("createdAt", "desc")
+        .limit(safeLimit)
         .get();
 
-      // Sort in memory since we can't orderBy without index
-      const docs = snapshot.docs
-        .map(
-          (doc) =>
-            ({ ...doc.data(), id: doc.id } as CallLogData & { id: string })
-        )
-        .sort((a, b) => {
-          const aTime = a.createdAt?.toMillis
-            ? a.createdAt.toMillis()
-            : new Date(a.createdAt?.toDate?.() || a.createdAt).getTime();
-          const bTime = b.createdAt?.toMillis
-            ? b.createdAt.toMillis()
-            : new Date(b.createdAt?.toDate?.() || b.createdAt).getTime();
-          return bTime - aTime; // Descending order (newest first)
-        })
-        .slice(0, limit);
-
-      return docs;
+      return snapshot.docs.map(
+        (doc) =>
+          ({ ...doc.data(), id: doc.id } as CallLogData & { id: string })
+      );
     } catch (error) {
-      console.error("Error fetching call logs:", error);
-      throw error;
+      const message = error instanceof Error ? error.message : String(error);
+      const code = (error as { code?: unknown })?.code;
+      const isMissingIndexError =
+        code === 9 ||
+        code === "failed-precondition" ||
+        message.includes("FAILED_PRECONDITION") ||
+        message.toLowerCase().includes("index");
+
+      if (!isMissingIndexError) {
+        console.error("Error fetching call logs:", error);
+        throw error;
+      }
+
+      console.warn(
+        "[CallLogService] Missing Firestore index detected, falling back to in-memory sort for call logs."
+      );
+
+      const fallbackSnapshot = await db
+        .collection(this.COLLECTION)
+        .where("userId", "==", userId)
+        .limit(Math.max(100, safeLimit * 5))
+        .get();
+
+      const fallbackLogs = fallbackSnapshot.docs.map(
+        (doc) =>
+          ({ ...doc.data(), id: doc.id } as CallLogData & { id: string })
+      );
+
+      fallbackLogs.sort(
+        (a, b) =>
+          this.getSortTimestamp(b as unknown as Record<string, unknown>) -
+          this.getSortTimestamp(a as unknown as Record<string, unknown>)
+      );
+
+      return fallbackLogs.slice(0, safeLimit);
     }
   }
 

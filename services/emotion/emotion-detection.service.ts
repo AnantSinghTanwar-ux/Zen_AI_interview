@@ -1,4 +1,7 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import {
+  getOpenRouterModelCandidates,
+  openRouterChatCompletion,
+} from '@/services/ai/openrouter-client';
 
 // Emotion detection types
 export interface EmotionData {
@@ -49,37 +52,73 @@ interface AudioFeatures {
 }
 
 class EmotionDetectionService {
-  private genAI: GoogleGenerativeAI;
-  private model: any;
-  private requestQueue: Array<() => Promise<any>> = [];
+  private requestQueue: Array<() => Promise<unknown>> = [];
   private isProcessingQueue = false;
   private lastRequestTime = 0;
   private requestCount = 0;
   private readonly RATE_LIMIT_DELAY = 4500; // 4.5s delay to stay under 15 RPM free tier limit safely
   private readonly MAX_RETRIES = 3;
   private readonly emotionCache = new Map<string, EmotionData>();
+  private isAiAvailable = false;
+  private disableAiForSession = false;
+  private hasLoggedAuthFailure = false;
+  private readonly modelCandidates = getOpenRouterModelCandidates(
+    process.env.OPENROUTER_MODEL,
+    process.env.GOOGLE_AI_FEEDBACK_MODEL,
+    'openrouter/auto'
+  );
 
   constructor() {
-    const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_AI_API_KEY || "AQ.Ab8RN6JuTm0PHJB3bCJjE1P-1p0_kXOrp_iwefhHb7LVxc8YIw";
+    const apiKey = this.resolveApiKey();
     const fallbackOnly = process.env.EMOTION_DETECTION_FALLBACK_ONLY === 'true';
+    const isServerRuntime = typeof window === 'undefined';
     
     if (!apiKey || fallbackOnly) {
-      console.warn('Google AI API key not found or fallback mode enabled. Emotion detection will use fallback analysis.');
-    }
-    this.genAI = new GoogleGenerativeAI(apiKey || '');
-    this.model = this.genAI.getGenerativeModel({ 
-      model: 'gemini-3-flash',
-      generationConfig: {
-        temperature: 0.3, // Lower temperature for more consistent emotion analysis
-        topK: 40,
-        topP: 0.8,
-        maxOutputTokens: 1024,
+      if (isServerRuntime) {
+        console.warn('OpenRouter API key not found or fallback mode enabled. Emotion detection will use fallback analysis.');
       }
-    });
+      return;
+    }
+
+    this.isAiAvailable = true;
+  }
+
+  private resolveApiKey(): string {
+    // Never expose server-only keys to the browser.
+    if (typeof window === 'undefined') {
+      return process.env.OPENROUTER_API_KEY || '';
+    }
+
+    return '';
+  }
+
+  private shouldUseRemoteAi(): boolean {
+    if (typeof window !== 'undefined') {
+      // Client-side transcript emotion detection should always stay local to avoid key exposure and noisy auth failures.
+      return false;
+    }
+
+    return this.isAiAvailable && !this.disableAiForSession;
+  }
+
+  private handleModelFailure(error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    const isAuthError =
+      /401|unauthorized|invalid authentication|api key not valid|permission denied/i.test(
+        message
+      );
+
+    if (isAuthError) {
+      this.disableAiForSession = true;
+      if (!this.hasLoggedAuthFailure) {
+        console.warn('Emotion AI disabled for this session due to authentication failure. Falling back to local analysis.');
+        this.hasLoggedAuthFailure = true;
+      }
+    }
   }
 
   /**
-   * Rate-limited request wrapper for Gemini API
+    * Rate-limited request wrapper for OpenRouter API
    */
   private async makeRateLimitedRequest<T>(requestFn: () => Promise<T>): Promise<T> {
     return new Promise((resolve, reject) => {
@@ -112,7 +151,9 @@ class EmotionDetectionService {
       // Wait if we need to respect rate limit
       if (timeSinceLastRequest < this.RATE_LIMIT_DELAY) {
         const waitTime = this.RATE_LIMIT_DELAY - timeSinceLastRequest;
-        console.log(`Rate limiting: waiting ${waitTime}ms before next request`);
+        if (typeof window === 'undefined') {
+          console.log(`Rate limiting: waiting ${waitTime}ms before next request`);
+        }
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
 
@@ -161,19 +202,14 @@ class EmotionDetectionService {
   }
 
   /**
-   * Analyze text transcript for emotional content using Gemini AI with rate limiting
+    * Analyze text transcript for emotional content using OpenRouter AI with rate limiting
    */
   async analyzeTextEmotion(
     text: string, 
     timestamp: number, 
     speakingDuration: number = 0
   ): Promise<EmotionData> {
-    // Check if fallback mode is enabled
-    const fallbackOnly = process.env.EMOTION_DETECTION_FALLBACK_ONLY === 'true';
-    const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_AI_API_KEY || "AQ.Ab8RN6JuTm0PHJB3bCJjE1P-1p0_kXOrp_iwefhHb7LVxc8YIw";
-    
-    if (fallbackOnly || !apiKey) {
-      console.log('Using fallback emotion analysis (API disabled or unavailable)');
+    if (!this.shouldUseRemoteAi()) {
       return this.fallbackTextAnalysis(text, timestamp, speakingDuration);
     }
 
@@ -235,8 +271,12 @@ class EmotionDetectionService {
             Respond only with the JSON object, no additional text.
           `;
 
-          const result = await this.model.generateContent(prompt);
-          return result.response.text();
+          return await openRouterChatCompletion({
+            messages: [{ role: 'user', content: prompt }],
+            modelCandidates: this.modelCandidates,
+            temperature: 0.3,
+            maxTokens: 1_024,
+          });
         });
       });
       
@@ -245,7 +285,7 @@ class EmotionDetectionService {
       let analysis: any = {};
       
       if (!jsonMatch) {
-        console.warn('Invalid response format from Gemini for emotion analysis. Raw result:', result);
+        console.warn('Invalid response format from OpenRouter for emotion analysis. Raw result:', result);
         // Fallback to neutral
         analysis = {
           emotion: 'neutral',
@@ -306,6 +346,7 @@ class EmotionDetectionService {
 
     } catch (error: any) {
       console.error('Error analyzing text emotion:', error);
+      this.handleModelFailure(error);
       
       // Always fallback to rule-based analysis on any error
       return this.fallbackTextAnalysis(text, timestamp, speakingDuration);
@@ -410,6 +451,25 @@ class EmotionDetectionService {
       };
     }
 
+    if (!this.shouldUseRemoteAi()) {
+      for (const message of userMessages) {
+        emotions.push(this.fallbackTextAnalysis(
+          message.message,
+          message.time || Date.now(),
+          message.duration || 0
+        ));
+      }
+
+      const summary = this.calculateEmotionSummary(emotions);
+
+      return {
+        emotions,
+        dominantEmotion: summary.mostFrequentEmotion,
+        emotionalTrend: this.calculateEmotionalTrend(emotions),
+        summary,
+      };
+    }
+
     try {
       // BATCH PROCESSING: Group messages to single API call
       const prompt = `
@@ -437,8 +497,12 @@ class EmotionDetectionService {
 
       const result = await this.makeRateLimitedRequest(async () => {
         return await this.retryWithBackoff(async () => {
-          const content = await this.model.generateContent(prompt);
-          return content.response.text();
+          return await openRouterChatCompletion({
+            messages: [{ role: 'user', content: prompt }],
+            modelCandidates: this.modelCandidates,
+            temperature: 0.2,
+            maxTokens: 2_048,
+          });
         });
       });
 
@@ -486,6 +550,7 @@ class EmotionDetectionService {
 
     } catch (error) {
        console.error("Batch emotion analysis failed, falling back to local analysis", error);
+       this.handleModelFailure(error);
        // Fallback: loop and use local analysis
        for (const message of userMessages) {
           emotions.push(this.fallbackTextAnalysis(

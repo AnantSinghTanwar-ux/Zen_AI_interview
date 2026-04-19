@@ -1,19 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { vapiCallDataService } from '@/services/vapi/call-data.service';
 import { emotionDetectionService } from '@/services/emotion/emotion-detection.service';
+import { getCurrentUser } from '@/lib/actions/auth.actions';
+import { checkRateLimit } from '@/lib/services/rate-limit.service';
+import { cacheService } from '@/lib/services/cache.service';
+import {
+  checkPremiumAccessForCall,
+  getPremiumRequiredErrorPayload,
+} from '@/lib/services/premium-access.service';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ callId: string }> }
 ) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, 'emotion-analyze');
+    if (!allowed) return response!;
+
     const { callId } = await params;
+
+    const premiumAccess = await checkPremiumAccessForCall({
+      userId: user.id,
+      email: user.email,
+      callIds: [callId],
+    });
+
+    if (!premiumAccess.allowed) {
+      return NextResponse.json(getPremiumRequiredErrorPayload(), { status: 402 });
+    }
 
     if (!callId) {
       return NextResponse.json(
         { error: 'Call ID is required' },
         { status: 400 }
       );
+    }
+
+    // Check cache first
+    const cacheKey = `emotion:${callId}`;
+    const cached = await cacheService.get<Record<string, unknown>>(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached, {
+        status: 200,
+        headers: { 'X-Cache': 'HIT' },
+      });
     }
 
     // Get the full call details from VAPI
@@ -48,7 +83,7 @@ export async function GET(
       costBreakdown: callDetails.costBreakdown,
       
       // Enhanced messages with emotion data
-      messages: callDetails.messages?.map((message: any, index: number) => {
+      messages: callDetails.messages?.map((message: any) => {
         const emotionData = emotionAnalysis?.emotions?.find(emotion => 
           Math.abs(emotion.secondsFromStart - (message.secondsFromStart || 0)) < 5 &&
           message.role === 'user'
@@ -85,7 +120,13 @@ export async function GET(
       duration: (callDetails as any).duration
     };
 
-    return NextResponse.json(formattedCallDetails, { status: 200 });
+    // Cache result for 2 hours
+    await cacheService.set(cacheKey, formattedCallDetails, 7200);
+
+    return NextResponse.json(formattedCallDetails, {
+      status: 200,
+      headers: { 'X-Cache': 'MISS' },
+    });
 
   } catch (error) {
     console.error('Error in enhanced call-data API:', error);
@@ -102,8 +143,26 @@ export async function POST(
   { params }: { params: Promise<{ callId: string }> }
 ) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, 'emotion-stream');
+    if (!allowed) return response!;
+
     const { callId } = await params;
     const { transcript, timestamp, isPartial } = await request.json();
+
+    const premiumAccess = await checkPremiumAccessForCall({
+      userId: user.id,
+      email: user.email,
+      callIds: [callId],
+    });
+
+    if (!premiumAccess.allowed) {
+      return NextResponse.json(getPremiumRequiredErrorPayload(), { status: 402 });
+    }
 
     if (!callId || !transcript) {
       return NextResponse.json(

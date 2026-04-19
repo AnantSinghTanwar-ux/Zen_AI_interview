@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { InterviewEvaluation, AspectRating, EvaluationResponse } from '@/types';
 import { Brain, TrendingUp, CheckCircle, XCircle, AlertCircle, Loader2, Star } from 'lucide-react';
+import PremiumAccessPopup from '@/components/PremiumAccessPopup';
 
 interface InterviewEvaluationProps {
   callId: string;
@@ -20,6 +21,8 @@ export default function InterviewEvaluationComponent({
   const [evaluation, setEvaluation] = useState<InterviewEvaluation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPremiumPopup, setShowPremiumPopup] = useState(false);
+  const [premiumMessage, setPremiumMessage] = useState<string | undefined>(undefined);
 
   const handleEvaluate = async () => {
     if (!messages || messages.length === 0) {
@@ -44,18 +47,35 @@ export default function InterviewEvaluationComponent({
 
       if (!response.ok) {
         const errorData = await response.json();
+
+        if (response.status === 402) {
+          setPremiumMessage(
+            errorData?.message ||
+              'Premium is required to continue using this Vapi AI feature.'
+          );
+          setShowPremiumPopup(true);
+          setError(errorData?.message || 'Premium subscription required');
+          return;
+        }
         
         // Handle specific error cases
         if (response.status === 503) {
-          throw new Error('Interview evaluation service is not available. Please configure the Google AI API key.');
+          throw new Error('Interview evaluation service is not available. Please configure the OpenRouter API key.');
         }
         
         if (response.status === 429) {
-          throw new Error('API quota exceeded. Please try again in a few minutes or upgrade your Google AI plan.');
+          if (errorData?.code === 'PREMIUM_DAILY_LIMIT_REACHED') {
+            throw new Error(
+              errorData?.message ||
+                'Daily premium feedback limit reached. Please try again tomorrow.'
+            );
+          }
+
+          throw new Error('API quota exceeded. Please try again in a few minutes or adjust your OpenRouter plan.');
         }
         
         if (response.status === 401) {
-          throw new Error('Invalid API key. Please check your Google AI API key configuration.');
+          throw new Error('Invalid API key. Please check your OpenRouter API key configuration.');
         }
         
         throw new Error(errorData.details || errorData.error || 'Failed to evaluate interview');
@@ -144,7 +164,7 @@ export default function InterviewEvaluationComponent({
         {evaluation && (
           <div className="flex items-center gap-1 ml-auto bg-yellow-100 border border-none px-2 py-1 shadow-neo">
             <Star className="w-4 h-4 text-black fill-yellow-400" />
-            <span className="text-xs font-bold text-black border-l border-black pl-2 ml-1">Gemini AI</span>
+            <span className="text-xs font-bold text-black border-l border-black pl-2 ml-1">OpenRouter</span>
           </div>
         )}
       </div>
@@ -166,8 +186,8 @@ export default function InterviewEvaluationComponent({
             <p className="text-red-600 font-bold text-sm mt-4 bg-red-100 border-2 border-red-500 inline-block px-4 py-1">No conversation found to evaluate</p>
           )}
           <div className="mt-6 text-xs text-gray-500 font-mono">
-            <p>Powered by Google Gemini AI</p>
-            <p>Requires GOOGLE_GENERATIVE_AI_API_KEY</p>
+            <p>Powered by OpenRouter AI</p>
+            <p>Requires OPENROUTER_API_KEY</p>
           </div>
         </div>
       )}
@@ -193,8 +213,8 @@ export default function InterviewEvaluationComponent({
               <p>💡 <strong>Solutions:</strong></p>
               <ul className="list-disc list-inside mt-1 space-y-1 font-medium">
                 <li>Wait a few minutes and try again</li>
-                <li>Upgrade to a paid Google AI plan</li>
-                <li>Check your usage at <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer" className="underline font-bold">Google AI Studio</a></li>
+                <li>Upgrade your OpenRouter plan or add credits</li>
+                <li>Check your usage at <a href="https://openrouter.ai/" target="_blank" rel="noopener noreferrer" className="underline font-bold">OpenRouter Dashboard</a></li>
               </ul>
             </div>
           )}
@@ -204,7 +224,7 @@ export default function InterviewEvaluationComponent({
               <p>💡 <strong>Solutions:</strong></p>
               <ul className="list-disc list-inside mt-1 space-y-1 font-medium">
                 <li>Check your API key in environment variables</li>
-                <li>Get a new API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline font-bold">Google AI Studio</a></li>
+                <li>Get a new API key from <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="underline font-bold">OpenRouter Keys</a></li>
                 <li>Restart your development server</li>
               </ul>
             </div>
@@ -336,6 +356,15 @@ export default function InterviewEvaluationComponent({
           </div>
         </div>
       )}
+
+      <PremiumAccessPopup
+        open={showPremiumPopup}
+        message={premiumMessage}
+        onClose={() => setShowPremiumPopup(false)}
+        onActivated={() => {
+          setError(null);
+        }}
+      />
     </div>
   );
 }

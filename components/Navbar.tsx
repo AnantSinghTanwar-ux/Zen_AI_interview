@@ -8,23 +8,59 @@ import { Button } from './ui/button';
 import { useState, useEffect } from 'react';
 import { checkAuthStatus } from '@/lib/actions/check-auth';
 
+type AuthState = 'unknown' | 'authenticated' | 'guest';
+
+function getClientAuthHint(): AuthState {
+  if (typeof window === 'undefined') return 'unknown';
+
+  const cachedState = window.sessionStorage.getItem('zenai-auth-state');
+  if (cachedState === 'authenticated' || cachedState === 'guest') {
+    return cachedState;
+  }
+
+  return document.cookie.includes('session=') ? 'authenticated' : 'guest';
+}
+
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [authState, setAuthState] = useState<AuthState>('unknown');
+
+  const isAuthenticated = authState === 'authenticated';
+  const isAuthLoading = authState === 'unknown';
 
   useEffect(() => {
+    let isMounted = true;
+
+    const hintedState = getClientAuthHint();
+    setAuthState(hintedState);
+
     const checkAuth = async () => {
       try {
         const result = await checkAuthStatus();
-        setIsAuthenticated(result.isAuthenticated);
+        if (!isMounted) return;
+
+        const nextState: AuthState = result.isAuthenticated ? 'authenticated' : 'guest';
+        setAuthState(nextState);
+
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.setItem('zenai-auth-state', nextState);
+        }
       } catch (error) {
         console.error("Auth check failed:", error);
-      } finally {
-        setLoading(false);
+        if (!isMounted) return;
+        setAuthState('guest');
+
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.setItem('zenai-auth-state', 'guest');
+        }
       }
     };
+
     checkAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
@@ -46,14 +82,14 @@ const Navbar = () => {
             <Link href="/feedback" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Feedback</Link>
             <Link href="/call-data" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Interviews</Link>
             <Link href="/recruiter" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Recruiter</Link>
-            {!loading && (
-              isAuthenticated ? (
-                <LogoutButton />
-              ) : (
-                <Link href="/sign-in">
-                  <Button className="bg-primary hover:bg-primary/90 text-white rounded-full px-6 border-none shadow-[0_0_15px_rgba(157,125,249,0.3)] transition-all hover:scale-105">Sign In</Button>
-                </Link>
-              )
+            {isAuthLoading ? (
+              <div className="h-10 w-28 rounded-full border border-white/10 bg-white/5 animate-pulse" />
+            ) : isAuthenticated ? (
+              <LogoutButton />
+            ) : (
+              <Link href="/sign-in">
+                <Button className="bg-primary hover:bg-primary/90 text-white rounded-full px-6 border-none shadow-[0_0_15px_rgba(157,125,249,0.3)] transition-all hover:scale-105">Sign In</Button>
+              </Link>
             )}
           </div>
 
@@ -109,14 +145,14 @@ const Navbar = () => {
                 Recruiter
               </Link>
               <div className="flex justify-center pt-4 mt-2 border-t border-white/10">
-                {!loading && (
-                  isAuthenticated ? (
-                    <LogoutButton />
-                  ) : (
-                    <Link href="/sign-in" onClick={() => setIsMobileMenuOpen(false)} className="w-full">
-                      <Button className="w-full bg-primary hover:bg-primary/90 text-white rounded-full h-12 shadow-[0_0_15px_rgba(157,125,249,0.3)]">Sign In</Button>
-                    </Link>
-                  )
+                {isAuthLoading ? (
+                  <div className="h-12 w-full rounded-full border border-white/10 bg-white/5 animate-pulse" />
+                ) : isAuthenticated ? (
+                  <LogoutButton />
+                ) : (
+                  <Link href="/sign-in" onClick={() => setIsMobileMenuOpen(false)} className="w-full">
+                    <Button className="w-full bg-primary hover:bg-primary/90 text-white rounded-full h-12 shadow-[0_0_15px_rgba(157,125,249,0.3)]">Sign In</Button>
+                  </Link>
                 )}
               </div>
             </div>

@@ -77,6 +77,7 @@ function AuthForm({ type }: { type: FormType }) {
 
     window.postMessage(
       {
+
         type: "ZENAI_EXTENSION_SYNC_TOKEN",
         token,
       },

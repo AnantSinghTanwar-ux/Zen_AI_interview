@@ -1,11 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { interviewEvaluationService } from '@/services/interview/interview-evaluation.service';
+import { getCurrentUser } from '@/lib/actions/auth.actions';
+import { checkRateLimit } from '@/lib/services/rate-limit.service';
+import {
+  checkAndConsumePremiumDailyLimit,
+  checkPremiumAccessForCall,
+  getPremiumDailyLimitErrorPayload,
+  getPremiumRequiredErrorPayload,
+} from '@/lib/services/premium-access.service';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ callId: string }> }
 ) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, 'interview-evaluation');
+    if (!allowed) return response!;
+
     const resolvedParams = await params;
     console.log('Starting interview evaluation for call:', resolvedParams.callId);
     
@@ -22,6 +38,35 @@ export async function POST(
     // Get request body with call details and messages
     const body = await request.json();
     const { messages, callDetails } = body;
+
+    const premiumAccess = await checkPremiumAccessForCall({
+      userId: user.id,
+      email: user.email,
+      callIds: [callId, callDetails?.vapiCallId, callDetails?.id],
+    });
+
+    if (!premiumAccess.allowed) {
+      return NextResponse.json(getPremiumRequiredErrorPayload(), { status: 402 });
+    }
+
+    const premiumDailyLimit = await checkAndConsumePremiumDailyLimit({
+      userId: user.id,
+      email: user.email,
+      kind: 'feedback',
+      usageKey: `feedback:${callId}`,
+      consume: true,
+    });
+
+    if (!premiumDailyLimit.allowed) {
+      return NextResponse.json(
+        getPremiumDailyLimitErrorPayload({
+          kind: premiumDailyLimit.kind,
+          limit: premiumDailyLimit.limit,
+          date: premiumDailyLimit.date,
+        }),
+        { status: 429 }
+      );
+    }
 
     console.log('Received evaluation request:', {
       callId,
@@ -48,11 +93,11 @@ export async function POST(
     // Check if evaluation service is available
     console.log('Checking if evaluation service is available...');
     if (!interviewEvaluationService.isAvailable()) {
-      console.error('Evaluation service is not available - API key not configured');
+      console.error('Evaluation service is not available - OpenRouter API key not configured');
       return NextResponse.json(
         { 
           error: 'Interview evaluation service is not available',
-          details: 'Google AI API key is not configured. Please set GOOGLE_GENERATIVE_AI_API_KEY environment variable.'
+          details: 'OpenRouter API key is not configured. Please set OPENROUTER_API_KEY environment variable.'
         },
         { status: 503 }
       );
@@ -60,7 +105,7 @@ export async function POST(
 
     console.log('Service is available, starting evaluation...');
     
-    // Generate interview evaluation using Gemini
+    // Generate interview evaluation using OpenRouter
     const evaluation = await interviewEvaluationService.evaluateInterview(messages, callDetails);
     
     console.log('Evaluation completed successfully');
@@ -92,7 +137,7 @@ export async function POST(
       return NextResponse.json(
         { 
           error: 'API quota exceeded',
-          details: 'Google AI API quota has been exceeded. Please try again later or upgrade your plan.',
+          details: 'OpenRouter API quota has been exceeded. Please try again later or adjust your plan.',
           retryAfter: 60 // seconds
         },
         { status: 429 }
@@ -104,7 +149,7 @@ export async function POST(
       return NextResponse.json(
         { 
           error: 'Invalid API key',
-          details: 'Please check your Google AI API key configuration.'
+          details: 'Please check your OpenRouter API key configuration.'
         },
         { status: 401 }
       );
@@ -125,6 +170,14 @@ export async function GET(
   { params }: { params: Promise<{ callId: string }> }
 ) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, 'interview-evaluation');
+    if (!allowed) return response!;
+
     const resolvedParams = await params;
     const { callId } = resolvedParams;
     

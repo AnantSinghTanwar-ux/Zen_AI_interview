@@ -59,7 +59,7 @@ function computeFallbackScore(app: ExternalApplication): ApplicationScore {
     strengths: [],
     weaknesses: [],
     feedbackSummary: "Score estimated from application data (backend score unavailable)",
-    generatedBy: "gemini",
+    generatedBy: "openrouter",
     createdAt: new Date().toISOString(),
   };
 }

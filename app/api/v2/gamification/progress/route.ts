@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { gamificationService } from "@/services/gamification/gamification.service";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
+import { checkRateLimit } from "@/lib/services/rate-limit.service";
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,6 +9,9 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, "gamification-progress");
+    if (!allowed) return response!;
 
     const progress = await gamificationService.getUserProgress(user.id);
     
@@ -32,6 +36,9 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, "gamification-progress");
+    if (!allowed) return response!;
 
     const data = await request.json();
     

@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { recruiterService } from "@/services/recruiter/recruiter.service";
 import { applicantService } from "@/services/recruiter/applicant.service";
 import { screeningService } from "@/services/recruiter/screening.service";
+import { checkRateLimit } from "@/lib/services/rate-limit.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +11,9 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, "recruiter-read");
+    if (!allowed) return response!;
 
     const recruiter = await recruiterService.getRecruiterByUserId(user.id);
     if (!recruiter) {

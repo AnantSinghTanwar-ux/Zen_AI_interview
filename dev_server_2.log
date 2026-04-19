@@ -1,0 +1,765 @@
+
+> ai_mock_interview_platform@0.1.0 dev
+> next dev --turbopack
+
+   ▲ Next.js 15.3.6 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://172.16.0.2:3000
+   - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 1972ms
+ ○ Compiling /api/health ...
+ ✓ Compiled /api/health in 1620ms
+ GET /api/health 200 in 6797ms
+ GET /api/health 200 in 6813ms
+ GET /api/health 200 in 2924ms
+ GET /api/health 200 in 3044ms
+ GET /api/health 200 in 3098ms
+ GET /api/health 200 in 3094ms
+ GET /api/health 200 in 3097ms
+ GET /api/health 200 in 3103ms
+ GET /api/health 200 in 3114ms
+ GET /api/health 200 in 3117ms
+ GET /api/health 200 in 3118ms
+ GET /api/health 200 in 3133ms
+ GET /api/health 200 in 3149ms
+ GET /api/health 200 in 3153ms
+ GET /api/health 200 in 3172ms
+ GET /api/health 200 in 3219ms
+ GET /api/health 200 in 3295ms
+ GET /api/health 200 in 3298ms
+ GET /api/health 200 in 3302ms
+ GET /api/health 200 in 3305ms
+ GET /api/health 200 in 3355ms
+ GET /api/health 200 in 3354ms
+ GET /api/health 200 in 3360ms
+ GET /api/health 200 in 3376ms
+ GET /api/health 200 in 3374ms
+ ○ Compiling /api/premium/vapi-access ...
+ GET /api/health 200 in 3496ms
+ ✓ Compiled /api/premium/vapi-access in 1117ms
+ GET /api/health 200 in 4253ms
+ POST /api/premium/vapi-access 200 in 5836ms
+ POST /api/premium/vapi-access 200 in 6141ms
+ POST /api/premium/vapi-access 200 in 6143ms
+ POST /api/premium/vapi-access 200 in 6008ms
+ POST /api/premium/vapi-access 200 in 6261ms
+ POST /api/premium/vapi-access 200 in 6504ms
+ POST /api/premium/vapi-access 200 in 6413ms
+ POST /api/premium/vapi-access 200 in 6259ms
+ POST /api/premium/vapi-access 200 in 6432ms
+ POST /api/premium/vapi-access 200 in 6211ms
+ POST /api/premium/vapi-access 200 in 6520ms
+ POST /api/premium/vapi-access 200 in 6285ms
+ ○ Compiling /api/vapi/call-data ...
+ POST /api/premium/vapi-access 200 in 5526ms
+ POST /api/premium/vapi-access 200 in 6635ms
+ POST /api/premium/vapi-access 200 in 6684ms
+ POST /api/premium/vapi-access 200 in 6587ms
+ POST /api/premium/vapi-access 200 in 6646ms
+ POST /api/premium/vapi-access 200 in 6434ms
+ POST /api/premium/vapi-access 200 in 6313ms
+ POST /api/premium/vapi-access 200 in 6506ms
+ POST /api/premium/vapi-access 200 in 6698ms
+ POST /api/premium/vapi-access 200 in 6698ms
+ POST /api/premium/vapi-access 200 in 6782ms
+ POST /api/premium/vapi-access 200 in 6593ms
+ POST /api/premium/vapi-access 200 in 6529ms
+ ✓ Compiled /api/vapi/call-data in 1660ms
+ GET /api/vapi/call-data?limit=5 402 in 4188ms
+ GET /api/vapi/call-data?limit=5 402 in 3630ms
+ GET /api/vapi/call-data?limit=5 402 in 3634ms
+ GET /api/vapi/call-data?limit=5 402 in 3943ms
+ GET /api/vapi/call-data?limit=5 402 in 4259ms
+ GET /api/vapi/call-data?limit=5 402 in 4135ms
+ GET /api/vapi/call-data?limit=5 402 in 3742ms
+ GET /api/vapi/call-data?limit=5 402 in 3998ms
+ GET /api/vapi/call-data?limit=5 402 in 3762ms
+ GET /api/vapi/call-data?limit=5 402 in 3947ms
+ GET /api/vapi/call-data?limit=5 402 in 3792ms
+ GET /api/vapi/call-data?limit=5 402 in 4303ms
+ GET /api/vapi/call-data?limit=5 402 in 3752ms
+ GET /api/vapi/call-data?limit=5 402 in 4395ms
+ GET /api/vapi/call-data?limit=5 402 in 4022ms
+ GET /api/vapi/call-data?limit=5 402 in 3844ms
+ GET /api/vapi/call-data?limit=5 402 in 3851ms
+ GET /api/vapi/call-data?limit=5 402 in 3856ms
+ GET /api/vapi/call-data?limit=5 402 in 3889ms
+ GET /api/vapi/call-data?limit=5 402 in 4232ms
+ GET /api/vapi/call-data?limit=5 402 in 4046ms
+ ○ Compiling /api/vapi/call-data/sync ...
+ GET /api/vapi/call-data?limit=5 402 in 4174ms
+ GET /api/vapi/call-data?limit=5 402 in 4432ms
+ GET /api/vapi/call-data?limit=5 402 in 4595ms
+ GET /api/vapi/call-data?limit=5 402 in 4351ms
+ ✓ Compiled /api/vapi/call-data/sync in 1409ms
+ POST /api/vapi/call-data/sync 402 in 3518ms
+ POST /api/vapi/call-data/sync 402 in 3217ms
+ POST /api/vapi/call-data/sync 402 in 3564ms
+ POST /api/vapi/call-data/sync 402 in 3616ms
+ POST /api/vapi/call-data/sync 402 in 3261ms
+ POST /api/vapi/call-data/sync 402 in 3148ms
+ POST /api/vapi/call-data/sync 402 in 3525ms
+ POST /api/vapi/call-data/sync 402 in 3871ms
+ POST /api/vapi/call-data/sync 402 in 3765ms
+ POST /api/vapi/call-data/sync 402 in 3879ms
+ POST /api/vapi/call-data/sync 402 in 3725ms
+ POST /api/vapi/call-data/sync 402 in 3342ms
+ POST /api/vapi/call-data/sync 402 in 3714ms
+ POST /api/vapi/call-data/sync 402 in 3893ms
+ POST /api/vapi/call-data/sync 402 in 3808ms
+ POST /api/vapi/call-data/sync 402 in 3717ms
+ POST /api/vapi/call-data/sync 402 in 3918ms
+ POST /api/vapi/call-data/sync 402 in 3735ms
+ POST /api/vapi/call-data/sync 402 in 3642ms
+ POST /api/vapi/call-data/sync 402 in 3851ms
+ POST /api/vapi/call-data/sync 402 in 3867ms
+ POST /api/vapi/call-data/sync 402 in 4026ms
+ POST /api/vapi/call-data/sync 402 in 3815ms
+ POST /api/vapi/call-data/sync 402 in 3869ms
+ POST /api/vapi/call-data/sync 402 in 3620ms
+ ○ Compiling /api/v2/feedback-jobs ...
+ ✓ Compiled /api/v2/feedback-jobs in 1739ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 3963ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4105ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4186ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4246ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4192ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4427ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4388ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4294ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4615ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4792ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4681ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4636ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4638ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4717ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4708ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4782ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4829ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4974ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4821ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 4872ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 5005ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 5051ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 5044ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 5057ms
+[FeedbackJobs] GET error: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at GET (app\api\v2\feedback-jobs\route.ts:160:7)
+  158 |       .orderBy("createdAt", "desc")
+  159 |       .limit(50)
+> 160 |       .get();
+      |       ^
+  161 |
+  162 |     const jobs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  163 | {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bodhai-62ef5/firestore/indexes?create_composite=ClJwcm9qZWN0cy9ib2RoYWktNjJlZjUvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2ZlZWRiYWNrX2pvYnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: [Metadata]
+}
+ GET /api/v2/feedback-jobs 500 in 5597ms
+ POST /api/v2/feedback-jobs 429 in 2547ms
+ POST /api/v2/feedback-jobs 429 in 2573ms
+ POST /api/v2/feedback-jobs 429 in 2577ms
+ POST /api/v2/feedback-jobs 429 in 2628ms
+ POST /api/v2/feedback-jobs 429 in 2630ms
+ POST /api/v2/feedback-jobs 429 in 2638ms
+ POST /api/v2/feedback-jobs 429 in 2640ms
+ POST /api/v2/feedback-jobs 429 in 2643ms
+ POST /api/v2/feedback-jobs 429 in 2247ms
+ POST /api/v2/feedback-jobs 429 in 2666ms
+ POST /api/v2/feedback-jobs 429 in 2700ms
+ POST /api/v2/feedback-jobs 429 in 2703ms
+ POST /api/v2/feedback-jobs 429 in 2707ms
+ POST /api/v2/feedback-jobs 429 in 2708ms
+ POST /api/v2/feedback-jobs 429 in 2711ms
+ POST /api/v2/feedback-jobs 429 in 2731ms
+ POST /api/v2/feedback-jobs 429 in 2758ms
+ POST /api/v2/feedback-jobs 429 in 2784ms
+ POST /api/v2/feedback-jobs 429 in 2788ms
+ POST /api/v2/feedback-jobs 429 in 2794ms
+ POST /api/v2/feedback-jobs 429 in 2819ms
+ POST /api/v2/feedback-jobs 429 in 2821ms
+ POST /api/v2/feedback-jobs 429 in 2848ms
+ POST /api/v2/feedback-jobs 429 in 2931ms
+ POST /api/v2/feedback-jobs 429 in 2934ms
+ ○ Compiling /api/call-logs ...
+ ✓ Compiled /api/call-logs in 1697ms
+ GET /api/call-logs?limit=5 429 in 4456ms
+ GET /api/call-logs?limit=5 429 in 4192ms
+ GET /api/call-logs?limit=5 429 in 4415ms
+ GET /api/call-logs?limit=5 429 in 4437ms
+ GET /api/call-logs?limit=5 429 in 4516ms
+ GET /api/call-logs?limit=5 429 in 4372ms
+ GET /api/call-logs?limit=5 429 in 4410ms
+ GET /api/call-logs?limit=5 429 in 4467ms
+ GET /api/call-logs?limit=5 429 in 4334ms
+ GET /api/call-logs?limit=5 429 in 4555ms
+ GET /api/call-logs?limit=5 429 in 4395ms
+ GET /api/call-logs?limit=5 429 in 4587ms
+ GET /api/call-logs?limit=5 429 in 4443ms
+ GET /api/call-logs?limit=5 429 in 4413ms
+ GET /api/call-logs?limit=5 429 in 4301ms
+ GET /api/call-logs?limit=5 429 in 4526ms
+ GET /api/call-logs?limit=5 429 in 4667ms
+ GET /api/call-logs?limit=5 429 in 4457ms
+ GET /api/call-logs?limit=5 429 in 4673ms
+ GET /api/call-logs?limit=5 429 in 4561ms
+ GET /api/call-logs?limit=5 429 in 4729ms
+ GET /api/call-logs?limit=5 429 in 4615ms
+ GET /api/call-logs?limit=5 429 in 4653ms
+ GET /api/call-logs?limit=5 429 in 4556ms
+ GET /api/call-logs?limit=5 429 in 4641ms
+ ○ Compiling /api/vapi/test ...
+ ✓ Compiled /api/vapi/test in 1864ms
+ GET /api/vapi/test?limit=1 429 in 3911ms
+ GET /api/vapi/test?limit=1 429 in 4108ms
+ GET /api/vapi/test?limit=1 429 in 3949ms
+ GET /api/vapi/test?limit=1 429 in 3965ms
+ GET /api/vapi/test?limit=1 429 in 4138ms
+ GET /api/vapi/test?limit=1 429 in 4113ms
+ GET /api/vapi/test?limit=1 429 in 4037ms
+ GET /api/vapi/test?limit=1 429 in 4095ms
+ GET /api/vapi/test?limit=1 429 in 4029ms
+ GET /api/vapi/test?limit=1 429 in 4188ms
+ GET /api/vapi/test?limit=1 429 in 4211ms
+ GET /api/vapi/test?limit=1 429 in 4050ms
+ GET /api/vapi/test?limit=1 429 in 4123ms
+ GET /api/vapi/test?limit=1 429 in 4172ms
+ GET /api/vapi/test?limit=1 429 in 4182ms
+ GET /api/vapi/test?limit=1 429 in 4202ms
+ GET /api/vapi/test?limit=1 429 in 4088ms
+ GET /api/vapi/test?limit=1 429 in 4139ms
+ GET /api/vapi/test?limit=1 429 in 4170ms
+ GET /api/vapi/test?limit=1 429 in 4257ms
+ GET /api/vapi/test?limit=1 429 in 4190ms
+ GET /api/vapi/test?limit=1 429 in 4261ms
+ GET /api/vapi/test?limit=1 429 in 4177ms
+ GET /api/vapi/test?limit=1 429 in 4285ms
+ GET /api/vapi/test?limit=1 429 in 4295ms
+ GET /api/health 200 in 1645ms
+ GET /api/health 200 in 1772ms
+ GET /api/health 200 in 1828ms
+ GET /api/health 200 in 2073ms
+ GET /api/health 200 in 2159ms
+ GET /api/health 200 in 2185ms
+ GET /api/health 200 in 2294ms
+ GET /api/health 200 in 2310ms
+ GET /api/health 200 in 2315ms
+ GET /api/health 200 in 2378ms
+ GET /api/health 200 in 2423ms
+ GET /api/health 200 in 2487ms
+ GET /api/health 200 in 2459ms
+ GET /api/health 200 in 2500ms
+ GET /api/health 200 in 2465ms
+ GET /api/health 200 in 2505ms
+ GET /api/health 200 in 2562ms
+ GET /api/health 200 in 2596ms
+ GET /api/health 200 in 2543ms
+ GET /api/health 200 in 2545ms
+ GET /api/health 200 in 2567ms
+ GET /api/health 200 in 2607ms
+ GET /api/health 200 in 2652ms
+ GET /api/health 200 in 2532ms
+ GET /api/health 200 in 2677ms
+ POST /api/premium/vapi-access 429 in 3112ms
+ POST /api/premium/vapi-access 429 in 3237ms
+ POST /api/premium/vapi-access 429 in 3302ms
+ POST /api/premium/vapi-access 429 in 3542ms
+ POST /api/premium/vapi-access 429 in 3467ms
+ POST /api/premium/vapi-access 429 in 3548ms
+ POST /api/premium/vapi-access 429 in 3500ms
+ POST /api/premium/vapi-access 429 in 3533ms
+ POST /api/premium/vapi-access 429 in 3609ms
+ POST /api/premium/vapi-access 429 in 3644ms
+ POST /api/premium/vapi-access 429 in 2968ms
+ POST /api/premium/vapi-access 429 in 3168ms
+ POST /api/premium/vapi-access 429 in 3445ms
+ POST /api/premium/vapi-access 429 in 3543ms
+ POST /api/premium/vapi-access 429 in 3228ms
+ POST /api/premium/vapi-access 429 in 3427ms
+ POST /api/premium/vapi-access 429 in 3513ms
+ POST /api/premium/vapi-access 429 in 3533ms
+ POST /api/premium/vapi-access 429 in 3537ms
+ POST /api/premium/vapi-access 429 in 3564ms
+ GET /api/vapi/call-data?limit=5 429 in 1536ms
+ POST /api/premium/vapi-access 429 in 3517ms
+ POST /api/premium/vapi-access 429 in 3381ms
+ POST /api/premium/vapi-access 429 in 3462ms
+ POST /api/premium/vapi-access 429 in 3543ms
+ POST /api/premium/vapi-access 429 in 3573ms
+ GET /api/vapi/call-data?limit=5 429 in 1524ms
+ GET /api/vapi/call-data?limit=5 429 in 1526ms
+ GET /api/vapi/call-data?limit=5 429 in 1486ms
+ GET /api/vapi/call-data?limit=5 429 in 1819ms
+ GET /api/vapi/call-data?limit=5 429 in 1688ms
+ GET /api/vapi/call-data?limit=5 429 in 1585ms
+ GET /api/vapi/call-data?limit=5 429 in 2574ms
+ GET /api/vapi/call-data?limit=5 429 in 2577ms
+ GET /api/vapi/call-data?limit=5 429 in 2645ms
+ GET /api/vapi/call-data?limit=5 429 in 2662ms
+ GET /api/vapi/call-data?limit=5 429 in 2664ms
+ GET /api/vapi/call-data?limit=5 429 in 2686ms
+ GET /api/vapi/call-data?limit=5 429 in 2632ms
+ GET /api/vapi/call-data?limit=5 429 in 2734ms
+ GET /api/vapi/call-data?limit=5 429 in 2816ms
+ GET /api/vapi/call-data?limit=5 429 in 2615ms
+ GET /api/vapi/call-data?limit=5 429 in 2640ms
+ POST /api/vapi/call-data/sync 429 in 2342ms
+ GET /api/vapi/call-data?limit=5 429 in 2828ms
+ GET /api/vapi/call-data?limit=5 429 in 2884ms
+ GET /api/vapi/call-data?limit=5 429 in 2724ms
+ GET /api/vapi/call-data?limit=5 429 in 2891ms
+ POST /api/vapi/call-data/sync 429 in 2492ms
+ POST /api/vapi/call-data/sync 429 in 2830ms
+ GET /api/vapi/call-data?limit=5 429 in 2841ms
+ GET /api/vapi/call-data?limit=5 429 in 2736ms
+ POST /api/vapi/call-data/sync 429 in 2263ms
+ POST /api/vapi/call-data/sync 429 in 2057ms
+ GET /api/vapi/call-data?limit=5 429 in 3478ms
+ POST /api/vapi/call-data/sync 429 in 2044ms
+ POST /api/vapi/call-data/sync 429 in 2240ms
+ POST /api/vapi/call-data/sync 429 in 1701ms
+ POST /api/vapi/call-data/sync 429 in 1740ms
+ POST /api/vapi/call-data/sync 429 in 1993ms
+ POST /api/vapi/call-data/sync 429 in 2024ms
+ POST /api/vapi/call-data/sync 429 in 2003ms
+ POST /api/vapi/call-data/sync 429 in 1988ms
+ POST /api/vapi/call-data/sync 429 in 2325ms
+ POST /api/vapi/call-data/sync 429 in 2299ms
+ POST /api/vapi/call-data/sync 429 in 2383ms
+ GET /api/v2/feedback-jobs 429 in 2324ms
+ POST /api/vapi/call-data/sync 429 in 2500ms
+ GET /api/v2/feedback-jobs 429 in 2387ms
+ POST /api/vapi/call-data/sync 429 in 2573ms
+ POST /api/vapi/call-data/sync 429 in 2573ms
+ POST /api/vapi/call-data/sync 429 in 2549ms
+ POST /api/vapi/call-data/sync 429 in 2536ms
+ GET /api/v2/feedback-jobs 429 in 2637ms
+ POST /api/vapi/call-data/sync 429 in 2543ms
+ POST /api/vapi/call-data/sync 429 in 2481ms
+ GET /api/v2/feedback-jobs 429 in 2055ms
+ GET /api/v2/feedback-jobs 429 in 2507ms
+ GET /api/v2/feedback-jobs 429 in 2323ms
+ POST /api/vapi/call-data/sync 429 in 2636ms
+ GET /api/v2/feedback-jobs 429 in 2367ms
+ POST /api/vapi/call-data/sync 429 in 2387ms
+ GET /api/v2/feedback-jobs 429 in 1890ms
+ GET /api/v2/feedback-jobs 429 in 1878ms
+ GET /api/v2/feedback-jobs 429 in 1537ms
+ GET /api/v2/feedback-jobs 429 in 1708ms
+ GET /api/v2/feedback-jobs 429 in 1846ms
+ GET /api/v2/feedback-jobs 429 in 1882ms
+ GET /api/v2/feedback-jobs 429 in 1640ms
+ GET /api/v2/feedback-jobs 429 in 1684ms
+ GET /api/v2/feedback-jobs 429 in 1718ms
+ POST /api/v2/feedback-jobs 429 in 1865ms
+ POST /api/v2/feedback-jobs 429 in 2144ms
+ GET /api/v2/feedback-jobs 429 in 2145ms
+ GET /api/v2/feedback-jobs 429 in 2174ms
+ GET /api/v2/feedback-jobs 429 in 2245ms
+ POST /api/v2/feedback-jobs 429 in 2314ms
+ GET /api/v2/feedback-jobs 429 in 2317ms
+ GET /api/v2/feedback-jobs 429 in 2318ms
+ POST /api/v2/feedback-jobs 429 in 2191ms
+ GET /api/v2/feedback-jobs 429 in 2402ms
+ GET /api/v2/feedback-jobs 429 in 2197ms
+ GET /api/v2/feedback-jobs 429 in 2705ms
+ POST /api/v2/feedback-jobs 429 in 2245ms
+ POST /api/v2/feedback-jobs 429 in 2153ms
+ POST /api/v2/feedback-jobs 429 in 2422ms
+ POST /api/v2/feedback-jobs 429 in 2458ms
+ GET /api/v2/feedback-jobs 429 in 2497ms
+ POST /api/v2/feedback-jobs 429 in 2314ms
+ POST /api/v2/feedback-jobs 429 in 2317ms
+ POST /api/v2/feedback-jobs 429 in 2156ms
+ POST /api/v2/feedback-jobs 429 in 2090ms
+ POST /api/v2/feedback-jobs 429 in 1618ms
+ POST /api/v2/feedback-jobs 429 in 2211ms
+ GET /api/call-logs?limit=5 429 in 1482ms
+ POST /api/v2/feedback-jobs 429 in 2030ms
+ POST /api/v2/feedback-jobs 429 in 2007ms
+ POST /api/v2/feedback-jobs 429 in 1500ms
+ GET /api/call-logs?limit=5 429 in 1503ms
+ POST /api/v2/feedback-jobs 429 in 1469ms
+ POST /api/v2/feedback-jobs 429 in 1753ms
+ POST /api/v2/feedback-jobs 429 in 1797ms
+ POST /api/v2/feedback-jobs 429 in 1911ms
+ POST /api/v2/feedback-jobs 429 in 2012ms
+ GET /api/call-logs?limit=5 429 in 2042ms
+ GET /api/call-logs?limit=5 429 in 2021ms
+ POST /api/v2/feedback-jobs 429 in 1890ms
+ GET /api/call-logs?limit=5 429 in 2282ms
+ POST /api/v2/feedback-jobs 429 in 2287ms
+ GET /api/call-logs?limit=5 429 in 2505ms
+ GET /api/call-logs?limit=5 429 in 2671ms
+ GET /api/call-logs?limit=5 429 in 2469ms
+ GET /api/call-logs?limit=5 429 in 2688ms
+ GET /api/call-logs?limit=5 429 in 2489ms
+ POST /api/v2/feedback-jobs 429 in 2826ms
+ GET /api/call-logs?limit=5 429 in 2705ms
+ GET /api/call-logs?limit=5 429 in 2641ms
+ GET /api/vapi/test?limit=1 429 in 2634ms
+ GET /api/call-logs?limit=5 429 in 2902ms
+ GET /api/call-logs?limit=5 429 in 2906ms
+ GET /api/vapi/test?limit=1 429 in 2563ms
+ GET /api/call-logs?limit=5 429 in 2218ms
+ GET /api/call-logs?limit=5 429 in 2923ms
+ GET /api/call-logs?limit=5 429 in 2889ms
+ GET /api/call-logs?limit=5 429 in 2582ms
+ GET /api/call-logs?limit=5 429 in 2586ms
+ GET /api/call-logs?limit=5 429 in 1834ms
+ GET /api/call-logs?limit=5 429 in 2166ms
+ GET /api/call-logs?limit=5 429 in 1673ms
+ GET /api/vapi/test?limit=1 429 in 2261ms
+ GET /api/vapi/test?limit=1 429 in 1805ms
+ GET /api/call-logs?limit=5 429 in 2530ms
+ GET /api/vapi/test?limit=1 429 in 1339ms
+ GET /api/vapi/test?limit=1 429 in 2221ms
+ GET /api/call-logs?limit=5 429 in 2246ms
+ GET /api/vapi/test?limit=1 429 in 1495ms
+ GET /api/vapi/test?limit=1 429 in 1741ms
+ GET /api/vapi/test?limit=1 429 in 1766ms
+ GET /api/vapi/test?limit=1 429 in 1522ms
+ GET /api/vapi/test?limit=1 429 in 1858ms
+ GET /api/vapi/test?limit=1 429 in 1582ms
+ GET /api/call-logs?limit=5 429 in 1853ms
+ GET /api/vapi/test?limit=1 429 in 1870ms
+ GET /api/vapi/test?limit=1 429 in 1828ms
+ GET /api/vapi/test?limit=1 429 in 1829ms
+ GET /api/vapi/test?limit=1 429 in 2036ms
+ GET /api/vapi/test?limit=1 429 in 2101ms
+ GET /api/vapi/test?limit=1 429 in 2094ms
+ GET /api/vapi/test?limit=1 429 in 2086ms
+ GET /api/vapi/test?limit=1 429 in 1751ms
+ GET /api/vapi/test?limit=1 429 in 2206ms
+ GET /api/vapi/test?limit=1 429 in 1954ms
+ GET /api/vapi/test?limit=1 429 in 1821ms
+ GET /api/vapi/test?limit=1 429 in 1911ms
+ GET /api/vapi/test?limit=1 429 in 1287ms
+ ○ Compiling /api/v2/recruiter/dashboard ...
+ ✓ Compiled /api/v2/recruiter/dashboard in 659ms
+ GET /api/v2/recruiter/dashboard 429 in 1995ms
+ ○ Compiling /api/v2/recruiter/leaderboard ...
+ ✓ Compiled /api/v2/recruiter/leaderboard in 611ms
+ GET /api/v2/recruiter/leaderboard?limit=5 429 in 1892ms
+ ○ Compiling /api/v2/recruiter/applications ...
+ ✓ Compiled /api/v2/recruiter/applications in 666ms
+ GET /api/v2/recruiter/applications?limit=10 429 in 1931ms
+ ○ Compiling /api/v2/recruiter/jobs ...
+ ✓ Compiled /api/v2/recruiter/jobs in 777ms
+ GET /api/v2/recruiter/jobs 429 in 2036ms
+[?25h

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import PageLayout from "@/components/PageLayout";
+import PremiumAccessPopup from "@/components/PremiumAccessPopup";
 import { Clock, MessageSquare, Briefcase, FileText, ChevronRight, CalendarDays, Zap } from "lucide-react";
 
 interface CallData {
@@ -19,15 +20,46 @@ function CallDataPage() {
   const [callData, setCallData] = useState<CallData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [unauthorized, setUnauthorized] = useState(false);
+  const [showPremiumPopup, setShowPremiumPopup] = useState(false);
+  const [premiumMessage, setPremiumMessage] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const fetchCallData = async () => {
       try {
         console.log("Fetching call data...");
-        const response = await fetch('/api/vapi/call-data');
+        const response = await fetch('/api/vapi/call-data', {
+          credentials: 'include',
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          setUnauthorized(true);
+          setCallData([]);
+          setError(null);
+          return;
+        }
+
+        if (response.status === 402) {
+          const payload = await response.json().catch(() => ({}));
+          setPremiumMessage(
+            payload?.message ||
+              "Premium is required to continue using this Vapi AI feature."
+          );
+          setShowPremiumPopup(true);
+          setCallData([]);
+          setError(payload?.message || "Premium subscription required");
+          return;
+        }
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          let message = `HTTP error! status: ${response.status}`;
+          try {
+            const payload = await response.json();
+            message = payload?.error || payload?.message || message;
+          } catch {
+            // Ignore JSON parse failures.
+          }
+          throw new Error(message);
         }
 
         const data = await response.json();
@@ -49,6 +81,29 @@ function CallDataPage() {
 
     fetchCallData();
   }, []);
+
+  if (unauthorized) {
+    return (
+      <PageLayout>
+        <div className="min-h-screen bg-background text-foreground relative py-20">
+          <div className="p-6 pt-32 max-w-7xl mx-auto relative z-10 flex flex-col items-center justify-center min-h-[60vh]">
+            <div className="glass-card rounded-3xl p-10 text-center max-w-2xl mx-auto w-full border border-white/10 relative overflow-hidden backdrop-blur-xl">
+              <h2 className="text-foreground font-semibold tracking-wide text-2xl mb-4">Sign In Required</h2>
+              <p className="text-foreground/85 font-light mb-8 text-lg leading-relaxed">
+                Please sign in to view your interview sessions and analytics.
+              </p>
+              <Link
+                href="/sign-in"
+                className="inline-flex items-center justify-center bg-primary text-white px-8 py-3 rounded-full font-medium border border-primary/40 hover:bg-primary/90 transition-all"
+              >
+                Go To Sign In
+              </Link>
+            </div>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
 
   if (loading) {
     return (
@@ -91,6 +146,16 @@ function CallDataPage() {
               </button>
             </div>
           </div>
+
+          <PremiumAccessPopup
+            open={showPremiumPopup}
+            message={premiumMessage}
+            onClose={() => setShowPremiumPopup(false)}
+            onActivated={() => {
+              setError(null);
+              window.location.reload();
+            }}
+          />
         </div>
       </PageLayout>
     );
@@ -227,6 +292,16 @@ function CallDataPage() {
             </div>
           )}
         </div>
+
+        <PremiumAccessPopup
+          open={showPremiumPopup}
+          message={premiumMessage}
+          onClose={() => setShowPremiumPopup(false)}
+          onActivated={() => {
+            setError(null);
+            window.location.reload();
+          }}
+        />
       </div>
     </PageLayout>
   );

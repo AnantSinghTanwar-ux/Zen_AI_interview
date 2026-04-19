@@ -5,8 +5,10 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "node scripts/preflight-redis.mjs && next start",
+    "lint": "next lint",
+    "worker": "node scripts/preflight-redis.mjs && tsx scripts/start-feedback-worker.ts",
+    "smoke:50": "node --env-file=.env --import tsx scripts/smoke-50-users.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^1.2.18",
@@ -35,6 +37,7 @@
     "react-hook-form": "^7.56.4",
     "react-i18next": "^15.7.3",
     "react-icons": "^5.6.0",
+    "redis": "^4.7.0",
     "recharts": "^3.1.2",
     "server-only": "^0.0.1",
     "sonner": "^2.0.4",
@@ -52,6 +55,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
     "tailwindcss": "^4",
+    "tsx": "^4.20.6",
     "tw-animate-css": "^1.3.2",
     "typescript": "^5"
   }

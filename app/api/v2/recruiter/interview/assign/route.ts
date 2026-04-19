@@ -2,28 +2,45 @@ import { NextRequest, NextResponse } from "next/server";
 import { recruiterGuard } from "@/app/api/v2/recruiter/_guard";
 import { getApplication, updateApplicationStatus } from "@/services/recruiter/external-application.service";
 import { db } from "@/services/firebase/admin";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { checkRateLimit } from "@/lib/services/rate-limit.service";
+import {
+  generateOpenRouterJson,
+  getOpenRouterModelCandidates,
+  hasOpenRouterKey,
+} from "@/services/ai/openrouter-client";
+import {
+  acquireIdempotencyLock,
+  completeIdempotencyLock,
+  failIdempotencyLock,
+  IdempotencyToken,
+} from "@/lib/services/idempotency.service";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://zen-ai-zeta.vercel.app";
 
 async function generateQuestions(roleTitle: string, roleCategory: string): Promise<string[]> {
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
-  if (!apiKey) {
+  if (!hasOpenRouterKey()) {
     return getDefaultQuestions(roleCategory);
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-3.0-flash" });
-
     const prompt = `Generate 5 interview questions for a ${roleTitle} (${roleCategory}) position.
 Return ONLY a JSON array of question strings. Make them practical and specific.`;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    const match = text.match(/\[[\s\S]*\]/);
-    if (!match) throw new Error("No JSON");
-    const questions = JSON.parse(match[0]) as string[];
+    const response = await generateOpenRouterJson<any>({
+      prompt: `${prompt}\nJSON format: {"questions": ["Question 1", "Question 2"]}`,
+      modelCandidates: getOpenRouterModelCandidates(
+        process.env.OPENROUTER_MODEL,
+        process.env.GOOGLE_AI_FEEDBACK_MODEL,
+        "openrouter/auto"
+      ),
+      temperature: 0.2,
+      maxTokens: 800,
+    });
+
+    const questions = Array.isArray(response?.questions)
+      ? (response.questions as string[])
+      : [];
+
     return questions.length >= 3 ? questions : getDefaultQuestions(roleCategory);
   } catch {
     return getDefaultQuestions(roleCategory);
@@ -51,12 +68,57 @@ function getDefaultQuestions(category: string): string[] {
 }
 
 export async function POST(request: NextRequest) {
-  const { error } = await recruiterGuard();
+  let idempotencyToken: IdempotencyToken | null = null;
+
+  const { user, error } = await recruiterGuard();
   if (error) return error;
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { allowed, response } = await checkRateLimit(request, user.id, "recruiter-write");
+  if (!allowed) return response!;
 
   try {
+    const idempotency = await acquireIdempotencyLock({
+      request,
+      userId: user.id,
+      scope: "recruiter:interview:assign",
+    });
+
+    if (idempotency.state === "invalid") {
+      return NextResponse.json({ error: idempotency.error }, { status: 400 });
+    }
+
+    if (idempotency.state === "in-progress") {
+      return NextResponse.json(
+        {
+          error: "Idempotent request is already being processed",
+          retryAfter: idempotency.retryAfterSeconds,
+        },
+        {
+          status: 409,
+          headers: {
+            "Retry-After": String(idempotency.retryAfterSeconds),
+          },
+        }
+      );
+    }
+
+    if (idempotency.state === "replay") {
+      return NextResponse.json(idempotency.body, { status: idempotency.status });
+    }
+
+    if (idempotency.state === "acquired") {
+      idempotencyToken = idempotency.token;
+    }
+
     const { applicationIds } = await request.json();
     if (!applicationIds?.length) {
+      if (idempotencyToken) {
+        await failIdempotencyLock({
+          token: idempotencyToken,
+          error: "applicationIds required",
+        });
+      }
       return NextResponse.json({ error: "applicationIds required" }, { status: 400 });
     }
 
@@ -116,9 +178,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ assigned, failed, results }, { status: 200 });
+    const payload = { assigned, failed, results };
+
+    if (idempotencyToken) {
+      await completeIdempotencyLock({
+        token: idempotencyToken,
+        status: 200,
+        body: payload,
+      });
+    }
+
+    return NextResponse.json(payload, { status: 200 });
   } catch (err) {
     console.error("Interview assign error:", err);
+
+    if (idempotencyToken) {
+      await failIdempotencyLock({
+        token: idempotencyToken,
+        error: err,
+      });
+    }
+
     return NextResponse.json({ error: "Failed", details: (err as Error).message }, { status: 500 });
   }
 }

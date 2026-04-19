@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyticsService } from "@/services/analytics/analytics.service";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
+import { checkRateLimit } from "@/lib/services/rate-limit.service";
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,6 +9,9 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, "analytics");
+    if (!allowed) return response!;
 
     const { searchParams } = new URL(request.url);
     const days = parseInt(searchParams.get("days") || "30");

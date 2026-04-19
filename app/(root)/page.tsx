@@ -13,8 +13,11 @@ import Navbar from "@/components/Navbar";
 import PageLayout from "@/components/PageLayout";
 import HeroSection from "@/components/HeroSection";
 import { FadeUp, FadeIn, StaggerParent, StaggerItem, ScaleCard } from "@/components/motion";
+import { getCurrentUser } from "@/lib/actions/auth.actions";
 
-const HomePage = () => {
+const HomePage = async () => {
+  const user = await getCurrentUser();
+
   return (
     <PageLayout fullWidth={true}>
       <HeroSection />
@@ -65,7 +68,7 @@ const HomePage = () => {
 
           {/* Recent Interview Data */}
           <FadeUp delay={0.05} className="mb-24">
-            <RecentCallData />
+            <RecentCallData userId={user?.id ?? null} />
           </FadeUp>
 
           <section className="flex flex-col gap-12 mt-12 pb-10">

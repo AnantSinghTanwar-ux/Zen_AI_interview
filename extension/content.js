@@ -7,6 +7,14 @@ const ZENAI = {
   }
 };
 
+const isDebugLoggingEnabled = () => {
+  try {
+    return window.localStorage.getItem("zenaiExtensionDebug") === "1";
+  } catch {
+    return false;
+  }
+};
+
 let extensionEnabled = true;
 
 const JOBYT_JOB_URL_REGEX = /^\/jobs\/([a-z0-9-]{8,})$/i;
@@ -73,6 +81,9 @@ const SELECTORS = {
 };
 
 const log = (...args) => {
+  if (!isDebugLoggingEnabled()) {
+    return;
+  }
   console.log(ZENAI.logPrefix, ...args);
 };
 

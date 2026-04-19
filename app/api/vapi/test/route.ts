@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { vapiCallDataService } from "@/services/vapi/call-data.service";
+import { getCurrentUser } from "@/lib/actions/auth.actions";
+import { checkRateLimit } from "@/lib/services/rate-limit.service";
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, "vapi-test");
+    if (!allowed) return response!;
+
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "5");
 
@@ -48,6 +58,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, "vapi-test");
+    if (!allowed) return response!;
+
     const { callId } = await request.json();
 
     if (!callId) {

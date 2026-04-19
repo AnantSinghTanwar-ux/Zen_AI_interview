@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import PremiumAccessPopup from "@/components/PremiumAccessPopup";
 import { StaggerParent, StaggerItem, ScaleCard, FadeUp } from "@/components/motion";
 
 interface CallData {
@@ -17,23 +18,63 @@ interface CallData {
   hasArtifact?: boolean;
 }
 
-export default function RecentCallData() {
+interface RecentCallDataProps {
+  userId?: string | null;
+}
+
+export default function RecentCallData({ userId }: RecentCallDataProps) {
   const [callData, setCallData] = useState<CallData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showPremiumPopup, setShowPremiumPopup] = useState(false);
+  const [premiumMessage, setPremiumMessage] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const fetchCallData = async () => {
+      if (!userId) {
+        setCallData([]);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
       try {
         // Fetch a larger number of calls to calculate total count
-        const response = await fetch('/api/vapi/call-data');
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        const response = await fetch('/api/vapi/call-data', {
+          credentials: 'include',
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          setCallData([]);
+          setError(null);
+          return;
         }
-        
+
+        if (response.status === 402) {
+          const payload = await response.json().catch(() => ({}));
+          setPremiumMessage(
+            payload?.message ||
+              "Premium is required to continue using this Vapi AI feature."
+          );
+          setShowPremiumPopup(true);
+          setCallData([]);
+          setError(payload?.message || "Premium subscription required");
+          return;
+        }
+
+        if (!response.ok) {
+          let message = `HTTP error! status: ${response.status}`;
+          try {
+            const payload = await response.json();
+            message = payload?.error || payload?.message || message;
+          } catch {
+            // Ignore JSON parse errors and keep generic message.
+          }
+          throw new Error(message);
+        }
+
         const data = await response.json();
-        
+
         if (Array.isArray(data)) {
           // Only keep the 4 most recent interviews
           setCallData(data.slice(0, 4));
@@ -50,7 +91,7 @@ export default function RecentCallData() {
     };
 
     fetchCallData();
-  }, []);
+  }, [userId]);
 
   if (loading) {
     return (
@@ -91,6 +132,16 @@ export default function RecentCallData() {
         <div className="bg-[#EF4444]/10 border border-[#EF4444]/20 rounded-2xl p-4">
           <p className="text-[#EF4444] font-medium">Unable to load recent sessions: {error}</p>
         </div>
+
+        <PremiumAccessPopup
+          open={showPremiumPopup}
+          message={premiumMessage}
+          onClose={() => setShowPremiumPopup(false)}
+          onActivated={() => {
+            setError(null);
+            window.location.reload();
+          }}
+        />
       </div>
     );
   }
@@ -100,9 +151,13 @@ export default function RecentCallData() {
       <div className="flex flex-col gap-6 mt-12">
          <h2 className="text-3xl font-semibold text-[#EAEAF0]">Recent Sessions</h2>
         <div className="text-center py-12 bg-[#111118] rounded-2xl border border-[#1F1F2B] border-dashed">
-          <p className="text-[#9CA3AF] font-light mb-6">No session data available yet.</p>
-          <Link href="/interview">
-            <Button className="btn-primary border-none shadow-[0_4px_14px_rgba(250,204,21,0.2)]">Start First Session</Button>
+          <p className="text-[#9CA3AF] font-light mb-6">
+            {userId ? "No session data available yet." : "Sign in to view your recent sessions."}
+          </p>
+          <Link href={userId ? "/interview" : "/sign-in"}>
+            <Button className="btn-primary border-none shadow-[0_4px_14px_rgba(250,204,21,0.2)]">
+              {userId ? "Start First Session" : "Sign In"}
+            </Button>
           </Link>
         </div>
       </div>
@@ -177,6 +232,16 @@ export default function RecentCallData() {
           <Button className="btn-secondary">View All Sessions</Button>
         </Link>
       </div>
+
+      <PremiumAccessPopup
+        open={showPremiumPopup}
+        message={premiumMessage}
+        onClose={() => setShowPremiumPopup(false)}
+        onActivated={() => {
+          setError(null);
+          window.location.reload();
+        }}
+      />
     </FadeUp>
   );
 }

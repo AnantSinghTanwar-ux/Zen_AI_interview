@@ -2,16 +2,67 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { recruiterService } from "@/services/recruiter/recruiter.service";
 import { applicantService } from "@/services/recruiter/applicant.service";
+import { checkRateLimit } from "@/lib/services/rate-limit.service";
+import {
+  acquireIdempotencyLock,
+  completeIdempotencyLock,
+  failIdempotencyLock,
+  IdempotencyToken,
+} from "@/lib/services/idempotency.service";
 
 export async function POST(request: NextRequest) {
+  let idempotencyToken: IdempotencyToken | null = null;
+
   try {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { allowed, response } = await checkRateLimit(request, user.id, "recruiter-write");
+    if (!allowed) return response!;
+
+    const idempotency = await acquireIdempotencyLock({
+      request,
+      userId: user.id,
+      scope: "recruiter:applicants:import",
+    });
+
+    if (idempotency.state === "invalid") {
+      return NextResponse.json({ error: idempotency.error }, { status: 400 });
+    }
+
+    if (idempotency.state === "in-progress") {
+      return NextResponse.json(
+        {
+          error: "Idempotent request is already being processed",
+          retryAfter: idempotency.retryAfterSeconds,
+        },
+        {
+          status: 409,
+          headers: {
+            "Retry-After": String(idempotency.retryAfterSeconds),
+          },
+        }
+      );
+    }
+
+    if (idempotency.state === "replay") {
+      return NextResponse.json(idempotency.body, { status: idempotency.status });
+    }
+
+    if (idempotency.state === "acquired") {
+      idempotencyToken = idempotency.token;
+    }
+
     const recruiter = await recruiterService.getRecruiterByUserId(user.id);
     if (!recruiter) {
+      if (idempotencyToken) {
+        await failIdempotencyLock({
+          token: idempotencyToken,
+          error: "Recruiter profile not found",
+        });
+      }
       return NextResponse.json(
         { error: "Recruiter profile not found" },
         { status: 403 }
@@ -23,6 +74,12 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File;
 
     if (!jobId || !file) {
+      if (idempotencyToken) {
+        await failIdempotencyLock({
+          token: idempotencyToken,
+          error: "jobId and file are required",
+        });
+      }
       return NextResponse.json(
         { error: "jobId and file are required" },
         { status: 400 }
@@ -33,6 +90,12 @@ export async function POST(request: NextRequest) {
     const lines = csvText.split("\n").map((l) => l.trim()).filter(Boolean);
 
     if (lines.length < 2) {
+      if (idempotencyToken) {
+        await failIdempotencyLock({
+          token: idempotencyToken,
+          error: "CSV must have a header row and at least one data row",
+        });
+      }
       return NextResponse.json(
         { error: "CSV must have a header row and at least one data row" },
         { status: 400 }
@@ -46,6 +109,12 @@ export async function POST(request: NextRequest) {
     const resumeIdx = header.findIndex((h) => h.includes("resume"));
 
     if (nameIdx === -1 || emailIdx === -1) {
+      if (idempotencyToken) {
+        await failIdempotencyLock({
+          token: idempotencyToken,
+          error: "CSV must have name and email columns",
+        });
+      }
       return NextResponse.json(
         { error: "CSV must have 'name' and 'email' columns" },
         { status: 400 }
@@ -69,18 +138,33 @@ export async function POST(request: NextRequest) {
 
     await recruiterService.incrementApplicantCount(recruiter.id!, result.imported);
 
-    return NextResponse.json(
-      {
-        success: true,
-        imported: result.imported,
-        failed: result.failed,
-        duplicates: result.duplicates,
-        total: applicants.length,
-      },
-      { status: 201 }
-    );
+    const payload = {
+      success: true,
+      imported: result.imported,
+      failed: result.failed,
+      duplicates: result.duplicates,
+      total: applicants.length,
+    };
+
+    if (idempotencyToken) {
+      await completeIdempotencyLock({
+        token: idempotencyToken,
+        status: 201,
+        body: payload,
+      });
+    }
+
+    return NextResponse.json(payload, { status: 201 });
   } catch (error) {
     console.error("Error importing applicants:", error);
+
+    if (idempotencyToken) {
+      await failIdempotencyLock({
+        token: idempotencyToken,
+        error,
+      });
+    }
+
     return NextResponse.json(
       { error: "Failed to import applicants" },
       { status: 500 }

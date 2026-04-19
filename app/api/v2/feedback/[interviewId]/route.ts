@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { feedbackService } from "@/services/feedback/feedback.service";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
+import { checkRateLimit } from "@/lib/services/rate-limit.service";
 
 export async function GET(
   request: NextRequest,
@@ -11,6 +12,9 @@ export async function GET(
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, "feedback-read");
+    if (!allowed) return response!;
 
     const { interviewId } = await params;
     const feedback = await feedbackService.getFeedbackByInterview(interviewId);
@@ -38,6 +42,9 @@ export async function POST(
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, "feedback-write");
+    if (!allowed) return response!;
 
     const { interviewId } = await params;
     const data = await request.json();

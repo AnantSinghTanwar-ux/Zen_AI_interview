@@ -2,12 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { vapiCallDataService } from '@/services/vapi/call-data.service';
 import { emotionDetectionService } from '@/services/emotion/emotion-detection.service';
 import { callLogService } from '@/services/firebase/call-log.service';
+import { getCurrentUser } from '@/lib/actions/auth.actions';
+import { checkRateLimit } from '@/lib/services/rate-limit.service';
+import {
+  checkPremiumAccessForCall,
+  getPremiumRequiredErrorPayload,
+} from '@/lib/services/premium-access.service';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ callId: string }> }
 ) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, 'call-data-detail');
+    if (!allowed) return response!;
+
     const { callId } = await params;
 
     if (!callId) {
@@ -39,6 +53,16 @@ export async function GET(
       }
     } catch (lookupError) {
       console.warn('Firestore ID resolution failed, using callId directly:', lookupError);
+    }
+
+    const premiumAccess = await checkPremiumAccessForCall({
+      userId: user.id,
+      email: user.email,
+      callIds: [callId, vapiCallId],
+    });
+
+    if (!premiumAccess.allowed) {
+      return NextResponse.json(getPremiumRequiredErrorPayload(), { status: 402 });
     }
 
     // Get the full call details from VAPI using the real UUID

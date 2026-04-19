@@ -1,6 +1,11 @@
 // Enhanced Feedback Service - Generates AI-powered suggestions
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { db } from "@/services/firebase/admin";
+import {
+  generateOpenRouterJson,
+  getOpenRouterModelCandidates,
+  hasOpenRouterKey,
+} from "@/services/ai/openrouter-client";
+import { applyHarshFeedbackGuardrails } from "@/services/ai/analysis-guardrails";
 
 export interface InterviewFeedback {
   id?: string;
@@ -48,36 +53,19 @@ export interface UserFeedbackSubmission {
   improvementAreas: string[];
 }
 
-function normalizeFeedbackModel(model?: string): string {
-  const value = String(model || '').trim();
-  if (!value) return 'gemini-3-flash';
-  if (value.includes('gemini-1.5-flash') || value.includes('gemini-2.0-flash')) {
-    return 'gemini-3-flash';
-  }
-  if (value === 'gemini-3.0-flash') {
-    return 'gemini-3-flash';
-  }
-  return value;
-}
-
 class FeedbackService {
   private readonly COLLECTION = 'interview_feedback';
   private readonly USER_FEEDBACK_COLLECTION = 'user_feedback';
-  private genAI: GoogleGenerativeAI | null = null;
-  private readonly modelCandidates = Array.from(
-    new Set([
-      normalizeFeedbackModel(process.env.GOOGLE_AI_FEEDBACK_MODEL),
-      'gemini-3-flash',
-      'gemini-2.5-flash',
-    ])
-  ).filter(Boolean);
+  private readonly modelCandidates = getOpenRouterModelCandidates(
+    process.env.OPENROUTER_HARSH_ANALYSIS_MODEL,
+    process.env.OPENROUTER_EVALUATION_MODEL,
+    'openai/gpt-4.1-mini',
+    process.env.OPENROUTER_MODEL,
+    process.env.GOOGLE_AI_FEEDBACK_MODEL,
+    'openrouter/auto'
+  );
 
-  constructor() {
-    const apiKey = process.env.GOOGLE_AI_API_KEY;
-    if (apiKey) {
-      this.genAI = new GoogleGenerativeAI(apiKey);
-    }
-  }
+  constructor() {}
 
   async generateAIFeedback(transcript: any[], interviewType: string): Promise<{
     strengths: string[];
@@ -94,13 +82,21 @@ class FeedbackService {
       overall: number;
     };
   }> {
-    if (!this.genAI) {
-      throw new Error('AI service not available');
+    if (!hasOpenRouterKey()) {
+      throw new Error('OpenRouter AI service is not available');
     }
 
     try {
       const prompt = `
-Analyze this ${interviewType} interview transcript and provide detailed feedback:
+    You are a strict interview evaluator.
+
+    MANDATORY RULES:
+    - Score only what is explicitly demonstrated in transcript content.
+    - Resume references are not enough to award strong technical/problem-solving scores.
+    - Be conservative and realistic like a hiring committee.
+    - If technical depth is missing, technical/problem-solving scores must stay low.
+
+    Analyze this ${interviewType} interview transcript and provide detailed feedback:
 
 Transcript: ${JSON.stringify(transcript)}
 
@@ -121,62 +117,60 @@ Focus on:
 - Specific improvement areas
 - Actionable next steps
 
+Harsh scoring guidance:
+- 0-34: insufficient evidence / weak demonstration
+- 35-54: below interview-ready
+- 55-69: acceptable but inconsistent
+- 70-84: strong performance
+- 85-100: exceptional, rare
+
 Return only valid JSON.
       `;
 
-      let result: any = null;
-      let lastError: unknown = null;
+      const result = await generateOpenRouterJson<any>({
+        prompt,
+        modelCandidates: this.modelCandidates,
+        temperature: 0.2,
+        maxTokens: 2_500,
+      });
 
-      for (const modelName of this.modelCandidates) {
-        const model = this.genAI.getGenerativeModel({ model: modelName });
-        let retries = 2;
-        let delay = 1200;
+      const transcriptText = Array.isArray(transcript)
+        ? transcript
+            .map((item) => {
+              if (typeof item === "string") return item;
+              if (!item || typeof item !== "object") return "";
+              const role = String((item as any).role || "candidate");
+              const content =
+                String((item as any).message || (item as any).content || "").trim();
+              if (!content) return "";
+              return `${role}: ${content}`;
+            })
+            .filter(Boolean)
+            .join("\n")
+        : String(transcript || "");
 
-        while (retries >= 0) {
-          try {
-            console.log(`[FeedbackService] Trying model: ${modelName}, retries left: ${retries}`);
-            result = await model.generateContent(prompt);
-            break;
-          } catch (error: any) {
-            lastError = error;
-            const msg = String(error?.message || '').toLowerCase();
-            const transient =
-              msg.includes('503') ||
-              msg.includes('429') ||
-              msg.includes('high demand') ||
-              msg.includes('service unavailable') ||
-              msg.includes('too many requests') ||
-              msg.includes('quota');
+      const guardedScores = applyHarshFeedbackGuardrails(
+        {
+          overallScore: result?.scores?.overall,
+          communicationScore: result?.scores?.communication,
+          technicalScore: result?.scores?.technical,
+          problemSolvingScore: result?.scores?.problemSolving,
+          confidenceScore: result?.scores?.confidence,
+        },
+        transcriptText
+      );
 
-            if (!transient || retries === 0) {
-              break;
-            }
-
-            await new Promise((resolve) => setTimeout(resolve, delay));
-            retries -= 1;
-            delay *= 2;
-          }
-        }
-
-        if (result) {
-          break;
-        }
-      }
-
-      if (!result) {
-        throw lastError || new Error('All feedback models failed');
-      }
-
-      const response = result.response;
-      const text = response.text();
-      
-      // Extract JSON from the response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('Invalid AI response format');
-      }
-
-      return JSON.parse(jsonMatch[0]);
+      return {
+        ...result,
+        scores: {
+          ...(result?.scores || {}),
+          overall: guardedScores.overallScore,
+          communication: guardedScores.communicationScore,
+          technical: guardedScores.technicalScore,
+          problemSolving: guardedScores.problemSolvingScore,
+          confidence: guardedScores.confidenceScore,
+        },
+      };
     } catch (error) {
       console.error('Error generating AI feedback:', error);
       

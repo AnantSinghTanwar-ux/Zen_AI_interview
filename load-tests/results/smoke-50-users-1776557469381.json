@@ -1,0 +1,371 @@
+{
+  "generatedAt": "2026-04-19T00:11:09.379Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "users": {
+    "requested": 50,
+    "authenticated": 50
+  },
+  "recruiter": {
+    "executed": 4,
+    "ok": false,
+    "message": "Recruiter endpoints executed"
+  },
+  "summary": {
+    "total": 404,
+    "ok": 250,
+    "fail": 154,
+    "passRate": "62%",
+    "perEndpoint": [
+      {
+        "endpoint": "GET /api/health",
+        "total": 50,
+        "ok": 50,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 2828,
+        "p95LatencyMs": 3402
+      },
+      {
+        "endpoint": "POST /api/premium/vapi-access",
+        "total": 50,
+        "ok": 50,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 4930,
+        "p95LatencyMs": 6717
+      },
+      {
+        "endpoint": "GET /api/vapi/call-data?limit=5",
+        "total": 50,
+        "ok": 50,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 3246,
+        "p95LatencyMs": 4397
+      },
+      {
+        "endpoint": "POST /api/vapi/call-data/sync",
+        "total": 50,
+        "ok": 50,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 2998,
+        "p95LatencyMs": 3900
+      },
+      {
+        "endpoint": "GET /api/v2/feedback-jobs",
+        "total": 50,
+        "ok": 0,
+        "fail": 50,
+        "passRate": "0%",
+        "avgLatencyMs": 3409,
+        "p95LatencyMs": 5058
+      },
+      {
+        "endpoint": "POST /api/v2/feedback-jobs",
+        "total": 50,
+        "ok": 50,
+        "fail": 0,
+        "passRate": "100%",
+        "avgLatencyMs": 2668,
+        "p95LatencyMs": 3655
+      },
+      {
+        "endpoint": "GET /api/call-logs?limit=5",
+        "total": 50,
+        "ok": 0,
+        "fail": 50,
+        "passRate": "0%",
+        "avgLatencyMs": 3434,
+        "p95LatencyMs": 4672
+      },
+      {
+        "endpoint": "GET /api/vapi/test?limit=1",
+        "total": 50,
+        "ok": 0,
+        "fail": 50,
+        "passRate": "0%",
+        "avgLatencyMs": 3032,
+        "p95LatencyMs": 4262
+      },
+      {
+        "endpoint": "GET /api/v2/recruiter/dashboard",
+        "total": 1,
+        "ok": 0,
+        "fail": 1,
+        "passRate": "0%",
+        "avgLatencyMs": 1997,
+        "p95LatencyMs": 1997
+      },
+      {
+        "endpoint": "GET /api/v2/recruiter/leaderboard?limit=5",
+        "total": 1,
+        "ok": 0,
+        "fail": 1,
+        "passRate": "0%",
+        "avgLatencyMs": 1898,
+        "p95LatencyMs": 1898
+      },
+      {
+        "endpoint": "GET /api/v2/recruiter/applications?limit=10",
+        "total": 1,
+        "ok": 0,
+        "fail": 1,
+        "passRate": "0%",
+        "avgLatencyMs": 1933,
+        "p95LatencyMs": 1933
+      },
+      {
+        "endpoint": "GET /api/v2/recruiter/jobs",
+        "total": 1,
+        "ok": 0,
+        "fail": 1,
+        "passRate": "0%",
+        "avgLatencyMs": 2039,
+        "p95LatencyMs": 2039
+      }
+    ],
+    "failures": [
+      {
+        "user": "loadtest_user_1776557393917_1_30ff604a@zenai.local",
+        "endpoint": "/api/v2/feedback-jobs",
+        "method": "GET",
+        "status": 500,
+        "ok": false,
+        "latencyMs": 4118
+      },
+      {
+        "user": "loadtest_user_1776557393917_1_30ff604a@zenai.local",
+        "endpoint": "/api/call-logs?limit=5",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4523
+      },
+      {
+        "user": "loadtest_user_1776557393917_1_30ff604a@zenai.local",
+        "endpoint": "/api/vapi/test?limit=1",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4182
+      },
+      {
+        "user": "loadtest_user_1776557393918_2_2cc56c79@zenai.local",
+        "endpoint": "/api/v2/feedback-jobs",
+        "method": "GET",
+        "status": 500,
+        "ok": false,
+        "latencyMs": 4826
+      },
+      {
+        "user": "loadtest_user_1776557393918_2_2cc56c79@zenai.local",
+        "endpoint": "/api/call-logs?limit=5",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4459
+      },
+      {
+        "user": "loadtest_user_1776557393918_2_2cc56c79@zenai.local",
+        "endpoint": "/api/vapi/test?limit=1",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4115
+      },
+      {
+        "user": "loadtest_user_1776557393919_3_1c5a0750@zenai.local",
+        "endpoint": "/api/v2/feedback-jobs",
+        "method": "GET",
+        "status": 500,
+        "ok": false,
+        "latencyMs": 4796
+      },
+      {
+        "user": "loadtest_user_1776557393919_3_1c5a0750@zenai.local",
+        "endpoint": "/api/call-logs?limit=5",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4397
+      },
+      {
+        "user": "loadtest_user_1776557393919_3_1c5a0750@zenai.local",
+        "endpoint": "/api/vapi/test?limit=1",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4100
+      },
+      {
+        "user": "loadtest_user_1776557393919_4_fdb1a54b@zenai.local",
+        "endpoint": "/api/v2/feedback-jobs",
+        "method": "GET",
+        "status": 500,
+        "ok": false,
+        "latencyMs": 4193
+      },
+      {
+        "user": "loadtest_user_1776557393919_4_fdb1a54b@zenai.local",
+        "endpoint": "/api/call-logs?limit=5",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4419
+      },
+      {
+        "user": "loadtest_user_1776557393919_4_fdb1a54b@zenai.local",
+        "endpoint": "/api/vapi/test?limit=1",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4215
+      },
+      {
+        "user": "loadtest_user_1776557393919_5_c8eaad86@zenai.local",
+        "endpoint": "/api/v2/feedback-jobs",
+        "method": "GET",
+        "status": 500,
+        "ok": false,
+        "latencyMs": 4296
+      },
+      {
+        "user": "loadtest_user_1776557393919_5_c8eaad86@zenai.local",
+        "endpoint": "/api/call-logs?limit=5",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4557
+      },
+      {
+        "user": "loadtest_user_1776557393919_5_c8eaad86@zenai.local",
+        "endpoint": "/api/vapi/test?limit=1",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 3979
+      },
+      {
+        "user": "loadtest_user_1776557393920_6_c04b7e25@zenai.local",
+        "endpoint": "/api/v2/feedback-jobs",
+        "method": "GET",
+        "status": 500,
+        "ok": false,
+        "latencyMs": 4791
+      },
+      {
+        "user": "loadtest_user_1776557393920_6_c04b7e25@zenai.local",
+        "endpoint": "/api/call-logs?limit=5",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4416
+      },
+      {
+        "user": "loadtest_user_1776557393920_6_c04b7e25@zenai.local",
+        "endpoint": "/api/vapi/test?limit=1",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4210
+      },
+      {
+        "user": "loadtest_user_1776557393920_7_4e22c206@zenai.local",
+        "endpoint": "/api/v2/feedback-jobs",
+        "method": "GET",
+        "status": 500,
+        "ok": false,
+        "latencyMs": 4198
+      },
+      {
+        "user": "loadtest_user_1776557393920_7_4e22c206@zenai.local",
+        "endpoint": "/api/call-logs?limit=5",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4675
+      },
+      {
+        "user": "loadtest_user_1776557393920_7_4e22c206@zenai.local",
+        "endpoint": "/api/vapi/test?limit=1",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4220
+      },
+      {
+        "user": "loadtest_user_1776557393920_8_b6ba9454@zenai.local",
+        "endpoint": "/api/v2/feedback-jobs",
+        "method": "GET",
+        "status": 500,
+        "ok": false,
+        "latencyMs": 5065
+      },
+      {
+        "user": "loadtest_user_1776557393920_8_b6ba9454@zenai.local",
+        "endpoint": "/api/call-logs?limit=5",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4590
+      },
+      {
+        "user": "loadtest_user_1776557393920_8_b6ba9454@zenai.local",
+        "endpoint": "/api/vapi/test?limit=1",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4127
+      },
+      {
+        "user": "loadtest_user_1776557395703_9_7ad0276a@zenai.local",
+        "endpoint": "/api/v2/feedback-jobs",
+        "method": "GET",
+        "status": 500,
+        "ok": false,
+        "latencyMs": 4648
+      },
+      {
+        "user": "loadtest_user_1776557395703_9_7ad0276a@zenai.local",
+        "endpoint": "/api/call-logs?limit=5",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4730
+      },
+      {
+        "user": "loadtest_user_1776557395703_9_7ad0276a@zenai.local",
+        "endpoint": "/api/vapi/test?limit=1",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4114
+      },
+      {
+        "user": "loadtest_user_1776557395732_10_af16b404@zenai.local",
+        "endpoint": "/api/v2/feedback-jobs",
+        "method": "GET",
+        "status": 500,
+        "ok": false,
+        "latencyMs": 4429
+      },
+      {
+        "user": "loadtest_user_1776557395732_10_af16b404@zenai.local",
+        "endpoint": "/api/call-logs?limit=5",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4446
+      },
+      {
+        "user": "loadtest_user_1776557395732_10_af16b404@zenai.local",
+        "endpoint": "/api/vapi/test?limit=1",
+        "method": "GET",
+        "status": 429,
+        "ok": false,
+        "latencyMs": 4159
+      }
+    ]
+  }
+}

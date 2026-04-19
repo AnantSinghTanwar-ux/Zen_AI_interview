@@ -39,6 +39,8 @@ interface User {
   id: string;
   userType?: 'candidate' | 'recruiter';
   recruiterId?: string;
+  isPremium?: boolean;
+  premiumSource?: string;
 }
 
 interface InterviewCardProps {

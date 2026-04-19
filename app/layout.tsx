@@ -24,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body 
         className={`${monaSans.variable} ${urbanist.variable} ${urbanist.className} antialiased bg-background text-foreground`}
         suppressHydrationWarning={true}

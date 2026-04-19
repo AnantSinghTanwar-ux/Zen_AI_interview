@@ -6,6 +6,7 @@ import { ArrowLeft, Clock, Code, Send, Shuffle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PageLayout from "@/components/PageLayout";
+import PremiumAccessPopup from "@/components/PremiumAccessPopup";
 import { cn } from "@/lib/utils";
 import { useStreamingChat } from "@/hooks/useStreamingChat";
 import {
@@ -38,6 +39,8 @@ export default function DSAInterviewPage() {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState("");
+  const [showPremiumPopup, setShowPremiumPopup] = useState(false);
+  const [premiumMessage, setPremiumMessage] = useState<string | undefined>(undefined);
 
   const [selectedCompany, setSelectedCompany] = useState<PracticeCompanyKey>("microsoft");
   const [selectedDifficulty, setSelectedDifficulty] = useState<(typeof difficultyOptions)[number]>("Any");
@@ -45,6 +48,7 @@ export default function DSAInterviewPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const premiumUsageKeyRef = useRef(`dsa-practice:${Date.now()}`);
 
   const availableTopics = useMemo(() => {
     const topics = new Set<string>();
@@ -142,7 +146,15 @@ export default function DSAInterviewPage() {
   };
 
   const { sendStreamingMessage, isStreaming } = useStreamingChat({
+    premiumUsageKey: premiumUsageKeyRef.current,
     onMessage: (delta) => setStreamingMessage((prev) => prev + delta),
+    onPremiumRequired: (message) => {
+      setPremiumMessage(
+        message ||
+          "Premium is required to continue using this Vapi AI feature."
+      );
+      setShowPremiumPopup(true);
+    },
     onComplete: (fullMessage, newChatId) => {
       setMessages((prev) => [
         ...prev,
@@ -197,27 +209,60 @@ export default function DSAInterviewPage() {
   };
 
   const startInterview = async () => {
-    const picked = pickQuestion();
-    setCurrentQuestion({
-      title: picked.title,
-      difficulty: picked.difficulty,
-      problem: picked.prompt,
-      topic: picked.topic,
-    });
-    setInterviewStage("question");
-    setTimerActive(true);
-    setTimeElapsed(0);
+    try {
+      const interviewUsageKey = `dsa-practice:${Date.now()}`;
+      premiumUsageKeyRef.current = interviewUsageKey;
 
-    const kickoff = [
-      `Start a ${companyName}-style DSA round.`,
-      `Use this selected popular question as the main problem: ${picked.title}.`,
-      `Difficulty: ${picked.difficulty}. Topic: ${picked.topic}.`,
-      `Problem statement: ${picked.prompt}`,
-      "Act like a real interviewer: ask clarifying questions, evaluate approach, then discuss optimal solution and trade-offs.",
-      "Keep answers concise and practical.",
-    ].join(" ");
+      const premiumCheck = await fetch("/api/premium/vapi-access", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          feature: "dsa-practice",
+          usageKey: interviewUsageKey,
+          quotaKind: "interview",
+        }),
+      });
 
-    await sendMessage(kickoff);
+      if (premiumCheck.status === 402 || premiumCheck.status === 429) {
+        const payload = await premiumCheck.json().catch(() => ({}));
+        setPremiumMessage(
+          payload?.message ||
+            "Premium is required to continue using this Vapi AI feature."
+        );
+        setShowPremiumPopup(true);
+        return;
+      }
+
+      if (!premiumCheck.ok) {
+        throw new Error("Failed to validate premium access");
+      }
+
+      const picked = pickQuestion();
+      setCurrentQuestion({
+        title: picked.title,
+        difficulty: picked.difficulty,
+        problem: picked.prompt,
+        topic: picked.topic,
+      });
+      setInterviewStage("question");
+      setTimerActive(true);
+      setTimeElapsed(0);
+
+      const kickoff = [
+        `Start a ${companyName}-style DSA round.`,
+        `Use this selected popular question as the main problem: ${picked.title}.`,
+        `Difficulty: ${picked.difficulty}. Topic: ${picked.topic}.`,
+        `Problem statement: ${picked.prompt}`,
+        "Act like a real interviewer: ask clarifying questions, evaluate approach, then discuss optimal solution and trade-offs.",
+        "Keep answers concise and practical.",
+      ].join(" ");
+
+      await sendMessage(kickoff);
+    } catch (error) {
+      console.error("Failed to start DSA interview:", error);
+    }
   };
 
   const getDifficultyColor = (difficulty: "Easy" | "Medium" | "Hard") => {
@@ -426,6 +471,15 @@ export default function DSAInterviewPage() {
           )}
         </div>
       </div>
+
+      <PremiumAccessPopup
+        open={showPremiumPopup}
+        message={premiumMessage}
+        onClose={() => setShowPremiumPopup(false)}
+        onActivated={() => {
+          setShowPremiumPopup(false);
+        }}
+      />
     </PageLayout>
   );
 }

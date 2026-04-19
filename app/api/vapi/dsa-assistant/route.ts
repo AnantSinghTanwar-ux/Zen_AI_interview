@@ -1,8 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/actions/auth.actions";
+import { checkRateLimit } from "@/lib/services/rate-limit.service";
+import {
+  checkPremiumAccessForFeature,
+  getPremiumRequiredErrorPayload,
+} from "@/lib/services/premium-access.service";
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = "71617d6d-e8fe-4558-9980-513a135d0527";
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { allowed, response: rateLimitResponse } = await checkRateLimit(request, user.id, "vapi-dsa-assistant");
+    if (!allowed) return rateLimitResponse!;
+
+    const premiumAccess = await checkPremiumAccessForFeature({
+      userId: user.id,
+      email: user.email,
+      featureKeys: [
+        `vapi-dsa-assistant:create:${Date.now()}`,
+      ],
+    });
+
+    if (!premiumAccess.allowed) {
+      return NextResponse.json(getPremiumRequiredErrorPayload(), { status: 402 });
+    }
+
+    const apiKey = process.env.VAPI_PRIVATE_API_KEY || "";
     if (!apiKey) {
       return NextResponse.json(
         { error: "Vapi API key not configured" },
@@ -115,9 +141,27 @@ Maintain a professional, encouraging tone while being thorough in your evaluatio
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const apiKey = "71617d6d-e8fe-4558-9980-513a135d0527";
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { allowed, response: rateLimitResponse } = await checkRateLimit(request, user.id, "vapi-dsa-assistant");
+    if (!allowed) return rateLimitResponse!;
+
+    const premiumAccess = await checkPremiumAccessForFeature({
+      userId: user.id,
+      email: user.email,
+      featureKeys: ["vapi-dsa-assistant:list"],
+    });
+
+    if (!premiumAccess.allowed) {
+      return NextResponse.json(getPremiumRequiredErrorPayload(), { status: 402 });
+    }
+
+    const apiKey = process.env.VAPI_PRIVATE_API_KEY || "";
     if (!apiKey) {
       return NextResponse.json(
         { error: "Vapi API key not configured" },

@@ -1,37 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { vapiCallDataService } from "@/services/vapi/call-data.service";
 import { callLogService } from "@/services/firebase/call-log.service";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getCurrentUser } from "@/lib/actions/auth.actions";
+import { checkRateLimit } from "@/lib/services/rate-limit.service";
+import { cacheService } from "@/lib/services/cache.service";
+import { retryWithBackoff } from "@/lib/services/retry.service";
+import {
+  generateOpenRouterJson,
+  getOpenRouterModelCandidates,
+  hasOpenRouterKey,
+} from "@/services/ai/openrouter-client";
+import { applyHarshFeedbackGuardrails } from "@/services/ai/analysis-guardrails";
+import {
+  checkAndConsumePremiumDailyLimit,
+  checkPremiumAccessForCall,
+  getPremiumDailyLimitErrorPayload,
+  getPremiumRequiredErrorPayload,
+} from "@/lib/services/premium-access.service";
 
-const GOOGLE_AI_KEY =
-  process.env.GOOGLE_AI_API_KEY ||
-  process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-
-const genAI = GOOGLE_AI_KEY ? new GoogleGenerativeAI(GOOGLE_AI_KEY) : null;
-
-function normalizeFeedbackModel(model?: string): string {
-  const value = String(model || "").trim();
-  if (!value) return "gemini-3-flash";
-
-  // Prevent stale env overrides from pinning unsupported 1.5 / 2.0 variants.
-  if (value.includes("gemini-1.5-flash") || value.includes("gemini-2.0-flash")) {
-    return "gemini-3-flash";
-  }
-
-  if (value === "gemini-3.0-flash") {
-    return "gemini-3-flash";
-  }
-
-  return value;
-}
-
-const FEEDBACK_MODEL_CANDIDATES = Array.from(
-  new Set([
-    normalizeFeedbackModel(process.env.GOOGLE_AI_FEEDBACK_MODEL),
-    "gemini-3-flash",
-    "gemini-2.5-flash",
-  ])
-).filter(Boolean);
+const FEEDBACK_MODEL_CANDIDATES = getOpenRouterModelCandidates(
+  process.env.OPENROUTER_HARSH_ANALYSIS_MODEL,
+  process.env.OPENROUTER_EVALUATION_MODEL,
+  "openai/gpt-4.1-mini",
+  process.env.OPENROUTER_MODEL,
+  process.env.GOOGLE_AI_FEEDBACK_MODEL,
+  "openrouter/auto"
+);
 
 interface FeedbackAnalysis {
   overallScore: number;
@@ -124,16 +118,28 @@ async function generateFeedbackFromTranscript(transcript: string, callData: any)
     throw new Error("No conversation transcript available for analysis");
   }
 
-  if (!genAI) {
-    throw new Error("Google AI API key not configured");
+  if (!hasOpenRouterKey()) {
+    throw new Error("OPENROUTER_API_KEY is not configured");
   }
 
   const prompt = `
-You are an expert interview coach analyzing a technical interview session. Please provide detailed feedback based on the following conversation transcript:
+You are a strict senior interviewer performing real-world screening analysis.
+
+CRITICAL SCORING RULES (must follow):
+1) Evidence over assumption: score ONLY based on what is explicitly present in the transcript.
+2) Resume mention is not proof: if candidate only references resume/background without technical discussion, do NOT award high technical/problem-solving scores.
+3) Harsh hiring bar: default to conservative scoring unless strong evidence exists.
+4) Missing-evidence caps:
+   - If no technical Q&A depth is visible, technicalScore MUST be <= 35.
+   - If no concrete problem-solving walkthrough is visible, problemSolvingScore MUST be <= 35.
+   - If answers are short/deflecting, communicationScore and confidenceScore should be penalized.
+5) Do not inflate scores for politeness or potential. Judge demonstrated interview performance only.
+
+Evaluate this interview transcript:
 
 ${transcript}
 
-Please analyze this interview and provide feedback in the following JSON format:
+Return ONLY valid JSON in this exact format:
 
 {
   "overallScore": [number 0-100],
@@ -149,73 +155,33 @@ Please analyze this interview and provide feedback in the following JSON format:
   "personalizedPlan": [array of 5-6 weekly improvement goals]
 }
 
-Focus on:
-- Technical knowledge and problem-solving approach
-- Communication clarity and structure
-- Confidence and professionalism
-- Areas for improvement with specific suggestions
-- Actionable next steps for skill development
+Scoring rubric guidance:
+- 0-34: insufficient evidence / weak demonstration
+- 35-54: basic but below interview-ready
+- 55-69: acceptable junior level but inconsistent
+- 70-84: strong interview-ready performance
+- 85-100: exceptional, rare performance with clear depth
 
-Provide realistic scores and constructive feedback that would help the candidate improve.
+Interpretation guardrails:
+- If candidate asks interviewer to read resume and technical depth is absent, treat technical/problem-solving as low-evidence.
+- Strengths/weaknesses/suggestions must be grounded in observable transcript behavior.
+- Keep feedback practical and direct, like a real hiring panel debrief.
+
+Provide tough-but-fair ratings and actionable coaching.
 `;
 
   try {
-    let result: any = null;
-    let lastError: unknown = null;
+    const feedbackData = await generateOpenRouterJson<any>({
+      prompt,
+      modelCandidates: FEEDBACK_MODEL_CANDIDATES,
+      temperature: 0.2,
+      maxTokens: 2_500,
+    });
 
-    for (const modelName of FEEDBACK_MODEL_CANDIDATES) {
-      const model = genAI.getGenerativeModel({ model: modelName });
-      let retries = 2;
-      let delay = 1500;
-
-      while (retries >= 0) {
-        try {
-          console.log(`[Feedback] Trying model: ${modelName}, retries left: ${retries}`);
-          result = await model.generateContent(prompt);
-          console.log(`[Feedback] Model succeeded: ${modelName}`);
-          break;
-        } catch (e: any) {
-          lastError = e;
-          const message = String(e?.message || "");
-          const shouldRetrySameModel =
-            message.includes("429") ||
-            message.includes("503") ||
-            message.toLowerCase().includes("quota") ||
-            message.toLowerCase().includes("high demand") ||
-            message.toLowerCase().includes("service unavailable") ||
-            message.toLowerCase().includes("too many requests");
-
-          if (!shouldRetrySameModel || retries === 0) {
-            console.warn(`[Feedback] Model failed: ${modelName}. Moving to next model.`, message);
-            break;
-          }
-
-          console.log(`[Feedback] Transient error on ${modelName}, waiting ${delay}ms before retry`);
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          retries -= 1;
-          delay *= 2;
-        }
-      }
-
-      if (result) {
-        break;
-      }
-    }
-
-    if (!result) {
-      throw lastError || new Error("All feedback models failed");
-    }
-
-    const response = await result.response;
-    const text = response.text();
-
-    // Try to extract JSON from the response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("Invalid response format from AI");
-    }
-
-    const feedbackData = JSON.parse(jsonMatch[0]);
+    const guardedFeedback = applyHarshFeedbackGuardrails(
+      feedbackData,
+      transcript
+    );
 
     // Calculate additional metrics from call data
     const messages = callData.messages || [];
@@ -225,20 +191,28 @@ Provide realistic scores and constructive feedback that would help the candidate
       : 30;
 
     return {
-      ...feedbackData,
+      ...guardedFeedback,
       responseTime,
       completionRate: callData.status === "ended" ? 100 : 75,
       duration: Math.round(duration)
     };
 
   } catch (error) {
-    console.error("Error generating AI feedback:", error);
+    console.error("Error generating OpenRouter feedback:", error);
     throw error;
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, "feedback-generate");
+    if (!allowed) return response!;
+
     const { searchParams } = new URL(request.url);
     const callId = searchParams.get("callId");
 
@@ -274,6 +248,45 @@ export async function GET(request: NextRequest) {
       }
     } catch (lookupError) {
       console.warn("Firestore ID resolution failed, using callId directly:", lookupError);
+    }
+
+    const premiumAccess = await checkPremiumAccessForCall({
+      userId: user.id,
+      email: user.email,
+      callIds: [callId, vapiCallId],
+    });
+
+    if (!premiumAccess.allowed) {
+      return NextResponse.json(getPremiumRequiredErrorPayload(), { status: 402 });
+    }
+
+    const premiumDailyLimit = await checkAndConsumePremiumDailyLimit({
+      userId: user.id,
+      email: user.email,
+      kind: "feedback",
+      usageKey: `feedback:${callId}`,
+      consume: true,
+    });
+
+    if (!premiumDailyLimit.allowed) {
+      return NextResponse.json(
+        getPremiumDailyLimitErrorPayload({
+          kind: premiumDailyLimit.kind,
+          limit: premiumDailyLimit.limit,
+          date: premiumDailyLimit.date,
+        }),
+        { status: 429 }
+      );
+    }
+
+    // Check cache after access verification.
+    const cacheKey = `feedback:v2:${callId}`;
+    const cached = await cacheService.get<Record<string, unknown>>(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached, {
+        status: 200,
+        headers: { "X-Cache": "HIT" },
+      });
     }
 
     let callData: any = null;
@@ -329,8 +342,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Generate AI-powered feedback
-    const feedback = await generateFeedbackFromTranscript(transcript, callData);
+    // Generate AI-powered feedback with retry logic
+    const feedback = await retryWithBackoff(
+      () => generateFeedbackFromTranscript(transcript, callData),
+      { maxRetries: 2, initialDelayMs: 500 }
+    );
 
     // Add metadata
     const responseData = {
@@ -338,15 +354,21 @@ export async function GET(request: NextRequest) {
       callId,
       vapiCallId,
       interviewId: callId,
-      userId: "current_user",
+      userId: user.id,
       interviewType: "technical",
       createdAt: new Date().toISOString(),
       ...feedback,
     };
 
+    // Cache the result for 2 hours
+    await cacheService.set(cacheKey, responseData, 7200);
+
     console.log(`Successfully generated feedback for call: ${callId}`);
 
-    return NextResponse.json(responseData, { status: 200 });
+    return NextResponse.json(responseData, {
+      status: 200,
+      headers: { "X-Cache": "MISS" },
+    });
 
   } catch (error) {
     console.error("Error generating feedback:", error);

@@ -1,4 +1,9 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import {
+  generateOpenRouterJson,
+  getOpenRouterModelCandidates,
+  hasOpenRouterKey,
+} from '@/services/ai/openrouter-client';
+import { applyStructuredEvaluationGuardrails } from '@/services/ai/analysis-guardrails';
 
 // Interview evaluation types
 export interface InterviewEvaluation {
@@ -26,9 +31,8 @@ export interface AspectRating {
 }
 
 class InterviewEvaluationService {
-  private genAI: GoogleGenerativeAI | null = null;
-  private model: any = null;
   private initialized = false;
+  private available = false;
 
   constructor() {
     // Don't initialize immediately - do it lazily when needed
@@ -36,31 +40,15 @@ class InterviewEvaluationService {
 
   private initialize() {
     if (this.initialized) return;
-    
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_GENERATIVE_AI_API_KEY;
-    if (!apiKey) {
-      console.warn('Google AI API key not found. Interview evaluation will not be available.');
-      this.genAI = null;
-      this.model = null;
+
+    if (!hasOpenRouterKey()) {
+      console.warn('OpenRouter API key not found. Interview evaluation will not be available.');
+      this.available = false;
     } else {
-      try {
-        this.genAI = new GoogleGenerativeAI(apiKey);
-        // Use gemini-3-flash
-        this.model = this.genAI.getGenerativeModel({ 
-          model: 'gemini-3-flash',
-          generationConfig: {
-            maxOutputTokens: 8192,
-            temperature: 0.1,
-          },
-        });
-        console.log('Interview evaluation service initialized successfully');
-      } catch (error) {
-        console.error('Failed to initialize Google AI service:', error);
-        this.genAI = null;
-        this.model = null;
-      }
+      this.available = true;
+      console.log('Interview evaluation service initialized with OpenRouter');
     }
-    
+
     this.initialized = true;
   }
 
@@ -69,7 +57,7 @@ class InterviewEvaluationService {
    */
   isAvailable(): boolean {
     this.initialize();
-    return this.model !== null;
+    return this.available;
   }
 
   /**
@@ -80,7 +68,7 @@ class InterviewEvaluationService {
     this.initialize();
     
     if (!this.isAvailable()) {
-      throw new Error('Interview evaluation service is not available. Please configure Google AI API key.');
+      throw new Error('Interview evaluation service is not available. Please configure OPENROUTER_API_KEY.');
     }
 
     try {
@@ -94,50 +82,33 @@ class InterviewEvaluationService {
       // Create comprehensive evaluation prompt
       const prompt = this.createEvaluationPrompt(transcript, callDetails);
       
-      // Get evaluation from Gemini
-      const result = await this.model.generateContent(prompt);
-      const response = result.response.text();
-      
-      // Extract JSON object directly from response (ignoring markdown fences)
-      const firstBrace = response.indexOf('{');
-      const lastBrace = response.lastIndexOf('}');
-      
-      if (firstBrace === -1 || lastBrace === -1) {
-        console.error('Gemini Raw Response (No JSON found):', response);
-        // Fallback: If no JSON found, throw specific error with preview of response
-        const preview = response.substring(0, 200);
-        throw new Error(`Invalid response format from Gemini AI: No JSON object found. Response preview: ${preview}...`);
-      }
-      
-      let jsonString = response.substring(firstBrace, lastBrace + 1);
-      
-      // Attempt to clean common JSON errors
-      // 1. Remove trailing commas before closing braces/brackets
-      jsonString = jsonString.replace(/,(\s*[}\]])/g, '$1');
-
-      let evaluation: any;
-      try {
-        evaluation = JSON.parse(jsonString);
-      } catch (parseError) {
-        console.error('JSON Parse Error:', parseError);
-        console.error('Raw Response:', response);
-        console.error('Extracted JSON String:', jsonString);
-        throw new Error(`Failed to parse evaluation JSON. Error: ${(parseError as Error).message}. Snippet: ${jsonString.substring(0, 150)}...`);
-      }
+      const evaluation = await generateOpenRouterJson<any>({
+        prompt,
+        modelCandidates: getOpenRouterModelCandidates(
+          process.env.OPENROUTER_HARSH_ANALYSIS_MODEL,
+          process.env.OPENROUTER_EVALUATION_MODEL,
+          'openai/gpt-4.1-mini',
+          process.env.OPENROUTER_MODEL,
+          process.env.GOOGLE_AI_FEEDBACK_MODEL,
+          'openrouter/auto'
+        ),
+        temperature: 0.1,
+        maxTokens: 4_000,
+      });
       
       // Validate and sanitize the evaluation
-      return this.validateEvaluation(evaluation);
+      return this.validateEvaluation(evaluation, transcript);
 
     } catch (error) {
       console.error('Error evaluating interview:', error);
       
       if (error instanceof Error) {
-        // Handle specific Google AI errors
+        // Handle specific API errors
         if (error.message.includes('429') || error.message.includes('quota')) {
-          throw new Error('API quota exceeded. Please try again later or upgrade your Google AI plan.');
+          throw new Error('API quota exceeded. Please try again later or adjust your OpenRouter limits.');
         }
         if (error.message.includes('403') || error.message.includes('API key')) {
-          throw new Error('Invalid API key. Please check your Google AI API key configuration.');
+          throw new Error('Invalid API key. Please check your OpenRouter API key configuration.');
         }
         throw error;
       } else {
@@ -161,11 +132,18 @@ class InterviewEvaluationService {
   }
 
   /**
-   * Create comprehensive evaluation prompt for Gemini
+    * Create comprehensive evaluation prompt for OpenRouter
    */
   private createEvaluationPrompt(transcript: string, callDetails: any): string {
     return `
-You are an expert technical interviewer evaluating a candidate's performance. Analyze this interview transcript and provide a comprehensive evaluation.
+You are a strict hiring-panel evaluator for real-world software engineering interviews.
+
+MANDATORY RULES:
+1) Score ONLY demonstrated interview evidence from transcript content.
+2) Resume references are context, not proof of technical ability.
+3) Use conservative scoring by default; do not inflate based on politeness or potential.
+4) If technical depth is missing, technicalKnowledge and problemSolving MUST stay low.
+5) If there is no code/system-design discussion, codeQuality/systemDesign cannot be high.
 
 INTERVIEW DETAILS:
 - Duration: ${callDetails.duration || 'Unknown'}
@@ -175,7 +153,7 @@ INTERVIEW DETAILS:
 TRANSCRIPT:
 ${transcript}
 
-Please evaluate the candidate across these aspects and provide a JSON response with the following structure:
+Return ONLY valid JSON using this exact structure:
 
 {
   "overallRating": 7.5,
@@ -239,13 +217,20 @@ EVALUATION CRITERIA:
 - System Design (1-10): Architecture understanding, scalability, system thinking
 - Behavioral Fit (1-10): Attitude, collaboration, cultural fit
 
-RECOMMENDATIONS:
-- "Strong Hire": Exceptional candidate (Overall 8.5-10)
-- "Hire": Good candidate (Overall 6.5-8.4)
-- "No Hire": Below expectations (Overall 4-6.4)
-- "Strong No Hire": Poor performance (Overall 1-3.9)
+EVIDENCE CAP RULES (must apply):
+- If there is no clear technical Q&A depth: technicalKnowledge <= 4
+- If there is no concrete solution walkthrough: problemSolving <= 4
+- If no code-level discussion appears: codeQuality <= 4
+- If no architecture/scalability discussion appears: systemDesign <= 4
+- If responses are short/deflecting: communication/confidence should be penalized
 
-Analyze the transcript thoroughly and provide specific evidence for each rating. Be objective and constructive in your feedback. Keep the "detailedFeedback" section concise (under 200 words) to ensure valid JSON output.
+RECOMMENDATIONS:
+- "Strong Hire": Rare, clearly exceptional evidence (Overall 8.8-10)
+- "Hire": Interview-ready with consistent depth (Overall 7.2-8.7)
+- "No Hire": Not interview-ready / inconsistent evidence (Overall 4.5-7.1)
+- "Strong No Hire": Clear mismatch or very weak evidence (Overall 1-4.4)
+
+Be direct, realistic, and strict. Keep "detailedFeedback" concise (under 200 words) and grounded in transcript evidence.
 
 Return ONLY the JSON object, no additional text. Ensure the JSON is valid standard JSON (no trailing commas, keys in double quotes).
     `;
@@ -254,7 +239,7 @@ Return ONLY the JSON object, no additional text. Ensure the JSON is valid standa
   /**
    * Validate and sanitize evaluation response
    */
-  private validateEvaluation(evaluation: any): InterviewEvaluation {
+  private validateEvaluation(evaluation: any, transcript: string): InterviewEvaluation {
     // Ensure all required fields exist and are within valid ranges
     const sanitized: InterviewEvaluation = {
       overallRating: Math.max(1, Math.min(10, evaluation.overallRating || 5)),
@@ -274,7 +259,7 @@ Return ONLY the JSON object, no additional text. Ensure the JSON is valid standa
       confidenceLevel: Math.max(1, Math.min(10, evaluation.confidenceLevel || 5))
     };
 
-    return sanitized;
+    return applyStructuredEvaluationGuardrails(sanitized, transcript) as InterviewEvaluation;
   }
 
   /**

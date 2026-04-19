@@ -1,8 +1,12 @@
 // Improvement Plan Service - Generates personalized learning paths
 import { db } from "@/services/firebase/admin";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { analyticsService } from "@/services/analytics/analytics.service";
 import { feedbackService } from "@/services/feedback/feedback.service";
+import {
+  generateOpenRouterJson,
+  getOpenRouterModelCandidates,
+  hasOpenRouterKey,
+} from "@/services/ai/openrouter-client";
 
 export interface ImprovementPlan {
   id?: string;
@@ -109,14 +113,8 @@ export interface Milestone {
 
 class ImprovementPlanService {
   private readonly COLLECTION = 'improvement_plans';
-  private genAI: GoogleGenerativeAI | null = null;
 
-  constructor() {
-    const apiKey = process.env.GOOGLE_AI_API_KEY;
-    if (apiKey) {
-      this.genAI = new GoogleGenerativeAI(apiKey);
-    }
-  }
+  constructor() {}
 
   async generatePersonalizedPlan(userId: string, preferences?: {
     focusAreas?: string[];
@@ -207,13 +205,11 @@ class ImprovementPlanService {
   }
 
   private async generateAIPlan(analysis: any, preferences: any = {}): Promise<any> {
-    if (!this.genAI) {
+    if (!hasOpenRouterKey()) {
       return this.generateFallbackPlan(analysis, preferences);
     }
 
     try {
-      const model = this.genAI.getGenerativeModel({ model: "gemini-3-flash" });
-      
       const prompt = `
 Generate a personalized interview improvement plan based on:
 
@@ -252,16 +248,16 @@ Focus on practical, actionable steps that address the identified weaknesses.
 Return only valid JSON.
       `;
 
-      const result = await model.generateContent(prompt);
-      const response = result.response;
-      const text = response.text();
-      
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('Invalid AI response format');
-      }
-
-      return JSON.parse(jsonMatch[0]);
+      return await generateOpenRouterJson<any>({
+        prompt,
+        modelCandidates: getOpenRouterModelCandidates(
+          process.env.OPENROUTER_MODEL,
+          process.env.GOOGLE_AI_FEEDBACK_MODEL,
+          'openrouter/auto'
+        ),
+        temperature: 0.2,
+        maxTokens: 3_000,
+      });
     } catch (error) {
       console.error('Error generating AI plan:', error);
       return this.generateFallbackPlan(analysis, preferences);

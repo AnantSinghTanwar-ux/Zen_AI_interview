@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callLogService } from "@/services/firebase/call-log.service";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
+import { checkRateLimit } from "@/lib/services/rate-limit.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +13,9 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, "call-logs-migrate");
+    if (!allowed) return response!;
 
     const { userId } = await request.json();
     const targetUserId = userId || user.id;
@@ -31,7 +35,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
 
@@ -41,6 +45,9 @@ export async function GET() {
         { status: 401 }
       );
     }
+
+    const { allowed, response } = await checkRateLimit(request, user.id, "call-logs-migrate");
+    if (!allowed) return response!;
 
     const logsWithoutUserId =
       await callLogService.getAllCallLogsWithoutUserId();

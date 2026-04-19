@@ -3,6 +3,10 @@ import { SignInParams, SignUpParams, User } from "@/types";
 import { FirebaseError } from "firebase/app";
 import { auth, db } from "@/services/firebase/admin";
 import { cookies } from "next/headers";
+import {
+  ensureSeedPremiumAccess,
+  isSeedPremiumEmail,
+} from "@/lib/services/premium-access.service";
 
 const SESSION_COOKIE_EXPIRES_IN = 60 * 60 * 24 * 7 * 1000; // 7 days
 
@@ -16,14 +20,33 @@ const ensureUserProfile = async (params: {
   const userSnap = await userRef.get();
 
   if (userSnap.exists) {
+    const existingData = (userSnap.data() || {}) as Record<string, unknown>;
+    const existingEmail =
+      (typeof existingData.email === "string" && existingData.email.trim()) ||
+      email?.trim() ||
+      "";
+
+    if (isSeedPremiumEmail(existingEmail) && existingData.isPremium !== true) {
+      await ensureSeedPremiumAccess({ userId: uid, email: existingEmail });
+
+      return {
+        ...existingData,
+        email: existingEmail,
+        isPremium: true,
+        premiumSource: existingData.premiumSource || "seed-email",
+        id: userSnap.id,
+      } as User;
+    }
+
     return {
-      ...(userSnap.data() || {}),
+      ...existingData,
       id: userSnap.id,
     } as User;
   }
 
   const fallbackName = name?.trim() || email?.split("@")[0] || "User";
   const fallbackEmail = email?.trim() || "";
+  const seedPremium = isSeedPremiumEmail(fallbackEmail);
 
   await userRef.set(
     {
@@ -31,6 +54,13 @@ const ensureUserProfile = async (params: {
       email: fallbackEmail,
       createdAt: new Date().toISOString(),
       source: "auto-created-on-signin",
+      ...(seedPremium
+        ? {
+            isPremium: true,
+            premiumSource: "seed-email",
+            premiumGrantedAt: new Date().toISOString(),
+          }
+        : {}),
     },
     { merge: true }
   );
