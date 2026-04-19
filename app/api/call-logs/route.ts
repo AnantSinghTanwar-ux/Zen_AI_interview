@@ -165,14 +165,19 @@ async function createExternalApplicationFromJobContext(
     else if (lowerTitle.includes("qa") || lowerTitle.includes("test") || lowerTitle.includes("quality")) roleCategory = "qa";
     else if (lowerTitle.includes("manager") || lowerTitle.includes("lead") || lowerTitle.includes("director")) roleCategory = "management";
 
-    // Check if an application already exists for this user + role + company
-    const existing = await db
+    // Check if an application already exists for this user + role + company.
+    // Prefer candidateEmail when available; fallback to candidateUserId otherwise.
+    const normalizedEmail = (userEmail || "").toLowerCase();
+    let existingQuery: FirebaseFirestore.Query = db
       .collection("external_applications")
-      .where("candidateEmail", "==", (userEmail || "").toLowerCase())
       .where("roleTitle", "==", title)
-      .where("companyName", "==", company || "Unknown")
-      .limit(1)
-      .get();
+      .where("companyName", "==", company || "Unknown");
+
+    existingQuery = normalizedEmail
+      ? existingQuery.where("candidateEmail", "==", normalizedEmail)
+      : existingQuery.where("candidateUserId", "==", userId);
+
+    const existing = await existingQuery.limit(1).get();
 
     if (!existing.empty) {
       const docId = existing.docs[0].id;
@@ -289,9 +294,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const getUserIdentityForExternalApp = async () => {
+      let userName = "";
+      let userEmail = "";
+      try {
+        const userDoc = await db.collection("users").doc(user.id).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          userName = userData?.name || "";
+          userEmail = userData?.email || "";
+        }
+      } catch (e) {
+        console.warn("Could not fetch user data for external_application:", e);
+      }
+      return { userName, userEmail };
+    };
+
+    const ensureRecruiterPipelineForJobContext = async (callIdForPipeline: string) => {
+      if (!jobContext) {
+        return;
+      }
+
+      const { userName, userEmail } = await getUserIdentityForExternalApp();
+      const applicationId = await createExternalApplicationFromJobContext(
+        jobContext,
+        user.id,
+        callIdForPipeline,
+        userName,
+        userEmail
+      );
+
+      if (applicationId) {
+        enqueueRecruiterScoreJob({
+          applicationId,
+          interviewId: callIdForPipeline,
+        }).catch((err) => {
+          console.error("[AutoScoreQueue] Failed to enqueue recruiter score job:", err);
+        });
+      }
+    };
+
     // Check if call log already exists
     const existingLog = await callLogService.getCallLogByVapiId(vapiCallId);
     if (existingLog) {
+      await ensureRecruiterPipelineForJobContext(vapiCallId);
+
       const payload = {
         message: "Call log already exists",
         id: existingLog.id,
@@ -382,38 +429,7 @@ export async function POST(request: NextRequest) {
 
     // If job context was provided (from extension), auto-create an external_application
     // and enqueue recruiter score generation asynchronously.
-    if (jobContext) {
-      let userName = "";
-      let userEmail = "";
-      try {
-        const userDoc = await db.collection("users").doc(user.id).get();
-        if (userDoc.exists) {
-          const userData = userDoc.data();
-          userName = userData?.name || "";
-          userEmail = userData?.email || "";
-        }
-      } catch (e) {
-        console.warn("Could not fetch user data for external_application:", e);
-      }
-
-      const applicationId = await createExternalApplicationFromJobContext(
-        jobContext,
-        user.id,
-        vapiCallId,
-        userName,
-        userEmail
-      );
-
-      // Queue score generation in the background (don't block the response)
-      if (applicationId) {
-        enqueueRecruiterScoreJob({
-          applicationId,
-          interviewId: vapiCallId,
-        }).catch((err) => {
-          console.error("[AutoScoreQueue] Failed to enqueue recruiter score job:", err);
-        });
-      }
-    }
+    await ensureRecruiterPipelineForJobContext(vapiCallId);
 
     const payload = {
       success: true,

@@ -9,13 +9,31 @@ const safeDecodeJobContext = (value: string | undefined) => {
     return "";
   }
 
+  const candidates: string[] = [value];
+
   try {
-    const parsed = JSON.parse(decodeURIComponent(value));
-    return JSON.stringify(parsed);
-  } catch (error) {
-    console.warn("Invalid job context in interview query", error);
-    return "";
+    candidates.push(decodeURIComponent(value));
+  } catch {
+    // Ignore decode errors; raw value may already be decoded.
   }
+
+  try {
+    candidates.push(decodeURIComponent(value.replace(/\+/g, "%20")));
+  } catch {
+    // Ignore decode errors; keep trying other candidates.
+  }
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      return JSON.stringify(parsed);
+    } catch {
+      // Try next candidate representation.
+    }
+  }
+
+  console.warn("Invalid job context in interview query");
+  return "";
 };
 
 async function InterviewPage({
