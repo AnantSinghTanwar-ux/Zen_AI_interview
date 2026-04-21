@@ -24,6 +24,7 @@ function getClientAuthHint(): AuthState {
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [authState, setAuthState] = useState<AuthState>('unknown');
+  const [isRecruiter, setIsRecruiter] = useState(false);
 
   const isAuthenticated = authState === 'authenticated';
   const isAuthLoading = authState === 'unknown';
@@ -41,6 +42,7 @@ const Navbar = () => {
 
         const nextState: AuthState = result.isAuthenticated ? 'authenticated' : 'guest';
         setAuthState(nextState);
+        setIsRecruiter(Boolean(result.isRecruiter));
 
         if (typeof window !== 'undefined') {
           window.sessionStorage.setItem('zenai-auth-state', nextState);
@@ -49,6 +51,7 @@ const Navbar = () => {
         console.error("Auth check failed:", error);
         if (!isMounted) return;
         setAuthState('guest');
+        setIsRecruiter(false);
 
         if (typeof window !== 'undefined') {
           window.sessionStorage.setItem('zenai-auth-state', 'guest');
@@ -81,7 +84,9 @@ const Navbar = () => {
             <Link href="/interview" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Practice</Link>
             <Link href="/feedback" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Feedback</Link>
             <Link href="/call-data" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Interviews</Link>
-            <Link href="/recruiter" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Recruiter</Link>
+            {isAuthenticated && isRecruiter && (
+              <Link href="/recruiter" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Recruiter</Link>
+            )}
             {isAuthLoading ? (
               <div className="h-10 w-28 rounded-full border border-white/10 bg-white/5 animate-pulse" />
             ) : isAuthenticated ? (
@@ -137,13 +142,15 @@ const Navbar = () => {
               >
                 Interviews
               </Link>
-              <Link 
-                href="/recruiter" 
-                className="text-foreground/90 font-medium text-lg w-full text-center py-3 hover:bg-white/5 rounded-2xl transition-all"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Recruiter
-              </Link>
+              {isAuthenticated && isRecruiter && (
+                <Link 
+                  href="/recruiter" 
+                  className="text-foreground/90 font-medium text-lg w-full text-center py-3 hover:bg-white/5 rounded-2xl transition-all"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Recruiter
+                </Link>
+              )}
               <div className="flex justify-center pt-4 mt-2 border-t border-white/10">
                 {isAuthLoading ? (
                   <div className="h-12 w-full rounded-full border border-white/10 bg-white/5 animate-pulse" />
