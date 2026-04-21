@@ -56,7 +56,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (!access.allowed) {
-      return NextResponse.json(getPremiumRequiredErrorPayload(), { status: 402 });
+      return NextResponse.json({
+        allowed: false,
+        ...getPremiumRequiredErrorPayload(),
+        usageKey: resolvedUsageKey,
+        isPremium: access.isPremium,
+        reason: access.reason,
+        trialConsumed: access.trialConsumed,
+      });
     }
 
     const resolvedQuotaKind = resolveQuotaKind(feature, quotaKind);
@@ -72,14 +79,22 @@ export async function POST(request: NextRequest) {
       });
 
       if (!quota.allowed) {
-        return NextResponse.json(
-          getPremiumDailyLimitErrorPayload({
+        return NextResponse.json({
+          allowed: false,
+          usageKey: resolvedUsageKey,
+          ...getPremiumDailyLimitErrorPayload({
             kind: quota.kind,
             limit: quota.limit,
             date: quota.date,
           }),
-          { status: 429 }
-        );
+          dailyLimit: {
+            kind: quota.kind,
+            limit: quota.limit,
+            used: quota.used,
+            remaining: quota.remaining,
+            date: quota.date,
+          },
+        });
       }
     }
 

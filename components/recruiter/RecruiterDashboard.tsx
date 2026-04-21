@@ -15,35 +15,37 @@ import type { ExternalApplication, ApplicationScore, LeaderboardEntry } from "@/
  * from available application data. Clearly marked as fallback in the UI.
  */
 function computeFallbackScore(app: ExternalApplication): ApplicationScore {
+  const clamp = (value: number) => Math.max(5, Math.min(95, Math.round(value)));
   let overall = 0;
   let recommendation: ApplicationScore["recommendation"] = "maybe";
 
   // Base score from interview completion status
   if (app.interviewStatus === "completed") {
-    overall = 62; // completed interviews start at 62
+    overall = 38;
   } else if (app.interviewStatus === "in_progress") {
-    overall = 40;
+    overall = 24;
   } else if (app.interviewStatus === "invited") {
-    overall = 25;
+    overall = 14;
   } else {
-    overall = 15; // pending
+    overall = 8;
   }
 
   // Boost for shortlisted status (recruiter signal)
   if (app.status === "shortlisted") {
-    overall = Math.max(overall, 72);
-    recommendation = "hire";
+    overall = Math.max(overall, 55);
+    recommendation = "maybe";
   } else if (app.status === "rejected") {
-    overall = Math.min(overall, 35);
+    overall = Math.min(overall, 22);
     recommendation = "no_hire";
   }
 
   // Add some variance based on application metadata
   const nameHash = app.candidateName.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-  const variance = (nameHash % 15) - 7; // -7 to +7 variance
-  overall = Math.max(10, Math.min(95, overall + variance));
+  const variance = (nameHash % 12) - 6; // -6 to +5 variance
+  overall = clamp(overall + variance);
 
-  if (overall >= 75) recommendation = "hire";
+  if (app.status === "rejected") recommendation = "no_hire";
+  else if (overall >= 82) recommendation = "hire";
   else if (overall >= 60) recommendation = "maybe";
   else recommendation = "no_hire";
 
@@ -52,9 +54,9 @@ function computeFallbackScore(app: ExternalApplication): ApplicationScore {
     applicationId: app.id,
     interviewId: app.interviewId || "",
     overallScore: overall,
-    technicalScore: Math.max(10, overall + ((nameHash % 10) - 5)),
-    communicationScore: Math.max(10, overall + ((nameHash % 8) - 4)),
-    problemSolvingScore: Math.max(10, overall + ((nameHash % 12) - 6)),
+    technicalScore: clamp(overall + ((nameHash % 8) - 5)),
+    communicationScore: clamp(overall + ((nameHash % 6) - 4)),
+    problemSolvingScore: clamp(overall + ((nameHash % 10) - 6)),
     recommendation,
     strengths: [],
     weaknesses: [],
@@ -249,36 +251,70 @@ export default function RecruiterDashboard() {
     });
   }, [applications, searchQuery]);
 
-  // Build client-side leaderboard from applications when backend leaderboard is empty
+  // Merge backend leaderboard with scored applications missing from backend leaderboard
   const effectiveLeaderboard = useMemo((): LeaderboardEntry[] => {
-    if (leaderboard.length > 0) return leaderboard;
+    const merged = new Map<string, LeaderboardEntry>();
 
-    // Fallback: build leaderboard from applications with scores (real or fallback)
-    const scored = applications
+    leaderboard.forEach((entry) => {
+      merged.set(entry.applicationId, { ...entry });
+    });
+
+    applications.forEach((app) => {
+      if (merged.has(app.id)) {
+        return;
+      }
+
+      const shouldCreateFallbackScore =
+        app.interviewStatus === "completed" ||
+        app.interviewStatus === "in_progress" ||
+        app.status === "shortlisted";
+      const score = app.score || (shouldCreateFallbackScore ? computeFallbackScore(app) : null);
+
+      if (!score) {
+        return;
+      }
+
+      merged.set(app.id, {
+        rank: 0,
+        applicationId: app.id,
+        candidateName: app.candidateName,
+        candidateEmail: app.candidateEmail,
+        roleTitle: app.roleTitle,
+        companyName: app.companyName,
+        sourcePlatform: app.sourcePlatform,
+        overallScore: score.overallScore,
+        technicalScore: score.technicalScore,
+        communicationScore: score.communicationScore,
+        problemSolvingScore: score.problemSolvingScore,
+        recommendation: score.recommendation,
+      });
+    });
+
+    const scored = Array.from(merged.values())
       .map((app) => {
-        const score = app.score || (app.interviewStatus === "completed" || app.status === "shortlisted" ? computeFallbackScore(app) : null);
-        if (!score) return null;
         return {
-          rank: 0,
-          applicationId: app.id,
-          candidateName: app.candidateName,
-          candidateEmail: app.candidateEmail,
-          roleTitle: app.roleTitle,
-          companyName: app.companyName,
-          sourcePlatform: app.sourcePlatform,
-          overallScore: score.overallScore,
-          technicalScore: score.technicalScore,
-          communicationScore: score.communicationScore,
-          problemSolvingScore: score.problemSolvingScore,
-          recommendation: score.recommendation,
+          ...app,
+          overallScore: Number(app.overallScore || 0),
         } as LeaderboardEntry;
       })
-      .filter(Boolean) as LeaderboardEntry[];
+      .filter((entry) => Number.isFinite(entry.overallScore));
 
     scored.sort((a, b) => b.overallScore - a.overallScore);
     scored.forEach((entry, idx) => { entry.rank = idx + 1; });
     return scored;
   }, [leaderboard, applications]);
+
+  const overviewTopCandidates = useMemo((): LeaderboardEntry[] => {
+    const statsCandidates = Array.isArray(stats?.topCandidates)
+      ? (stats.topCandidates as LeaderboardEntry[])
+      : [];
+
+    if (statsCandidates.length > 0) {
+      return statsCandidates.slice(0, 5);
+    }
+
+    return effectiveLeaderboard.slice(0, 5);
+  }, [stats, effectiveLeaderboard]);
 
   const scoreColor = (s: number) => s >= 80 ? "text-emerald-400" : s >= 60 ? "text-yellow-400" : "text-red-400";
 
@@ -386,14 +422,14 @@ export default function RecruiterDashboard() {
           </div>
 
           {/* Top candidates */}
-          {stats.topCandidates?.length > 0 && (
+          {overviewTopCandidates.length > 0 && (
             <div className="rounded-xl border border-white/10 bg-card/60 backdrop-blur-sm p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Trophy className="w-4 h-4 text-primary" />
                 <h3 className="text-sm font-semibold text-foreground">Top Candidates</h3>
               </div>
               <div className="space-y-2">
-                {stats.topCandidates.map((c: LeaderboardEntry, i: number) => (
+                {overviewTopCandidates.map((c: LeaderboardEntry, i: number) => (
                   <div key={c.applicationId} className="flex items-center gap-3 p-2 rounded-lg bg-white/[0.02]">
                     <span className="text-lg font-bold text-primary w-6 text-center">#{i + 1}</span>
                     <div className="flex-1 min-w-0">

@@ -33,13 +33,16 @@ const SKIP_JOB_INJECTION_HOSTS = new Set([
 
 const SELECTORS = {
   title: [
-    "h1[class*='job']",
-    "h1[class*='title']",
-    "h1[data-test*='job']",
-    "h1",
+    ".job-details-jobs-unified-top-card__job-title",
+    ".jobs-unified-top-card__job-title",
     "[data-testid*='job-title']",
     ".top-card-layout__title",
-    ".job-details-jobs-unified-top-card__job-title"
+    "h1[data-test*='job']",
+    "h1[class*='job-title']",
+    "h1[class*='job']",
+    "h1[class*='title']",
+    "main h1",
+    "h1"
   ],
   company: [
     // LinkedIn (most reliable, ordered by specificity)
@@ -331,6 +334,70 @@ const cleanCompanyName = (value) => {
   return sanitizeText(v, 120);
 };
 
+const GENERIC_LINKEDIN_TITLE_REGEX = /^(?:\(\d+\)\s*)?(?:top\s+jobs?(?:\s+picks)?\s+for\s+you|jobs?\s+for\s+you|recommended\s+jobs?|job\s+recommendations?|search\s+results?)$/i;
+
+const cleanJobTitle = (value) => {
+  let v = sanitizeText(String(value || ""), 220);
+  if (!v) {
+    return "";
+  }
+
+  v = v.replace(/^\(\d+\)\s*/, "").trim();
+  v = v.replace(/\s*[|]\s*linkedin.*$/i, "").trim();
+  v = v.replace(/\s*-\s*linkedin.*$/i, "").trim();
+
+  if (!v || v.length < 2 || GENERIC_LINKEDIN_TITLE_REGEX.test(v)) {
+    return "";
+  }
+
+  return sanitizeText(v, 160);
+};
+
+const extractLinkedInActiveJobTitle = () => {
+  const selectors = [
+    ".job-details-jobs-unified-top-card__job-title",
+    ".jobs-unified-top-card__job-title",
+    ".jobs-details-top-card__job-title",
+    "main .job-details-jobs-unified-top-card__job-title",
+    "main .jobs-unified-top-card__job-title",
+    "main h1"
+  ];
+
+  for (const selector of selectors) {
+    const el = document.querySelector(selector);
+    const title = cleanJobTitle(el?.textContent || "");
+    if (title) {
+      return title;
+    }
+  }
+
+  const ogTitle = document
+    .querySelector("meta[property='og:title']")
+    ?.getAttribute("content");
+  return cleanJobTitle(ogTitle || "");
+};
+
+const extractLinkedInTopCardCompany = () => {
+  const selectors = [
+    ".job-details-jobs-unified-top-card__company-name a",
+    ".job-details-jobs-unified-top-card__company-name",
+    ".jobs-unified-top-card__company-name a",
+    ".jobs-unified-top-card__company-name",
+    ".job-details-jobs-unified-top-card__primary-description-container a[href*='/company/']",
+    ".jobs-unified-top-card__primary-description-container a[href*='/company/']"
+  ];
+
+  for (const selector of selectors) {
+    const el = document.querySelector(selector);
+    const company = cleanCompanyName(el?.textContent || "");
+    if (company) {
+      return company;
+    }
+  }
+
+  return "";
+};
+
 const normalizeRequirementLine = (line) =>
   sanitizeText(line, 260)
     .replace(/^[-•\d.)\s]+/, "")
@@ -341,14 +408,17 @@ const extractJobDetails = () => {
   const fromJsonLd = extractJsonLdJobPosting();
 
   const title =
-    fromJsonLd?.title ||
-    extractFromSelectors(SELECTORS.title, { minLength: 2, maxLen: 400 }) ||
-    sanitizeText(document.title.replace(/\s*\|.*$/, ""), 300);
+    cleanJobTitle(fromJsonLd?.title || "") ||
+    extractLinkedInActiveJobTitle() ||
+    cleanJobTitle(extractFromSelectors(SELECTORS.title, { minLength: 2, maxLen: 400 })) ||
+    cleanJobTitle(sanitizeText(document.title.replace(/\s*\|.*$/, ""), 300)) ||
+    "Unknown Role";
 
   const extractedCompany =
-    fromJsonLd?.company ||
+    cleanCompanyName(fromJsonLd?.company || "") ||
+    extractLinkedInTopCardCompany() ||
     extractLinkedInCompanyFromAboutPanel() ||
-    extractFromSelectors(SELECTORS.company, { minLength: 2, maxLen: 300 }) ||
+    cleanCompanyName(extractFromSelectors(SELECTORS.company, { minLength: 2, maxLen: 300 })) ||
     "";
 
   const rawDescription =
@@ -359,8 +429,9 @@ const extractJobDetails = () => {
   const description = cleanJobDescription(rawDescription);
   const company =
     cleanCompanyName(extractedCompany) ||
+    extractLinkedInTopCardCompany() ||
     extractLinkedInCompanyFromAboutPanel() ||
-    parseCompanyFromText(rawDescription) ||
+    cleanCompanyName(parseCompanyFromText(rawDescription)) ||
     "Unknown";
 
   const skills = extractSkills(description);
@@ -375,6 +446,36 @@ const extractJobDetails = () => {
     requirements,
     skills
   };
+};
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const shouldRetryLinkedInExtraction = (job) => {
+  if (!window.location.hostname.toLowerCase().includes("linkedin.com")) {
+    return false;
+  }
+
+  const titleMissingOrGeneric =
+    !job.title || job.title === "Unknown Role" || GENERIC_LINKEDIN_TITLE_REGEX.test(job.title.trim());
+  const companyMissing = !job.company || job.company === "Unknown";
+
+  return titleMissingOrGeneric || companyMissing;
+};
+
+const extractJobDetailsWithRetry = async () => {
+  const maxAttempts = window.location.hostname.toLowerCase().includes("linkedin.com") ? 4 : 1;
+  let job = extractJobDetails();
+
+  for (let attempt = 1; attempt < maxAttempts; attempt += 1) {
+    if (!shouldRetryLinkedInExtraction(job)) {
+      return job;
+    }
+
+    await wait(250 * attempt);
+    job = extractJobDetails();
+  }
+
+  return job;
 };
 
 const extractRequirements = (descriptionText) => {
@@ -471,13 +572,13 @@ const isLikelyJobPage = () => {
   return score >= 2;
 };
 
-const sendJobForAnalysis = () => {
+const sendJobForAnalysis = async () => {
   if (!extensionEnabled) {
     log("Extension disabled, skipping analysis message");
     return;
   }
 
-  const job = extractJobDetails();
+  const job = await extractJobDetailsWithRetry();
   const payload = {
     sourceUrl: window.location.href,
     extractedAt: new Date().toISOString(),
@@ -570,7 +671,7 @@ const createButton = () => {
   button.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
-    sendJobForAnalysis();
+    void sendJobForAnalysis();
   });
 
   return button;

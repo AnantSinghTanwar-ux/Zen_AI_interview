@@ -109,9 +109,17 @@ MANDATORY RULES:
 1) Evidence-only scoring: use only explicit transcript evidence.
 2) Resume references are not technical proof.
 3) Be harsh and realistic; do not inflate scores.
-4) If technical depth is absent, technicalScore MUST be <= 35.
-5) If no concrete problem-solving walkthrough exists, problemSolvingScore MUST be <= 35.
-6) CommunicationScore should be penalized for vague/short/deflecting responses.
+4) If technical depth is absent, technicalScore MUST be <= 25.
+5) If no concrete problem-solving walkthrough exists, problemSolvingScore MUST be <= 25.
+6) CommunicationScore should be penalized for vague/short/deflecting responses and should rarely exceed 42 in those cases.
+7) Do not use hire/strong_hire unless transcript contains multiple concrete, correct, role-relevant examples.
+8) Default baseline is low: average interviews usually score in 20-55 unless evidence clearly proves otherwise.
+
+RECOMMENDATION BANDS:
+- strong_hire: 90-100 (exceptional, rare)
+- hire: 78-89 (consistently strong, clear depth)
+- maybe: 58-77 (mixed evidence / partial readiness)
+- no_hire: 0-57 (insufficient depth)
 
 Transcript:
 ${transcript}
@@ -128,7 +136,7 @@ Respond in ONLY valid JSON with this exact structure:
   "feedbackSummary": "<2-3 sentence overall assessment>"
 }
 
-Use real-world hiring standards. Return ONLY JSON.
+Use real-world hiring standards in a competitive market. Return ONLY JSON.
 `;
 }
 

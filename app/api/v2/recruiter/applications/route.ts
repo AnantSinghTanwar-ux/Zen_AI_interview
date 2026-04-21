@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { recruiterGuard } from "@/app/api/v2/recruiter/_guard";
 import { getApplications, getDistinctValues } from "@/services/recruiter/external-application.service";
-import { getScoreByApplication } from "@/services/recruiter/application-score.service";
+import {
+  getScoreByApplication,
+  normalizeRecruiterScoreForDisplay,
+} from "@/services/recruiter/application-score.service";
 import { checkRateLimit } from "@/lib/services/rate-limit.service";
 
 export async function GET(request: NextRequest) {
@@ -36,7 +39,10 @@ export async function GET(request: NextRequest) {
       applications.map(async (app) => {
         if (app.scoreStatus === "available") {
           const score = await getScoreByApplication(app.id);
-          return { ...app, score };
+          return {
+            ...app,
+            score: score ? normalizeRecruiterScoreForDisplay(score) : null,
+          };
         }
         return { ...app, score: null };
       })

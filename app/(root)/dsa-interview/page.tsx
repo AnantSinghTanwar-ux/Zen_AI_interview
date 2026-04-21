@@ -225,10 +225,18 @@ export default function DSAInterviewPage() {
         }),
       });
 
-      if (premiumCheck.status === 402 || premiumCheck.status === 429) {
-        const payload = await premiumCheck.json().catch(() => ({}));
+      const premiumPayload = await premiumCheck.json().catch(() => ({}));
+
+      const requiresPremiumUpgrade =
+        premiumCheck.status === 402 ||
+        premiumCheck.status === 429 ||
+        premiumPayload?.allowed === false ||
+        premiumPayload?.code === "PREMIUM_REQUIRED" ||
+        premiumPayload?.code === "PREMIUM_DAILY_LIMIT_REACHED";
+
+      if (requiresPremiumUpgrade) {
         setPremiumMessage(
-          payload?.message ||
+          premiumPayload?.message ||
             "Premium is required to continue using this Vapi AI feature."
         );
         setShowPremiumPopup(true);

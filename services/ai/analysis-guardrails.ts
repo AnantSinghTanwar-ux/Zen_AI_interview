@@ -220,21 +220,27 @@ export function applyHarshFeedbackGuardrails<T extends HarshFeedbackScoreShape>(
   let adjustedOverall = overallScore;
 
   if (!evidence.hasTechnicalDepth) {
-    adjustedTechnical = Math.min(adjustedTechnical, 35);
+    adjustedTechnical = Math.min(adjustedTechnical, 25);
   }
 
   if (!evidence.hasProblemSolvingDepth) {
-    adjustedProblem = Math.min(adjustedProblem, 35);
+    adjustedProblem = Math.min(adjustedProblem, 25);
   }
 
-  if (evidence.avgCandidateWords < 12 || evidence.candidateTurns < 3) {
-    adjustedCommunication = Math.min(adjustedCommunication, 55);
-    adjustedConfidence = Math.min(adjustedConfidence, 55);
+  if (evidence.avgCandidateWords < 18 || evidence.candidateTurns < 4) {
+    adjustedCommunication = Math.min(adjustedCommunication, 42);
+    adjustedConfidence = Math.min(adjustedConfidence, 42);
   }
 
   if (evidence.hasResumeDeflection && !evidence.hasTechnicalDepth) {
-    adjustedOverall = Math.min(adjustedOverall, 55);
-    adjustedConfidence = Math.min(adjustedConfidence, 50);
+    adjustedOverall = Math.min(adjustedOverall, 40);
+    adjustedConfidence = Math.min(adjustedConfidence, 35);
+  }
+
+  if (!evidence.hasTechnicalDepth && !evidence.hasProblemSolvingDepth) {
+    adjustedOverall = Math.min(adjustedOverall, 32);
+  } else if (!evidence.hasTechnicalDepth || !evidence.hasProblemSolvingDepth) {
+    adjustedOverall = Math.min(adjustedOverall, 45);
   }
 
   const componentAverage = Math.round(
@@ -266,19 +272,25 @@ export function applyRecruiterScoreGuardrails<T extends RecruiterScoreShape>(
   let overallScore = clampScoreOptional(input.overallScore, 0, 100, 0);
 
   if (!evidence.hasTechnicalDepth) {
-    technicalScore = Math.min(technicalScore, 35);
+    technicalScore = Math.min(technicalScore, 25);
   }
 
   if (!evidence.hasProblemSolvingDepth) {
-    problemSolvingScore = Math.min(problemSolvingScore, 35);
+    problemSolvingScore = Math.min(problemSolvingScore, 25);
   }
 
-  if (evidence.avgCandidateWords < 12 || evidence.candidateTurns < 3) {
-    communicationScore = Math.min(communicationScore, 55);
+  if (evidence.avgCandidateWords < 18 || evidence.candidateTurns < 4) {
+    communicationScore = Math.min(communicationScore, 42);
   }
 
   if (evidence.hasResumeDeflection && !evidence.hasTechnicalDepth) {
-    overallScore = Math.min(overallScore, 55);
+    overallScore = Math.min(overallScore, 40);
+  }
+
+  if (!evidence.hasTechnicalDepth && !evidence.hasProblemSolvingDepth) {
+    overallScore = Math.min(overallScore, 30);
+  } else if (!evidence.hasTechnicalDepth || !evidence.hasProblemSolvingDepth) {
+    overallScore = Math.min(overallScore, 45);
   }
 
   const componentAverage = Math.round(
@@ -289,9 +301,9 @@ export function applyRecruiterScoreGuardrails<T extends RecruiterScoreShape>(
   const normalizedOverall = clampScore(overallScore, 0, 100);
 
   let recommendation = String(input.recommendation || "").toLowerCase().trim();
-  if (normalizedOverall >= 85) recommendation = "strong_hire";
-  else if (normalizedOverall >= 70) recommendation = "hire";
-  else if (normalizedOverall >= 45) recommendation = "maybe";
+  if (normalizedOverall >= 90) recommendation = "strong_hire";
+  else if (normalizedOverall >= 78) recommendation = "hire";
+  else if (normalizedOverall >= 58) recommendation = "maybe";
   else recommendation = "no_hire";
 
   return {
@@ -305,9 +317,9 @@ export function applyRecruiterScoreGuardrails<T extends RecruiterScoreShape>(
 }
 
 function recommendationFromOverall(overall: number): string {
-  if (overall >= 8.8) return "Strong Hire";
-  if (overall >= 7.2) return "Hire";
-  if (overall >= 4.5) return "No Hire";
+  if (overall >= 9.2) return "Strong Hire";
+  if (overall >= 8.0) return "Hire";
+  if (overall >= 5.8) return "No Hire";
   return "Strong No Hire";
 }
 
@@ -335,28 +347,28 @@ export function applyStructuredEvaluationGuardrails<T extends StructuredEvaluati
   let adjustedConfidence = clampScoreOptional(input.confidenceLevel, 1, 10, 5);
 
   if (!evidence.hasTechnicalDepth) {
-    adjustedTechnical = Math.min(adjustedTechnical, 4);
+    adjustedTechnical = Math.min(adjustedTechnical, 3);
   }
 
   if (!evidence.hasProblemSolvingDepth) {
-    adjustedProblem = Math.min(adjustedProblem, 4);
+    adjustedProblem = Math.min(adjustedProblem, 3);
   }
 
   if (!evidence.hasCodeDepth) {
-    adjustedCodeQuality = Math.min(adjustedCodeQuality, 4);
+    adjustedCodeQuality = Math.min(adjustedCodeQuality, 3);
   }
 
   if (!evidence.hasSystemDesignDepth) {
-    adjustedSystemDesign = Math.min(adjustedSystemDesign, 4);
+    adjustedSystemDesign = Math.min(adjustedSystemDesign, 3);
   }
 
-  if (evidence.avgCandidateWords < 12 || evidence.candidateTurns < 3) {
-    adjustedCommunication = Math.min(adjustedCommunication, 5);
-    adjustedConfidence = Math.min(adjustedConfidence, 5);
+  if (evidence.avgCandidateWords < 18 || evidence.candidateTurns < 4) {
+    adjustedCommunication = Math.min(adjustedCommunication, 4);
+    adjustedConfidence = Math.min(adjustedConfidence, 4);
   }
 
   if (evidence.hasResumeDeflection && !evidence.hasTechnicalDepth) {
-    adjustedConfidence = Math.min(adjustedConfidence, 4);
+    adjustedConfidence = Math.min(adjustedConfidence, 3.5);
   }
 
   const averageScore =
@@ -374,11 +386,18 @@ export function applyStructuredEvaluationGuardrails<T extends StructuredEvaluati
     Math.round(averageScore * 10) / 10
   );
 
+  let constrainedOverall = adjustedOverall;
+  if (!evidence.hasTechnicalDepth && !evidence.hasProblemSolvingDepth) {
+    constrainedOverall = Math.min(constrainedOverall, 4.8);
+  } else if (!evidence.hasTechnicalDepth || !evidence.hasProblemSolvingDepth) {
+    constrainedOverall = Math.min(constrainedOverall, 6.0);
+  }
+
   return {
     ...input,
-    overallRating: clampScore(adjustedOverall, 1, 10),
+    overallRating: clampScore(constrainedOverall, 1, 10),
     confidenceLevel: clampScore(adjustedConfidence, 1, 10),
-    recommendation: recommendationFromOverall(adjustedOverall),
+    recommendation: recommendationFromOverall(constrainedOverall),
     aspects: {
       ...aspects,
       technicalKnowledge: {

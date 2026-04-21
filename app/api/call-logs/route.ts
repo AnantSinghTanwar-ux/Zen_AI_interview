@@ -116,6 +116,10 @@ async function createExternalApplicationFromJobContext(
       let v = cleanEntity(value, 220);
       if (!v) return "";
 
+      v = v.replace(/^\(\d+\)\s*/, "").trim();
+      v = v.replace(/\s*[|]\s*linkedin.*$/i, "").trim();
+      v = v.replace(/\s*-\s*linkedin.*$/i, "").trim();
+
       const lower = v.toLowerCase();
       const cutMarkers = [" apply now", " easy apply", " resume", " your current resume", " see application"];
       for (const marker of cutMarkers) {
@@ -126,17 +130,60 @@ async function createExternalApplicationFromJobContext(
         }
       }
 
+      if (
+        /^(?:top\s+jobs?(?:\s+picks)?\s+for\s+you|jobs?\s+for\s+you|recommended\s+jobs?|search\s+results?)$/i.test(v)
+      ) {
+        return "";
+      }
+
       return cleanEntity(v, 160);
     };
 
+    const extractRoleTitleFromDescription = (value: string) => {
+      const text = cleanEntity(value, 6000);
+      if (!text) return "";
+
+      const roleMatch = text.match(/(?:role|position|job title)\s*[:\-]\s*([^\n,.]{3,120})/i);
+      if (roleMatch?.[1]) {
+        return cleanRoleTitle(roleMatch[1]);
+      }
+
+      const firstLine = text
+        .split(/\n|\./)
+        .map((line) => cleanEntity(line, 160))
+        .find((line) => line.length >= 4 && line.length <= 90);
+
+      return cleanRoleTitle(firstLine || "");
+    };
+
+    const extractCompanyFromDescription = (value: string) => {
+      const text = cleanEntity(value, 6000);
+      if (!text) return "";
+
+      const aboutMatch = text.match(/\babout\s+([A-Z][A-Za-z0-9&.,\-\s]{2,80})/);
+      if (aboutMatch?.[1]) {
+        return cleanCompanyName(aboutMatch[1]);
+      }
+
+      const atMatch = text.match(/\b(?:at|for)\s+([A-Z][A-Za-z0-9&.,\-\s]{2,80})/);
+      if (atMatch?.[1]) {
+        return cleanCompanyName(atMatch[1]);
+      }
+
+      return "";
+    };
+
     const titleRaw = cleanEntity(job.title || "", 220);
-    const title = cleanRoleTitle(titleRaw) || titleRaw;
+    const title =
+      cleanRoleTitle(titleRaw) ||
+      cleanRoleTitle(cleanEntity(job.roleTitle || job.position || "", 220)) ||
+      extractRoleTitleFromDescription(cleanEntity(job.description || "", 6000));
 
     const companyCandidate = cleanEntity(
       job.companyName || job.company?.name || job.company || job.organization || job.employer || "",
       200
     );
-    const company = cleanCompanyName(companyCandidate);
+    const company = cleanCompanyName(companyCandidate) || extractCompanyFromDescription(cleanEntity(job.description || "", 6000));
     const sourceUrl = cleanEntity(jobContext.sourceUrl || "", 600);
 
     if (!title && !company) {

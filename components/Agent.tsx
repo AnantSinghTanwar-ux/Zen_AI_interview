@@ -2,7 +2,7 @@
   "use client";
 
   import Image from "next/image";
-  import React, { useEffect, useState, useRef } from "react";
+  import React, { useEffect, useMemo, useRef, useState } from "react";
   import { cn } from "@/lib/utils";
   import { AgentProps } from "@/types";
   import { useRouter } from "next/navigation";
@@ -52,6 +52,57 @@
   }
 
   const ASSISTANT = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID;
+
+  const CODING_ROLE_HINTS = [
+    "software",
+    "developer",
+    "engineer",
+    "backend",
+    "frontend",
+    "fullstack",
+    "full-stack",
+    "web developer",
+    "sde",
+    "programming",
+    "coding",
+  ];
+
+  const NON_CODING_ROLE_HINTS = [
+    "graphic",
+    "visual",
+    "designer",
+    "marketing",
+    "sales",
+    "hr",
+    "recruiter",
+    "content",
+    "copywriter",
+    "operations",
+  ];
+
+  function toContextText(value: unknown): string {
+    if (typeof value === "string") return value;
+    if (Array.isArray(value)) return value.map((item) => toContextText(item)).join(" ");
+    if (value && typeof value === "object") return Object.values(value).map((item) => toContextText(item)).join(" ");
+    return "";
+  }
+
+  function extractRoleContextText(rawJson?: string): string {
+    if (!rawJson) return "";
+    try {
+      const parsed = JSON.parse(rawJson) as Record<string, unknown>;
+      const combined = [
+        toContextText(parsed),
+        toContextText(parsed.job),
+        toContextText(parsed.profile),
+      ]
+        .filter(Boolean)
+        .join(" ");
+      return combined.slice(0, 3000);
+    } catch {
+      return String(rawJson || "").slice(0, 3000);
+    }
+  }
 
   function Agent({
     userName,
@@ -119,6 +170,43 @@
       setShowPremiumPopup(true);
     };
 
+    const isNonFatalVapiAudioError = (
+      errorLike: unknown,
+      message: string
+    ) => {
+      const normalizedMessage = message.toLowerCase();
+
+      if (
+        normalizedMessage.includes("wasm_or_worker_not_ready") ||
+        normalizedMessage.includes("audio-processor-error") ||
+        normalizedMessage.includes("didiniterror") ||
+        normalizedMessage.includes("krisp")
+      ) {
+        return true;
+      }
+
+      if (!errorLike || typeof errorLike !== "object") {
+        return false;
+      }
+
+      const eventLike = errorLike as {
+        type?: string;
+        stage?: string;
+        error?: { message?: string };
+      };
+
+      return (
+        eventLike.type === "audio-processor-error" ||
+        eventLike.type === "audio-processing-setup-error" ||
+        eventLike.type === "audio-observer-setup-error" ||
+        eventLike.stage === "audio-processing-setup" ||
+        eventLike.stage === "audio-observer-setup" ||
+        String(eventLike.error?.message || "")
+          .toLowerCase()
+          .includes("wasm_or_worker_not_ready")
+      );
+    };
+
     useEffect(() => {
       userIdRef.current = userId;
     }, [userId]);
@@ -148,8 +236,55 @@
       setCurrentCallId(callId);
     };
 
+    const roleContextText = useMemo(() => {
+      const fromJob = extractRoleContextText(jobContextJson);
+      const fromPractice = extractRoleContextText(practiceContextJson);
+      return `${fromJob} ${fromPractice}`.toLowerCase();
+    }, [jobContextJson, practiceContextJson]);
+
+    const isLikelyCodingRole = useMemo(() => {
+      const hasCodingHint = CODING_ROLE_HINTS.some((hint) => roleContextText.includes(hint));
+      const hasNonCodingHint = NON_CODING_ROLE_HINTS.some((hint) => roleContextText.includes(hint));
+
+      if (hasCodingHint) return true;
+      if (hasNonCodingHint) return false;
+      return false;
+    }, [roleContextText]);
+
+    const isExplicitCodingTaskMessage = (text: string): boolean => {
+      const normalized = String(text || "").toLowerCase();
+
+      const hasCodeBlock = /```[\s\S]*```/.test(text);
+      const hasCodingAnchor =
+        /(coding|code|algorithm|data structure|leetcode|function signature|time complexity|space complexity|runtime|big o)/i.test(
+          text
+        );
+      const hasActionVerb = /(write|implement|solve|optimize|debug|complete|return|create)/i.test(text);
+      const hasNonCodingSignal =
+        /(portfolio|visual design|graphic|branding|client communication|behavioral|tell me about yourself)/i.test(
+          text
+        );
+
+      if (hasCodeBlock) return true;
+      if (hasNonCodingSignal && !/(write code|coding challenge|implement|function)/i.test(text)) return false;
+      if (hasCodingAnchor && hasActionVerb) return true;
+
+      if (
+        isLikelyCodingRole &&
+        /(algorithm|data structure|complexity|function|write code|implement)/i.test(normalized)
+      ) {
+        return true;
+      }
+
+      return false;
+    };
+
     const parseQuestionFromMessage = (message: string): DSAQuestion | null => {
       try {
+        if (!isExplicitCodingTaskMessage(message)) {
+          return null;
+        }
+
         const lines = message.split("\n");
         let title = "";
         let difficulty: "Easy" | "Medium" | "Hard" = "Medium";
@@ -162,7 +297,6 @@
         const questionPatterns = [
           /(?:problem|question|challenge|task):\s*(.+?)(?:\n|$)/i,
           /(?:write|implement|create|solve)\s+(?:a|an)?\s*(.+?)(?:\n|\.)/i,
-          /(?:given|you have|consider)\s+(.+?)(?:\n|\.)/i,
         ];
 
         for (const pattern of questionPatterns) {
@@ -211,32 +345,6 @@
           };
         }
 
-        // Fallback: if it's a long message with coding keywords, treat as problem
-        if (message.length > 50) {
-          const codingKeywords = [
-            "array",
-            "string",
-            "tree",
-            "graph",
-            "algorithm",
-            "function",
-            "return",
-            "implement",
-          ];
-          const hasKeywords = codingKeywords.some((keyword) =>
-            message.toLowerCase().includes(keyword)
-          );
-
-          if (hasKeywords) {
-            return {
-              title: "Programming Problem",
-              difficulty: "Medium",
-              problem:
-                message.slice(0, 400) + (message.length > 400 ? "..." : ""),
-            };
-          }
-        }
-
         return null;
       } catch (error) {
         console.error("Error parsing question:", error);
@@ -261,7 +369,7 @@
         // When call is active, inject the solution into the conversation
         if (callStatus === CallStatus.ACTIVE) {
           // Add the solution to the conversation context that the assistant can see
-          const solutionPrompt = `USER PROVIDED DSA SOLUTION VIA TEXT: "${message}". Please acknowledge this solution and provide feedback during the interview.`;
+          const solutionPrompt = `USER PROVIDED CODING ANSWER VIA TEXT: "${message}". Store this answer and continue the screening flow. Do not provide evaluation feedback during the live session.`;
 
           try {
             // Try to send via Vapi's message system
@@ -283,7 +391,7 @@
           const successMessage: ChatMessage = {
             role: "assistant",
             content:
-              "✅ Solution submitted! The interviewer will analyze your approach.",
+              "✅ Solution submitted. The interviewer will continue with the next step.",
             timestamp: new Date(),
           };
           setChatMessages((prev) => [...prev, successMessage]);
@@ -301,7 +409,7 @@
           const offlineMessage: ChatMessage = {
             role: "assistant",
             content:
-              "✅ Solution noted. Start a voice interview to get real-time feedback.",
+              "✅ Solution noted. Start the live session to continue the screening.",
             timestamp: new Date(),
           };
           setChatMessages((prev) => [...prev, offlineMessage]);
@@ -405,6 +513,19 @@
         setCallStatus(CallStatus.ACTIVE);
         console.log("Call started - will try to get call ID from Vapi");
 
+        try {
+          vapi.send({
+            type: "add-message",
+            message: {
+              role: "system",
+              content:
+                "Run this as a live screening conversation. Do not provide answer-by-answer feedback, scoring, strengths, weaknesses, or hiring recommendation during the call. Do not mention any fixed interview duration (for example 30 minutes) unless the candidate explicitly asks. Ask one question at a time and wait for candidate response. Only use coding questions when coding skill is explicitly being tested for the role/context. For non-coding roles, avoid coding tasks. If coding is required, give a concrete coding prompt with function signature and constraints, then wait for the candidate's solution.",
+            },
+          });
+        } catch (error) {
+          console.warn("Failed to inject global screening instruction", error);
+        }
+
         if (activeJobContextJson && !isJobContextInjectedRef.current) {
           try {
             vapi.send({
@@ -413,7 +534,9 @@
                 role: "system",
                 content:
                   `Use this job details JSON to tailor the interview questions, follow-up depth, and evaluation rubric. ` +
-                  `Prioritize role requirements and missing skills while interviewing.\n\nJOB_DETAILS_JSON:\n${activeJobContextJson}`,
+                  `Prioritize role requirements and missing skills while interviewing. ` +
+                  `Do not ask the candidate to restate role title, company, level, or skills if those fields already exist in JOB_DETAILS_JSON. ` +
+                  `Only ask clarifying questions when a critical field is missing or empty.\n\nJOB_DETAILS_JSON:\n${activeJobContextJson}`,
               },
             });
             isJobContextInjectedRef.current = true;
@@ -432,7 +555,8 @@
                 content:
                   `Use this PRACTICE_PROFILE_JSON to tailor interview style, topic emphasis, and follow-up depth. ` +
                   `Prefer company-specific question framing while keeping responses concise. ` +
-                  `Do not ask the candidate to provide or upload any additional JSON file; use the provided JSON only.\n\nPRACTICE_PROFILE_JSON:\n${activePracticeContextJson}`,
+                  `Do not ask the candidate to provide or upload any additional JSON file; use the provided JSON only. ` +
+                  `Do not ask for role/company/background again when PRACTICE_PROFILE_JSON already contains it.\n\nPRACTICE_PROFILE_JSON:\n${activePracticeContextJson}`,
               },
             });
             isPracticeContextInjectedRef.current = true;
@@ -552,34 +676,9 @@
               const updated = prev + " " + message.transcript;
 
               // Check if the combined message contains DSA-related keywords
-              const dsaKeywords = [
-                "dsa",
-                "algorithm",
-                "data structure",
-                "coding",
-                "problem",
-                "solve",
-                "function",
-                "array",
-                "string",
-                "tree",
-                "graph",
-                "linked list",
-                "stack",
-                "queue",
-                "write a",
-                "implement",
-                "return",
-                "leetcode",
-                "write code",
-                "solution",
-                "complexity",
-              ];
-              const containsDSA = dsaKeywords.some((keyword) =>
-                updated.toLowerCase().includes(keyword)
-              );
+              const containsCodingTask = isExplicitCodingTaskMessage(updated);
 
-              if (containsDSA) {
+              if (containsCodingTask) {
                 setShowChat(true);
                 // Try to parse question from the full message
                 const questionData = parseQuestionFromMessage(updated);
@@ -604,7 +703,12 @@
         const candidate =
           typeof e === "string"
             ? null
-            : (e as { message?: string; error?: { message?: string } });
+            : (e as {
+                message?: string;
+                type?: string;
+                stage?: string;
+                error?: { message?: string };
+              });
 
         const message =
           typeof e === "string"
@@ -618,12 +722,19 @@
           return;
         }
 
-        // If call setup fails, make sure UI exits connecting state.
-        isStartingCallRef.current = false;
-        setCallStatus(CallStatus.INACTIVE);
+        if (isNonFatalVapiAudioError(e, message)) {
+          console.warn("Vapi non-fatal audio setup warning:", message, e);
+          return;
+        }
+
+        const hasTrackedCall = Boolean(currentCallIdRef.current);
+        if (isStartingCallRef.current || !hasTrackedCall) {
+          isStartingCallRef.current = false;
+          setCallStatus(CallStatus.INACTIVE);
+        }
 
         // Only log actual errors that need attention
-        console.log("Vapi Error:", message, e);
+        console.error("Vapi Error:", message, e);
         toast.error(message);
       };
 
@@ -705,10 +816,18 @@
           }),
         });
 
-        if (premiumCheck.status === 402 || premiumCheck.status === 429) {
-          const payload = await premiumCheck.json().catch(() => ({}));
+        const premiumPayload = await premiumCheck.json().catch(() => ({}));
+
+        const requiresPremiumUpgrade =
+          premiumCheck.status === 402 ||
+          premiumCheck.status === 429 ||
+          premiumPayload?.allowed === false ||
+          premiumPayload?.code === "PREMIUM_REQUIRED" ||
+          premiumPayload?.code === "PREMIUM_DAILY_LIMIT_REACHED";
+
+        if (requiresPremiumUpgrade) {
           setCallStatus(CallStatus.INACTIVE);
-          openPremiumPopup(payload?.message);
+          openPremiumPopup(premiumPayload?.message);
           return;
         }
 

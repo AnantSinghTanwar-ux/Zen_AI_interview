@@ -95,6 +95,8 @@ class FeedbackService {
     - Resume references are not enough to award strong technical/problem-solving scores.
     - Be conservative and realistic like a hiring committee.
     - If technical depth is missing, technical/problem-solving scores must stay low.
+    - Default to strict ratings; do not reward politeness or potential without proof.
+    - Scores above 75 require repeated high-quality technical evidence.
 
     Analyze this ${interviewType} interview transcript and provide detailed feedback:
 
@@ -118,11 +120,12 @@ Focus on:
 - Actionable next steps
 
 Harsh scoring guidance:
-- 0-34: insufficient evidence / weak demonstration
-- 35-54: below interview-ready
-- 55-69: acceptable but inconsistent
-- 70-84: strong performance
-- 85-100: exceptional, rare
+- 0-24: insufficient evidence / weak demonstration
+- 25-44: clearly below interview-ready
+- 45-59: borderline / inconsistent performance
+- 60-74: solid but not standout
+- 75-89: strong and uncommon
+- 90-100: exceptional and very rare
 
 Return only valid JSON.
       `;

@@ -144,6 +144,7 @@ MANDATORY RULES:
 3) Use conservative scoring by default; do not inflate based on politeness or potential.
 4) If technical depth is missing, technicalKnowledge and problemSolving MUST stay low.
 5) If there is no code/system-design discussion, codeQuality/systemDesign cannot be high.
+6) Default recommendation should be No Hire unless transcript shows repeated strong evidence.
 
 INTERVIEW DETAILS:
 - Duration: ${callDetails.duration || 'Unknown'}
@@ -218,17 +219,17 @@ EVALUATION CRITERIA:
 - Behavioral Fit (1-10): Attitude, collaboration, cultural fit
 
 EVIDENCE CAP RULES (must apply):
-- If there is no clear technical Q&A depth: technicalKnowledge <= 4
-- If there is no concrete solution walkthrough: problemSolving <= 4
-- If no code-level discussion appears: codeQuality <= 4
-- If no architecture/scalability discussion appears: systemDesign <= 4
+- If there is no clear technical Q&A depth: technicalKnowledge <= 3
+- If there is no concrete solution walkthrough: problemSolving <= 3
+- If no code-level discussion appears: codeQuality <= 3
+- If no architecture/scalability discussion appears: systemDesign <= 3
 - If responses are short/deflecting: communication/confidence should be penalized
 
 RECOMMENDATIONS:
-- "Strong Hire": Rare, clearly exceptional evidence (Overall 8.8-10)
-- "Hire": Interview-ready with consistent depth (Overall 7.2-8.7)
-- "No Hire": Not interview-ready / inconsistent evidence (Overall 4.5-7.1)
-- "Strong No Hire": Clear mismatch or very weak evidence (Overall 1-4.4)
+- "Strong Hire": Rare, clearly exceptional evidence (Overall 9.2-10)
+- "Hire": Interview-ready with consistent depth (Overall 8.0-9.1)
+- "No Hire": Not interview-ready / inconsistent evidence (Overall 5.8-7.9)
+- "Strong No Hire": Clear mismatch or very weak evidence (Overall 1-5.7)
 
 Be direct, realistic, and strict. Keep "detailedFeedback" concise (under 200 words) and grounded in transcript evidence.
 
