@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/actions/auth.actions";
+import { recruiterGuard } from "@/app/api/v2/recruiter/_guard";
 import { recruiterService } from "@/services/recruiter/recruiter.service";
 import { jobService } from "@/services/recruiter/job.service";
 import { checkRateLimit } from "@/lib/services/rate-limit.service";
@@ -35,10 +35,9 @@ export async function POST(request: NextRequest) {
   let idempotencyToken: IdempotencyToken | null = null;
 
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { user, error } = await recruiterGuard();
+    if (error) return error;
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { allowed, response } = await checkRateLimit(request, user.id, "recruiter-write");
     if (!allowed) return response!;
@@ -145,10 +144,9 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { user, error } = await recruiterGuard();
+    if (error) return error;
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { allowed, response } = await checkRateLimit(request, user.id, "recruiter-read");
     if (!allowed) return response!;

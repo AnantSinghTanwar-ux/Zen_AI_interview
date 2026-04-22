@@ -2,7 +2,7 @@ import { db } from "@/services/firebase/admin";
 import { callLogService } from "@/services/firebase/call-log.service";
 import { vapiCallDataService } from "@/services/vapi/call-data.service";
 import { saveScore, getScoreByApplication } from "@/services/recruiter/application-score.service";
-import { updateApplicationStatus } from "@/services/recruiter/external-application.service";
+import { updateApplicationScoreState } from "@/services/recruiter/external-application.service";
 import {
   generateOpenRouterJson,
   getOpenRouterModelCandidates,
@@ -14,6 +14,10 @@ const COLLECTION = "recruiter_score_jobs";
 const MAX_RETRIES = Number(process.env.RECRUITER_SCORE_JOB_MAX_RETRIES ?? 3);
 
 const SCORE_MODEL_CANDIDATES = getOpenRouterModelCandidates(
+  process.env.OPENROUTER_RECRUITER_STRICT_MODEL,
+  "openai/gpt-4.1",
+  "anthropic/claude-3.7-sonnet",
+  "google/gemini-2.5-pro",
   process.env.OPENROUTER_HARSH_ANALYSIS_MODEL,
   process.env.OPENROUTER_EVALUATION_MODEL,
   "openai/gpt-4.1-mini",
@@ -102,6 +106,10 @@ async function getTranscript(interviewId: string): Promise<string> {
 }
 
 function buildRecruiterPrompt(transcript: string): string {
+  const normalizedTranscript = String(transcript || "")
+    .replace(/\r\n?/g, "\n")
+    .trim();
+
   return `
 You are a strict recruiter panel evaluating interview performance for hiring decisions.
 
@@ -114,6 +122,25 @@ MANDATORY RULES:
 6) CommunicationScore should be penalized for vague/short/deflecting responses and should rarely exceed 42 in those cases.
 7) Do not use hire/strong_hire unless transcript contains multiple concrete, correct, role-relevant examples.
 8) Default baseline is low: average interviews usually score in 20-55 unless evidence clearly proves otherwise.
+9) If candidate gives almost no meaningful response, score must be between 0 and 8.
+10) If candidate speaks but answers are irrelevant to interviewer questions, overallScore must be <= 10.
+11) Never score using randomness, tone, or potential; only transcript evidence.
+12) Be deterministic and strict. Similar evidence must produce similar scores.
+
+SCORING SCALE (VERY STRICT):
+- 0-8: silent, near-silent, or unusable responses.
+- 9-20: some speech but mostly irrelevant, incorrect, or evasive.
+- 21-40: partial answers with major technical gaps.
+- 41-59: moderate but inconsistent technical correctness.
+- 60-79: strong, mostly correct, role-relevant answers.
+- 80-100: exceptional depth and accuracy across most questions.
+
+SCORING METHOD (must follow):
+1) Identify each interviewer question.
+2) Map each candidate response to that specific question.
+3) Score relevance + correctness + completeness per question.
+4) Penalize silence/irrelevance aggressively.
+5) Aggregate into the final strict score.
 
 RECOMMENDATION BANDS:
 - strong_hire: 90-100 (exceptional, rare)
@@ -122,7 +149,7 @@ RECOMMENDATION BANDS:
 - no_hire: 0-57 (insufficient depth)
 
 Transcript:
-${transcript}
+${normalizedTranscript}
 
 Respond in ONLY valid JSON with this exact structure:
 {
@@ -185,7 +212,7 @@ export async function enqueueRecruiterScoreJob(params: {
 
   const ref = await db.collection(COLLECTION).add(payload);
 
-  await updateApplicationStatus(applicationId, {
+  await updateApplicationScoreState(applicationId, {
     scoreStatus: "processing",
   }).catch(() => {
     // Queue creation should still succeed even if status update fails.
@@ -242,7 +269,7 @@ export async function processRecruiterScoreJob(jobId: string, job: RecruiterScor
 
     const existingScore = await getScoreByApplication(job.applicationId);
     if (existingScore) {
-      await updateApplicationStatus(job.applicationId, {
+      await updateApplicationScoreState(job.applicationId, {
         scoreStatus: "available",
         scoreId: existingScore.id,
       });
@@ -261,16 +288,28 @@ export async function processRecruiterScoreJob(jobId: string, job: RecruiterScor
     }
 
     const transcript = await getTranscript(job.interviewId);
-    if (!transcript || transcript.trim().length < 50) {
-      throw new Error("Transcript too short for recruiter scoring");
-    }
 
-    const rawScore = await generateOpenRouterJson<any>({
-      prompt: buildRecruiterPrompt(transcript),
-      modelCandidates: SCORE_MODEL_CANDIDATES,
-      temperature: 0.2,
-      maxTokens: 1_800,
-    });
+    const rawScore =
+      !transcript || transcript.trim().length < 20
+        ? {
+            overallScore: 0,
+            technicalScore: 0,
+            communicationScore: 4,
+            problemSolvingScore: 0,
+            recommendation: "no_hire",
+            strengths: [],
+            weaknesses: [
+              "No meaningful candidate response found in transcript",
+            ],
+            feedbackSummary:
+              "Candidate provided little or no usable response during the interview.",
+          }
+        : await generateOpenRouterJson<any>({
+            prompt: buildRecruiterPrompt(transcript),
+            modelCandidates: SCORE_MODEL_CANDIDATES,
+            temperature: 0,
+            maxTokens: 1_800,
+          });
 
     const guarded = applyRecruiterScoreGuardrails(rawScore, transcript);
 
@@ -286,9 +325,12 @@ export async function processRecruiterScoreJob(jobId: string, job: RecruiterScor
       weaknesses: guarded.weaknesses || [],
       feedbackSummary: guarded.feedbackSummary || "",
       generatedBy: "openrouter" as any,
+    }, {
+      scoringVersion: "recruiter-strict-v2",
+      modelCandidates: SCORE_MODEL_CANDIDATES,
     });
 
-    await updateApplicationStatus(job.applicationId, {
+    await updateApplicationScoreState(job.applicationId, {
       scoreStatus: "available",
       scoreId,
     });
@@ -311,7 +353,7 @@ export async function processRecruiterScoreJob(jobId: string, job: RecruiterScor
     });
 
     if (exhausted) {
-      await updateApplicationStatus(job.applicationId, {
+      await updateApplicationScoreState(job.applicationId, {
         scoreStatus: "failed",
       }).catch(() => {
         // no-op
@@ -344,16 +386,29 @@ export async function enqueueRecruiterScoreBackfillJobs(apps: Array<{
   interviewStatus?: string;
   scoreStatus?: string;
 }>) {
-  const candidates = apps
-    .filter(
-      (app) =>
-        app.interviewStatus === "completed" &&
-        Boolean(app.interviewId) &&
-        app.scoreStatus !== "available"
-    )
-    .slice(0, 20);
+  const candidates: Array<{ id: string; interviewId?: string }> = [];
 
-  for (const app of candidates) {
+  for (const app of apps) {
+    if (app.interviewStatus !== "completed" || !app.interviewId) {
+      continue;
+    }
+
+    if (app.scoreStatus !== "available") {
+      candidates.push(app);
+      continue;
+    }
+
+    const existingScore = await getScoreByApplication(app.id).catch(() => null);
+    if (!existingScore) {
+      candidates.push(app);
+    }
+
+    if (candidates.length >= 20) {
+      break;
+    }
+  }
+
+  for (const app of candidates.slice(0, 20)) {
     await enqueueRecruiterScoreJob({
       applicationId: app.id,
       interviewId: String(app.interviewId),

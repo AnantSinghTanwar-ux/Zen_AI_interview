@@ -3,10 +3,12 @@ import {
   ExternalApplication,
   SourcePlatform,
   RoleCategory,
+  ScoreStatus,
   RECRUITER_EMAIL,
 } from "@/types/external-application";
 
 const COLLECTION = "external_applications";
+const GENERIC_ROLE_TITLE_REGEX = /^(?:\(\d+\)\s*)?(?:top\s+jobs?(?:\s+picks)?\s+for\s+you|jobs?\s+for\s+you|recommended\s+jobs?|job\s+recommendations?|search\s+results?)$/i;
 
 // Normalize enums
 function normalizePlatform(raw: string): SourcePlatform {
@@ -62,6 +64,14 @@ function cleanRoleTitle(value: unknown): string {
     }
   }
 
+  v = v.replace(/^\(\d+\)\s*/, "").trim();
+  v = v.replace(/\s*[|]\s*linkedin.*$/i, "").trim();
+  v = v.replace(/\s*-\s*linkedin.*$/i, "").trim();
+
+  if (!v || GENERIC_ROLE_TITLE_REGEX.test(v)) {
+    return "";
+  }
+
   return cleanEntity(v, 160);
 }
 
@@ -114,9 +124,16 @@ function normalizeForDisplay(app: ExternalApplication): ExternalApplication {
   return {
     ...app,
     companyName: cleanedCompany || (looksLikeMetric ? "Unknown" : rawCompany || "Unknown"),
-    roleTitle: cleanedRoleTitle || app.roleTitle,
+    roleTitle: cleanedRoleTitle || "Unknown Role",
   };
 }
+
+type ApplicationStatusUpdates = Partial<
+  Pick<ExternalApplication, "status" | "interviewStatus" | "interviewId" | "inviteLink">
+>;
+
+type ApplicationScoreStateUpdates = Pick<ExternalApplication, "scoreStatus"> &
+  Partial<Pick<ExternalApplication, "scoreId">>;
 
 export async function importApplications(
   records: Array<{
@@ -261,12 +278,47 @@ export async function getApplication(id: string): Promise<ExternalApplication | 
 
 export async function updateApplicationStatus(
   applicationId: string,
-  updates: Partial<Pick<ExternalApplication, "status" | "interviewStatus" | "scoreStatus" | "interviewId" | "inviteLink" | "scoreId">>
+  updates: ApplicationStatusUpdates
 ): Promise<void> {
+  const payload: ApplicationStatusUpdates = {};
+
+  if (updates.status !== undefined) payload.status = updates.status;
+  if (updates.interviewStatus !== undefined) payload.interviewStatus = updates.interviewStatus;
+  if (updates.interviewId !== undefined) payload.interviewId = updates.interviewId;
+  if (updates.inviteLink !== undefined) payload.inviteLink = updates.inviteLink;
+
+  if (Object.keys(payload).length === 0) {
+    return;
+  }
+
   await db
     .collection(COLLECTION)
     .doc(applicationId)
-    .update({ ...updates, updatedAt: new Date().toISOString() });
+    .update({ ...payload, updatedAt: new Date().toISOString() });
+}
+
+export async function updateApplicationScoreState(
+  applicationId: string,
+  updates: ApplicationScoreStateUpdates
+): Promise<void> {
+  const payload: { scoreStatus: ScoreStatus; scoreId?: string; updatedAt: string } = {
+    scoreStatus: updates.scoreStatus,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (updates.scoreStatus === "available") {
+    const scoreId = String(updates.scoreId || "").trim();
+    if (!scoreId) {
+      throw new Error("scoreId is required when scoreStatus is available");
+    }
+    payload.scoreId = scoreId;
+  }
+
+  if (updates.scoreStatus === "failed" || updates.scoreStatus === "pending" || updates.scoreStatus === "processing") {
+    payload.scoreId = String(updates.scoreId || "").trim() || "";
+  }
+
+  await db.collection(COLLECTION).doc(applicationId).update(payload);
 }
 
 export async function getDistinctValues(): Promise<{

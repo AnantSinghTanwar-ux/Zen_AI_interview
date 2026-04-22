@@ -8,6 +8,11 @@ export interface TranscriptEvidenceSnapshot {
   hasResumeDeflection: boolean;
   candidateTurns: number;
   avgCandidateWords: number;
+  candidateWordCount: number;
+  candidateRelevantWordCount: number;
+  candidateRelevanceRatio: number;
+  interviewerTurns: number;
+  silenceLikeResponseTurns: number;
 }
 
 interface HarshFeedbackScoreShape {
@@ -100,8 +105,18 @@ function getCandidateSegments(transcript: string): string[] {
 
 export function analyzeTranscriptEvidence(transcript: string): TranscriptEvidenceSnapshot {
   const normalized = normalizeTranscript(transcript);
+  const transcriptLines = String(transcript || "")
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
   const candidateSegments = getCandidateSegments(transcript);
   const candidateText = candidateSegments.join(" ").toLowerCase();
+
+  const interviewerTurns = transcriptLines.filter((line) =>
+    /^(interviewer|assistant|bot)\s*:/i.test(line)
+  ).length;
 
   const technicalPatterns = [
     "algorithm",
@@ -180,6 +195,20 @@ export function analyzeTranscriptEvidence(transcript: string): TranscriptEvidenc
   const avgCandidateWords =
     candidateTurns > 0 ? totalCandidateWords / candidateTurns : totalCandidateWords;
 
+  const relevantWordEstimate = technicalHits + problemHits + codeHits + systemHits;
+  const candidateRelevanceRatio =
+    totalCandidateWords > 0
+      ? Math.min(1, Math.max(0, relevantWordEstimate / totalCandidateWords))
+      : 0;
+
+  const silenceLikeResponseTurns = candidateSegments.filter((segment) => {
+    const text = segment.toLowerCase().trim();
+    const wordCount = text.split(/\s+/).filter(Boolean).length;
+    if (wordCount <= 2) return true;
+    if (/^(i don'?t know|no idea|skip|nothing|not sure|hmm|umm?)\b/i.test(text)) return true;
+    return false;
+  }).length;
+
   const hasResumeDeflection =
     /read (my )?resume|check (my )?resume|look at (my )?resume|as in my resume|my cv|my background/i.test(
       normalized
@@ -198,6 +227,11 @@ export function analyzeTranscriptEvidence(transcript: string): TranscriptEvidenc
     hasResumeDeflection,
     candidateTurns,
     avgCandidateWords,
+    candidateWordCount: totalCandidateWords,
+    candidateRelevantWordCount: relevantWordEstimate,
+    candidateRelevanceRatio,
+    interviewerTurns,
+    silenceLikeResponseTurns,
   };
 }
 
@@ -279,6 +313,27 @@ export function applyRecruiterScoreGuardrails<T extends RecruiterScoreShape>(
     problemSolvingScore = Math.min(problemSolvingScore, 25);
   }
 
+  if (evidence.candidateWordCount < 25 || evidence.candidateTurns < 2) {
+    technicalScore = Math.min(technicalScore, 6);
+    problemSolvingScore = Math.min(problemSolvingScore, 6);
+    communicationScore = Math.min(communicationScore, 8);
+    overallScore = Math.min(overallScore, 8);
+  }
+
+  if (evidence.candidateRelevanceRatio < 0.03) {
+    technicalScore = Math.min(technicalScore, 8);
+    problemSolvingScore = Math.min(problemSolvingScore, 8);
+    communicationScore = Math.min(communicationScore, 10);
+    overallScore = Math.min(overallScore, 10);
+  }
+
+  if (evidence.silenceLikeResponseTurns >= Math.max(2, evidence.candidateTurns - 1)) {
+    technicalScore = Math.min(technicalScore, 5);
+    problemSolvingScore = Math.min(problemSolvingScore, 5);
+    communicationScore = Math.min(communicationScore, 7);
+    overallScore = Math.min(overallScore, 7);
+  }
+
   if (evidence.avgCandidateWords < 18 || evidence.candidateTurns < 4) {
     communicationScore = Math.min(communicationScore, 42);
   }
@@ -288,9 +343,13 @@ export function applyRecruiterScoreGuardrails<T extends RecruiterScoreShape>(
   }
 
   if (!evidence.hasTechnicalDepth && !evidence.hasProblemSolvingDepth) {
-    overallScore = Math.min(overallScore, 30);
+    overallScore = Math.min(overallScore, 14);
   } else if (!evidence.hasTechnicalDepth || !evidence.hasProblemSolvingDepth) {
-    overallScore = Math.min(overallScore, 45);
+    overallScore = Math.min(overallScore, 28);
+  }
+
+  if (evidence.interviewerTurns >= 5 && evidence.candidateTurns <= 1) {
+    overallScore = Math.min(overallScore, 6);
   }
 
   const componentAverage = Math.round(
@@ -303,7 +362,7 @@ export function applyRecruiterScoreGuardrails<T extends RecruiterScoreShape>(
   let recommendation = String(input.recommendation || "").toLowerCase().trim();
   if (normalizedOverall >= 90) recommendation = "strong_hire";
   else if (normalizedOverall >= 78) recommendation = "hire";
-  else if (normalizedOverall >= 58) recommendation = "maybe";
+  else if (normalizedOverall >= 60) recommendation = "maybe";
   else recommendation = "no_hire";
 
   return {

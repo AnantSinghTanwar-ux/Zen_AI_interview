@@ -2,7 +2,7 @@ import JobForm from "@/components/recruiter/JobForm";
 import PageLayout from "@/components/PageLayout";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { redirect } from "next/navigation";
-import { RECRUITER_EMAIL } from "@/types/external-application";
+import { isAllowedRecruiterEmail } from "@/lib/auth/recruiter-access";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ export default async function NewJobPage() {
     redirect("/sign-in?redirect=/recruiter/jobs/new");
   }
 
-  if (user.email !== RECRUITER_EMAIL) {
+  if (!isAllowedRecruiterEmail(user.email)) {
     redirect("/");
   }
 

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/actions/auth.actions";
+import { recruiterGuard } from "@/app/api/v2/recruiter/_guard";
 import { recruiterService } from "@/services/recruiter/recruiter.service";
 import { applicantService } from "@/services/recruiter/applicant.service";
+import { jobService } from "@/services/recruiter/job.service";
 import { checkRateLimit } from "@/lib/services/rate-limit.service";
 import {
   acquireIdempotencyLock,
@@ -14,10 +15,9 @@ export async function POST(request: NextRequest) {
   let idempotencyToken: IdempotencyToken | null = null;
 
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { user, error } = await recruiterGuard();
+    if (error) return error;
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { allowed, response } = await checkRateLimit(request, user.id, "recruiter-write");
     if (!allowed) return response!;
@@ -84,6 +84,17 @@ export async function POST(request: NextRequest) {
         { error: "jobId and file are required" },
         { status: 400 }
       );
+    }
+
+    const job = await jobService.getJob(jobId);
+    if (!job || job.recruiterId !== recruiter.id) {
+      if (idempotencyToken) {
+        await failIdempotencyLock({
+          token: idempotencyToken,
+          error: "Access denied",
+        });
+      }
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     const csvText = await file.text();

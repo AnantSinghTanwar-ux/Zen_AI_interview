@@ -4,8 +4,37 @@ import {
   LeaderboardEntry,
   ExternalApplication,
 } from "@/types/external-application";
+import {
+  attachScoreIntegrityFields,
+  buildScoreFingerprintInput,
+  verifyScoreSignature,
+} from "@/services/recruiter/score-integrity.service";
 
 const COLLECTION = "application_scores";
+
+function toMillis(value: unknown): number {
+  const ms = new Date(String(value || "")).getTime();
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function getValidatedScoreFromDoc(
+  doc: FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData>
+): ApplicationScore | null {
+  const raw = doc.data() as ApplicationScore & { signature?: string; sealed?: boolean };
+  const score = { id: doc.id, ...raw } as ApplicationScore;
+
+  const fingerprintPayload = buildScoreFingerprintInput(score);
+  const validSignature = verifyScoreSignature({
+    payload: fingerprintPayload,
+    expectedSignature: raw.signature,
+  });
+
+  if (!raw.sealed || !validSignature) {
+    return null;
+  }
+
+  return score;
+}
 
 function clampScore(value: number, min = 0, max = 100): number {
   const normalized = Number.isFinite(Number(value)) ? Number(value) : min;
@@ -72,45 +101,55 @@ function computeStrictFallbackScore(app: ExternalApplication): {
   problemSolvingScore: number;
   recommendation: "strong_hire" | "hire" | "maybe" | "no_hire";
 } {
-  let overall = 0;
+  let overall = 6;
 
-  if (app.interviewStatus === "completed") overall = 38;
-  else if (app.interviewStatus === "in_progress") overall = 24;
-  else if (app.interviewStatus === "invited") overall = 14;
-  else overall = 8;
+  if (app.interviewStatus === "completed") overall = 12;
+  else if (app.interviewStatus === "in_progress") overall = 7;
+  else if (app.interviewStatus === "invited") overall = 5;
+  else overall = 4;
 
   if (app.status === "shortlisted") {
-    overall = Math.max(overall, 55);
+    overall = Math.max(overall, 18);
   } else if (app.status === "rejected") {
-    overall = Math.min(overall, 22);
+    overall = Math.min(overall, 6);
   }
 
-  const nameHash = String(app.candidateName || "")
-    .split("")
-    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const variance = (nameHash % 12) - 6;
-  overall = clampScore(overall + variance, 5, 95);
+  overall = clampScore(overall, 0, 100);
 
   let recommendation: "strong_hire" | "hire" | "maybe" | "no_hire" =
     "no_hire";
   if (app.status === "rejected") recommendation = "no_hire";
   else if (overall >= 90) recommendation = "strong_hire";
-  else if (overall >= 82) recommendation = "hire";
+  else if (overall >= 80) recommendation = "hire";
   else if (overall >= 60) recommendation = "maybe";
 
   return {
     overallScore: overall,
-    technicalScore: clampScore(overall + ((nameHash % 8) - 5), 5, 95),
-    communicationScore: clampScore(overall + ((nameHash % 6) - 4), 5, 95),
-    problemSolvingScore: clampScore(overall + ((nameHash % 10) - 6), 5, 95),
+    technicalScore: clampScore(Math.max(0, overall - 2), 0, 100),
+    communicationScore: clampScore(Math.max(0, overall - 1), 0, 100),
+    problemSolvingScore: clampScore(Math.max(0, overall - 3), 0, 100),
     recommendation,
   };
 }
 
-export async function saveScore(data: Omit<ApplicationScore, "id" | "createdAt">): Promise<string> {
+export async function saveScore(
+  data: Omit<ApplicationScore, "id" | "createdAt">,
+  metadata?: Record<string, unknown>
+): Promise<string> {
+  const createdAt = new Date().toISOString();
+  const { signature } = attachScoreIntegrityFields({
+    ...data,
+    createdAt,
+  });
+
   const docRef = await db.collection(COLLECTION).add({
     ...data,
-    createdAt: new Date().toISOString(),
+    createdAt,
+    signature,
+    sealed: true,
+    lockedBy: "recruiter-score-pipeline",
+    schemaVersion: 2,
+    ...(metadata || {}),
   });
   return docRef.id;
 }
@@ -119,22 +158,40 @@ export async function getScoreByApplication(applicationId: string): Promise<Appl
   const snapshot = await db
     .collection(COLLECTION)
     .where("applicationId", "==", applicationId)
-    .limit(1)
     .get();
 
   if (snapshot.empty) return null;
-  return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ApplicationScore;
+
+  const sortedDocs = [...snapshot.docs].sort((a, b) => {
+    return toMillis(b.data()?.createdAt) - toMillis(a.data()?.createdAt);
+  });
+
+  for (const doc of sortedDocs) {
+    const score = getValidatedScoreFromDoc(doc);
+    if (score) return score;
+  }
+
+  return null;
 }
 
 export async function getScoreByInterview(interviewId: string): Promise<ApplicationScore | null> {
   const snapshot = await db
     .collection(COLLECTION)
     .where("interviewId", "==", interviewId)
-    .limit(1)
     .get();
 
   if (snapshot.empty) return null;
-  return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ApplicationScore;
+
+  const sortedDocs = [...snapshot.docs].sort((a, b) => {
+    return toMillis(b.data()?.createdAt) - toMillis(a.data()?.createdAt);
+  });
+
+  for (const doc of sortedDocs) {
+    const score = getValidatedScoreFromDoc(doc);
+    if (score) return score;
+  }
+
+  return null;
 }
 
 export async function getLeaderboard(filters?: {
@@ -204,8 +261,8 @@ export async function getLeaderboard(filters?: {
 
 export async function getAllScores(): Promise<ApplicationScore[]> {
   const snapshot = await db.collection(COLLECTION).get();
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  })) as ApplicationScore[];
+  return snapshot.docs
+    .sort((a, b) => toMillis(b.data()?.createdAt) - toMillis(a.data()?.createdAt))
+    .map((doc) => getValidatedScoreFromDoc(doc))
+    .filter(Boolean) as ApplicationScore[];
 }

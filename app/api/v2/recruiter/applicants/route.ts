@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/actions/auth.actions";
+import { recruiterGuard } from "@/app/api/v2/recruiter/_guard";
 import { recruiterService } from "@/services/recruiter/recruiter.service";
 import { applicantService } from "@/services/recruiter/applicant.service";
+import { jobService } from "@/services/recruiter/job.service";
 import { checkRateLimit } from "@/lib/services/rate-limit.service";
 import {
   acquireIdempotencyLock,
@@ -30,10 +31,9 @@ async function getOrCreateRecruiter(userId: string) {
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { user, error } = await recruiterGuard();
+    if (error) return error;
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { allowed, response } = await checkRateLimit(request, user.id, "applicants-list");
     if (!allowed) return response!;
@@ -52,6 +52,15 @@ export async function GET(request: NextRequest) {
         { error: "jobId query parameter is required" },
         { status: 400 }
       );
+    }
+
+    const job = await jobService.getJob(jobId);
+    if (!job) {
+      return NextResponse.json({ error: "Job not found" }, { status: 404 });
+    }
+
+    if (job.recruiterId !== recruiter.id) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     const applicants = await applicantService.getApplicantsByJob(jobId, status);
@@ -81,10 +90,9 @@ export async function PATCH(request: NextRequest) {
   let idempotencyToken: IdempotencyToken | null = null;
 
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { user, error } = await recruiterGuard();
+    if (error) return error;
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { allowed, response } = await checkRateLimit(request, user.id, "recruiter-write");
     if (!allowed) return response!;
@@ -136,6 +144,39 @@ export async function PATCH(request: NextRequest) {
         { error: "applicantId and status are required" },
         { status: 400 }
       );
+    }
+
+    const recruiter = await getOrCreateRecruiter(user.id);
+    if (!recruiter) {
+      if (idempotencyToken) {
+        await failIdempotencyLock({
+          token: idempotencyToken,
+          error: "Recruiter profile not found",
+        });
+      }
+      return NextResponse.json({ error: "Recruiter profile not found" }, { status: 403 });
+    }
+
+    const applicant = await applicantService.getApplicant(applicantId);
+    if (!applicant) {
+      if (idempotencyToken) {
+        await failIdempotencyLock({
+          token: idempotencyToken,
+          error: "Applicant not found",
+        });
+      }
+      return NextResponse.json({ error: "Applicant not found" }, { status: 404 });
+    }
+
+    const job = await jobService.getJob(applicant.jobId);
+    if (!job || job.recruiterId !== recruiter.id) {
+      if (idempotencyToken) {
+        await failIdempotencyLock({
+          token: idempotencyToken,
+          error: "Access denied",
+        });
+      }
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     await applicantService.updateApplicantStatus(applicantId, status);

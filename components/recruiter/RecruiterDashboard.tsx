@@ -15,37 +15,33 @@ import type { ExternalApplication, ApplicationScore, LeaderboardEntry } from "@/
  * from available application data. Clearly marked as fallback in the UI.
  */
 function computeFallbackScore(app: ExternalApplication): ApplicationScore {
-  const clamp = (value: number) => Math.max(5, Math.min(95, Math.round(value)));
+  const clamp = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
   let overall = 0;
-  let recommendation: ApplicationScore["recommendation"] = "maybe";
+  let recommendation: ApplicationScore["recommendation"] = "no_hire";
 
-  // Base score from interview completion status
+  // Deterministic strict fallback for missing backend scores.
   if (app.interviewStatus === "completed") {
-    overall = 38;
+    overall = 12;
   } else if (app.interviewStatus === "in_progress") {
-    overall = 24;
+    overall = 7;
   } else if (app.interviewStatus === "invited") {
-    overall = 14;
+    overall = 5;
   } else {
-    overall = 8;
+    overall = 4;
   }
 
-  // Boost for shortlisted status (recruiter signal)
   if (app.status === "shortlisted") {
-    overall = Math.max(overall, 55);
-    recommendation = "maybe";
+    overall = Math.max(overall, 18);
   } else if (app.status === "rejected") {
-    overall = Math.min(overall, 22);
+    overall = Math.min(overall, 6);
     recommendation = "no_hire";
   }
 
-  // Add some variance based on application metadata
-  const nameHash = app.candidateName.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-  const variance = (nameHash % 12) - 6; // -6 to +5 variance
-  overall = clamp(overall + variance);
+  overall = clamp(overall);
 
   if (app.status === "rejected") recommendation = "no_hire";
-  else if (overall >= 82) recommendation = "hire";
+  else if (overall >= 90) recommendation = "strong_hire";
+  else if (overall >= 80) recommendation = "hire";
   else if (overall >= 60) recommendation = "maybe";
   else recommendation = "no_hire";
 
@@ -54,9 +50,9 @@ function computeFallbackScore(app: ExternalApplication): ApplicationScore {
     applicationId: app.id,
     interviewId: app.interviewId || "",
     overallScore: overall,
-    technicalScore: clamp(overall + ((nameHash % 8) - 5)),
-    communicationScore: clamp(overall + ((nameHash % 6) - 4)),
-    problemSolvingScore: clamp(overall + ((nameHash % 10) - 6)),
+    technicalScore: clamp(Math.max(0, overall - 2)),
+    communicationScore: clamp(Math.max(0, overall - 1)),
+    problemSolvingScore: clamp(Math.max(0, overall - 3)),
     recommendation,
     strengths: [],
     weaknesses: [],

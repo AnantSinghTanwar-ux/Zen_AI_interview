@@ -1,7 +1,7 @@
 "use server";
 
 import { getCurrentUser } from "@/lib/actions/auth.actions";
-import { RECRUITER_EMAIL } from "@/types/external-application";
+import { isAllowedRecruiterEmail } from "@/lib/auth/recruiter-access";
 
 export async function checkAuthStatus() {
   try {
@@ -10,9 +10,7 @@ export async function checkAuthStatus() {
       return { isAuthenticated: false, isRecruiter: false };
     }
 
-    const email = String(user.email || "").trim().toLowerCase();
-    const userType = String((user as { userType?: string }).userType || "").trim().toLowerCase();
-    const isRecruiter = email === RECRUITER_EMAIL.toLowerCase() || userType === "recruiter";
+    const isRecruiter = isAllowedRecruiterEmail(user.email);
 
     return { isAuthenticated: true, isRecruiter };
   } catch (error) {

@@ -3,7 +3,7 @@ import { recruiterGuard } from "@/app/api/v2/recruiter/_guard";
 import {
   getApplications,
   getDistinctValues,
-  updateApplicationStatus,
+  updateApplicationScoreState,
 } from "@/services/recruiter/external-application.service";
 import {
   getLeaderboard,
@@ -24,7 +24,7 @@ async function backfillScoresForCompletedApps(apps: ExternalApplication[]) {
       existingScore &&
       (app.scoreStatus !== "available" || app.scoreId !== existingScore.id)
     ) {
-      await updateApplicationStatus(app.id, {
+      await updateApplicationScoreState(app.id, {
         scoreStatus: "available",
         scoreId: existingScore.id,
       });
