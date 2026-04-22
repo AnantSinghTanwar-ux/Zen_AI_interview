@@ -15,13 +15,13 @@ const MAX_RETRIES = Number(process.env.RECRUITER_SCORE_JOB_MAX_RETRIES ?? 3);
 
 const SCORE_MODEL_CANDIDATES = getOpenRouterModelCandidates(
   process.env.OPENROUTER_RECRUITER_STRICT_MODEL,
-  "anthropic/claude-sonnet-4",
-  "anthropic/claude-3.7-sonnet",
+  // Valid OpenRouter model IDs — claude-sonnet-4 does NOT exist on OpenRouter
+  "anthropic/claude-3.5-sonnet",
+  "anthropic/claude-3-haiku",
   "openai/gpt-4.1",
-  "google/gemini-2.5-pro-preview-06-05",
+  "openai/gpt-4.1-mini",
   process.env.OPENROUTER_HARSH_ANALYSIS_MODEL,
   process.env.OPENROUTER_EVALUATION_MODEL,
-  "openai/gpt-4.1-mini",
   process.env.OPENROUTER_MODEL,
   "openrouter/auto"
 );
@@ -263,6 +263,41 @@ export async function enqueueRecruiterScoreJob(params: {
   };
 }
 
+/**
+ * Enqueue a score job and immediately start processing it in the background
+ * (fire-and-forget). This ensures scoring happens right after an interview ends
+ * without requiring a separate cron or manual trigger.
+ */
+export function enqueueAndProcessRecruiterScoreJob(params: {
+  applicationId: string;
+  interviewId: string;
+}): void {
+  enqueueRecruiterScoreJob(params)
+    .then(({ jobId, deduplicated }) => {
+      if (!deduplicated) {
+        // Run the job immediately in the background — don't await
+        processRecruiterScoreJob(jobId, {
+          applicationId: params.applicationId,
+          interviewId: params.interviewId,
+          status: "pending",
+          retryCount: 0,
+          createdAt: new Date().toISOString(),
+          startedAt: null,
+          completedAt: null,
+          scoreId: null,
+          modelUsed: null,
+          processingTimeMs: 0,
+          error: null,
+        }).catch((err) => {
+          console.error("[AutoScore] Background processing failed for job", jobId, err);
+        });
+      }
+    })
+    .catch((err) => {
+      console.error("[AutoScore] Failed to enqueue score job:", err);
+    });
+}
+
 async function completeRecruiterScoreJob(params: {
   jobId: string;
   scoreId: string;
@@ -410,12 +445,34 @@ export async function processPendingRecruiterScoreJobs(limit: number = 5) {
     .limit(safeLimit)
     .get();
 
-  if (snapshot.empty) return;
+  if (snapshot.empty) return { processed: 0, failed: 0 };
+
+  let processed = 0;
+  let failed = 0;
 
   for (const doc of snapshot.docs) {
-    await processRecruiterScoreJob(doc.id, doc.data() as RecruiterScoreJob);
+    try {
+      // Cap each individual job to 90s to prevent serverless timeout
+      await Promise.race([
+        processRecruiterScoreJob(doc.id, doc.data() as RecruiterScoreJob),
+        new Promise<void>((_, reject) =>
+          setTimeout(() => reject(new Error("Job timeout after 90s")), 90_000)
+        ),
+      ]);
+      processed++;
+    } catch (err) {
+      console.error(`[ScoreQueue] Job ${doc.id} timed out or failed:`, err);
+      failed++;
+      // Mark as failed so it doesn't block the queue
+      await db.collection(COLLECTION).doc(doc.id).update({
+        status: "failed",
+        error: err instanceof Error ? err.message : "Job timed out",
+      }).catch(() => {/* no-op */});
+    }
     await new Promise<void>((resolve) => setTimeout(resolve, 100));
   }
+
+  return { processed, failed };
 }
 
 export async function enqueueRecruiterScoreBackfillJobs(apps: Array<{

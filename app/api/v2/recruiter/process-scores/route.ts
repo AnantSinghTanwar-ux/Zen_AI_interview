@@ -6,6 +6,8 @@ import { checkRateLimit } from "@/lib/services/rate-limit.service";
 /**
  * POST /api/v2/recruiter/process-scores
  * Manually trigger processing of pending score jobs.
+ * Scoring now also happens automatically right after an interview ends,
+ * so this endpoint is a backstop for any jobs that might have been missed.
  */
 export async function POST(request: NextRequest) {
   const { user, error } = await recruiterGuard();
@@ -16,8 +18,15 @@ export async function POST(request: NextRequest) {
   if (!allowed) return response!;
 
   try {
-    await processPendingRecruiterScoreJobs(20);
-    return NextResponse.json({ message: "Score processing triggered successfully" }, { status: 200 });
+    const result = await processPendingRecruiterScoreJobs(20);
+    return NextResponse.json(
+      {
+        message: "Score processing triggered successfully",
+        processed: result?.processed ?? 0,
+        failed: result?.failed ?? 0,
+      },
+      { status: 200 }
+    );
   } catch (err) {
     console.error("Process scores error:", err);
     return NextResponse.json(

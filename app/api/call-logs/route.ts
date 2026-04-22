@@ -10,7 +10,7 @@ import {
   failIdempotencyLock,
   IdempotencyToken,
 } from "@/lib/services/idempotency.service";
-import { enqueueRecruiterScoreJob } from "@/services/recruiter/recruiter-score-queue.service";
+import { enqueueAndProcessRecruiterScoreJob } from "@/services/recruiter/recruiter-score-queue.service";
 
 type TranscriptMessage = {
   type?: string;
@@ -372,11 +372,12 @@ export async function POST(request: NextRequest) {
       );
 
       if (applicationId) {
-        enqueueRecruiterScoreJob({
+        // Fire-and-forget: enqueue AND immediately process the scoring job.
+        // This means the score is generated right after the interview ends,
+        // without needing a separate cron or manual process-scores trigger.
+        enqueueAndProcessRecruiterScoreJob({
           applicationId,
           interviewId: callIdForPipeline,
-        }).catch((err) => {
-          console.error("[AutoScoreQueue] Failed to enqueue recruiter score job:", err);
         });
       }
     };

@@ -93,6 +93,21 @@ export default function RecruiterDashboard() {
   useEffect(() => { if (tab === "applications") fetchApplications(); }, [tab, fetchApplications]);
   useEffect(() => { if (tab === "leaderboard") fetchLeaderboard(); }, [tab, fetchLeaderboard]);
 
+  // Auto-refresh every 8s if any application is still being scored
+  useEffect(() => {
+    const hasPendingScores = applications.some(
+      (a) => a.scoreStatus === "processing" || a.scoreStatus === "pending"
+    );
+    if (!hasPendingScores) return;
+
+    const timer = setInterval(() => {
+      fetchApplications();
+      fetchStats();
+    }, 8000);
+
+    return () => clearInterval(timer);
+  }, [applications, fetchApplications, fetchStats]);
+
   // === RESCORE ALL ===
   const handleRescore = async () => {
     setRescoring(true);
@@ -101,19 +116,37 @@ export default function RecruiterDashboard() {
       const res = await fetch("/api/v2/recruiter/rescore", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
-        toast.success(`Queued ${data.enqueued} interviews for AI re-scoring`);
-        setRescoreProgress(`Processing ${data.enqueued} interviews with AI...`);
+        const enqueued = data.enqueued ?? 0;
+        toast.success(`Queued ${enqueued} interviews for AI re-scoring`);
+        if (enqueued === 0) {
+          toast.info("No completed interviews found to re-score.");
+          return;
+        }
 
-        // Now trigger processing
-        let attempts = 0;
-        const maxAttempts = 12;
-        while (attempts < maxAttempts) {
-          attempts++;
-          setRescoreProgress(`AI analyzing interviews... (batch ${attempts}/${maxAttempts})`);
-          const processRes = await fetch("/api/v2/recruiter/process-scores", { method: "POST" });
-          if (!processRes.ok) break;
-          // Wait a bit between batches
-          await new Promise((r) => setTimeout(r, 3000));
+        // Jobs auto-process now — just poll for results
+        setRescoreProgress(`AI is analyzing ${enqueued} interviews in the background...`);
+        const pollInterval = 10_000; // 10s
+        const maxWaitMs = enqueued * 35_000; // ~35s per job estimate
+        const deadline = Date.now() + Math.min(maxWaitMs, 5 * 60_000); // cap at 5 min
+
+        let lastPendingCount = enqueued;
+        while (Date.now() < deadline) {
+          await new Promise((r) => setTimeout(r, pollInterval));
+          await fetchApplications();
+          const stillPending = applications.filter(
+            (a) => a.scoreStatus === "processing" || a.scoreStatus === "pending"
+          ).length;
+          setRescoreProgress(
+            stillPending > 0
+              ? `AI analyzing... (${stillPending} remaining)`
+              : "Finalizing scores..."
+          );
+          if (stillPending === 0) break;
+          if (stillPending === lastPendingCount) {
+            // Nudge the queue in case a job got stuck
+            await fetch("/api/v2/recruiter/process-scores", { method: "POST" }).catch(() => {});
+          }
+          lastPendingCount = stillPending;
         }
 
         setRescoreProgress("Refreshing data...");
