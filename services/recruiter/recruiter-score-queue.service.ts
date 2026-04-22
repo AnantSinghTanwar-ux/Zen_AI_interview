@@ -15,14 +15,14 @@ const MAX_RETRIES = Number(process.env.RECRUITER_SCORE_JOB_MAX_RETRIES ?? 3);
 
 const SCORE_MODEL_CANDIDATES = getOpenRouterModelCandidates(
   process.env.OPENROUTER_RECRUITER_STRICT_MODEL,
-  "openai/gpt-4.1",
+  "anthropic/claude-sonnet-4",
   "anthropic/claude-3.7-sonnet",
-  "google/gemini-2.5-pro",
+  "openai/gpt-4.1",
+  "google/gemini-2.5-pro-preview-06-05",
   process.env.OPENROUTER_HARSH_ANALYSIS_MODEL,
   process.env.OPENROUTER_EVALUATION_MODEL,
   "openai/gpt-4.1-mini",
   process.env.OPENROUTER_MODEL,
-  process.env.GOOGLE_AI_FEEDBACK_MODEL,
   "openrouter/auto"
 );
 
@@ -111,61 +111,99 @@ function buildRecruiterPrompt(transcript: string): string {
     .trim();
 
   return `
-You are a strict recruiter panel evaluating interview performance for hiring decisions.
+You are a senior technical recruiter and hiring panel evaluator. Your job is to produce a PRECISE, DIFFERENTIATED score for this specific candidate interview.
 
-MANDATORY RULES:
-1) Evidence-only scoring: use only explicit transcript evidence.
-2) Resume references are not technical proof.
-3) Be harsh and realistic; do not inflate scores.
-4) If technical depth is absent, technicalScore MUST be <= 25.
-5) If no concrete problem-solving walkthrough exists, problemSolvingScore MUST be <= 25.
-6) CommunicationScore should be penalized for vague/short/deflecting responses and should rarely exceed 42 in those cases.
-7) Do not use hire/strong_hire unless transcript contains multiple concrete, correct, role-relevant examples.
-8) Default baseline is low: average interviews usually score in 20-55 unless evidence clearly proves otherwise.
-9) If candidate gives almost no meaningful response, score must be between 0 and 8.
-10) If candidate speaks but answers are irrelevant to interviewer questions, overallScore must be <= 10.
-11) Never score using randomness, tone, or potential; only transcript evidence.
-12) Be deterministic and strict. Similar evidence must produce similar scores.
+CRITICAL: Every candidate is different. Scores MUST reflect actual performance differences. Two candidates should NEVER get the same score unless their interviews are virtually identical.
 
-SCORING SCALE (VERY STRICT):
-- 0-8: silent, near-silent, or unusable responses.
-- 9-20: some speech but mostly irrelevant, incorrect, or evasive.
-- 21-40: partial answers with major technical gaps.
-- 41-59: moderate but inconsistent technical correctness.
-- 60-79: strong, mostly correct, role-relevant answers.
-- 80-100: exceptional depth and accuracy across most questions.
+## ANALYSIS METHODOLOGY (Follow step-by-step)
 
-SCORING METHOD (must follow):
-1) Identify each interviewer question.
-2) Map each candidate response to that specific question.
-3) Score relevance + correctness + completeness per question.
-4) Penalize silence/irrelevance aggressively.
-5) Aggregate into the final strict score.
+### Step 1: Extract Question-Answer Pairs
+Identify every distinct question or topic the interviewer raised. For each one, note:
+- The specific question or topic
+- What the candidate actually said in response
+- Whether the response was: correct, partially correct, incorrect, vague, or missing
 
-RECOMMENDATION BANDS:
-- strong_hire: 90-100 (exceptional, rare)
-- hire: 78-89 (consistently strong, clear depth)
-- maybe: 58-77 (mixed evidence / partial readiness)
-- no_hire: 0-57 (insufficient depth)
+### Step 2: Score Each Dimension Independently
 
-Transcript:
+**Technical Score (0-100):**
+- Did the candidate demonstrate specific technical knowledge?
+- Were technical terms used correctly?
+- Did they explain concepts with depth (not just name-dropping)?
+- Were code examples, architecture decisions, or algorithms discussed accurately?
+- Score 0-15: No technical content or all wrong
+- Score 16-35: Mentioned tech topics but shallow/incorrect
+- Score 36-55: Some correct technical knowledge, major gaps
+- Score 56-75: Solid technical understanding with minor gaps
+- Score 76-90: Strong technical depth, mostly accurate
+- Score 91-100: Exceptional, expert-level technical discourse
+
+**Communication Score (0-100):**
+- Were answers clear, structured, and well-articulated?
+- Did the candidate explain their thought process?
+- Were responses concise yet comprehensive?
+- Did they ask clarifying questions when appropriate?
+- Score 0-15: Incoherent, silent, or one-word answers
+- Score 16-35: Disorganized, hard to follow
+- Score 36-55: Understandable but rambling or unfocused
+- Score 56-75: Clear communication with some structure
+- Score 76-90: Well-structured, articulate responses
+- Score 91-100: Exceptional clarity and persuasiveness
+
+**Problem Solving Score (0-100):**
+- Did the candidate break down problems systematically?
+- Did they consider edge cases or trade-offs?
+- Did they demonstrate analytical thinking?
+- Did they walk through their approach before implementing?
+- Score 0-15: No problem-solving demonstrated
+- Score 16-35: Jumped to conclusions without analysis
+- Score 36-55: Some analytical thinking, missed key aspects
+- Score 56-75: Good approach with reasonable trade-off analysis
+- Score 76-90: Excellent systematic problem breakdown
+- Score 91-100: Masterful problem decomposition with creative solutions
+
+### Step 3: Calculate Overall Score
+Overall = weighted average:
+- Technical: 40%
+- Problem Solving: 30%
+- Communication: 30%
+
+Then adjust ±5 points based on:
+- Enthusiasm and engagement (+1 to +3)
+- Red flags like dishonesty or arrogance (-3 to -5)
+- Consistency across topics (+1 to +2)
+
+### Step 4: Determine Recommendation
+- strong_hire (85-100): Exceptional across all dimensions, would strengthen any team
+- hire (65-84): Solid performer, clearly meets the bar for the role
+- maybe (40-64): Mixed signals, some promise but significant concerns
+- no_hire (0-39): Does not meet the hiring bar
+
+## SPECIAL CASES:
+- Very short interviews (< 5 exchanges): Score based on what IS there, but note this in feedbackSummary. Short does NOT mean automatic zero - a candidate who gives 3 brilliant answers deserves a good score.
+- If candidate gives mostly irrelevant answers: communicationScore should still reflect clarity of speech, but technicalScore and problemSolvingScore should be very low.
+- If transcript shows candidate was interrupted or had technical issues: note this and be fair.
+
+## TRANSCRIPT TO ANALYZE:
 ${normalizedTranscript}
 
-Respond in ONLY valid JSON with this exact structure:
+## REQUIRED OUTPUT FORMAT (ONLY valid JSON, nothing else):
 {
   "overallScore": <number 0-100>,
   "technicalScore": <number 0-100>,
   "communicationScore": <number 0-100>,
   "problemSolvingScore": <number 0-100>,
   "recommendation": "<one of: strong_hire, hire, maybe, no_hire>",
-  "strengths": ["<strength1>", "<strength2>", "<strength3>"],
-  "weaknesses": ["<weakness1>", "<weakness2>"],
-  "feedbackSummary": "<2-3 sentence overall assessment>"
+  "strengths": ["<specific strength from transcript>", "<another specific strength>", "<third strength if applicable>"],
+  "weaknesses": ["<specific weakness from transcript>", "<another specific weakness>"],
+  "feedbackSummary": "<3-4 sentence detailed assessment referencing specific parts of the interview, what impressed you, what concerned you, and why you gave this particular score>"
 }
 
-Use real-world hiring standards in a competitive market. Return ONLY JSON.
+IMPORTANT: The feedbackSummary MUST reference specific things the candidate said. Generic feedback like "candidate performed adequately" is UNACCEPTABLE. Quote or paraphrase actual responses.
+
+Return ONLY the JSON object, no additional text.
 `;
 }
+
 
 export async function enqueueRecruiterScoreJob(params: {
   applicationId: string;
@@ -307,8 +345,8 @@ export async function processRecruiterScoreJob(jobId: string, job: RecruiterScor
         : await generateOpenRouterJson<any>({
             prompt: buildRecruiterPrompt(transcript),
             modelCandidates: SCORE_MODEL_CANDIDATES,
-            temperature: 0,
-            maxTokens: 1_800,
+            temperature: 0.1,
+            maxTokens: 2_500,
           });
 
     const guarded = applyRecruiterScoreGuardrails(rawScore, transcript);

@@ -70,27 +70,12 @@ function normalizeOverallByRecommendation(
 export function normalizeRecruiterScoreForDisplay(
   score: ApplicationScore
 ): ApplicationScore {
-  const overall = normalizeOverallByRecommendation(
-    score.overallScore,
-    score.recommendation
-  );
-
-  const technical = clampScore(score.technicalScore);
-  const communication = clampScore(score.communicationScore);
-  const problemSolving = clampScore(score.problemSolvingScore);
-
-  const cappedTechnical = overall <= 45 ? Math.min(technical, 50) : technical;
-  const cappedCommunication =
-    overall <= 45 ? Math.min(communication, 52) : communication;
-  const cappedProblemSolving =
-    overall <= 45 ? Math.min(problemSolving, 50) : problemSolving;
-
   return {
     ...score,
-    overallScore: overall,
-    technicalScore: cappedTechnical,
-    communicationScore: cappedCommunication,
-    problemSolvingScore: cappedProblemSolving,
+    overallScore: clampScore(score.overallScore),
+    technicalScore: clampScore(score.technicalScore),
+    communicationScore: clampScore(score.communicationScore),
+    problemSolvingScore: clampScore(score.problemSolvingScore),
   };
 }
 
@@ -222,12 +207,10 @@ export async function getLeaderboard(filters?: {
       ? await getScoreByApplication(doc.id)
       : null;
 
+    // Only include candidates with actual AI-generated scores
+    // No more fake fallback scores that give everyone the same number
     const score = persistedScore
       ? normalizeRecruiterScoreForDisplay(persistedScore)
-      : app.interviewStatus === "completed" ||
-        app.interviewStatus === "in_progress" ||
-        app.status === "shortlisted"
-      ? computeStrictFallbackScore(app)
       : null;
 
     if (!score) continue;

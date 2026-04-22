@@ -105,7 +105,7 @@ export async function openRouterChatCompletion(
   }
 
   const modelCandidates = getOpenRouterModelCandidates(...(options.modelCandidates || []));
-  const timeoutMs = options.timeoutMs || 30_000;
+  const timeoutMs = options.timeoutMs || 60_000;
   let lastError: unknown = null;
 
   for (const model of modelCandidates) {

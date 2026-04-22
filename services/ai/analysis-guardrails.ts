@@ -305,64 +305,45 @@ export function applyRecruiterScoreGuardrails<T extends RecruiterScoreShape>(
   let communicationScore = clampScoreOptional(input.communicationScore, 0, 100, 0);
   let overallScore = clampScoreOptional(input.overallScore, 0, 100, 0);
 
-  if (!evidence.hasTechnicalDepth) {
-    technicalScore = Math.min(technicalScore, 25);
-  }
-
-  if (!evidence.hasProblemSolvingDepth) {
-    problemSolvingScore = Math.min(problemSolvingScore, 25);
-  }
-
-  if (evidence.candidateWordCount < 25 || evidence.candidateTurns < 2) {
-    technicalScore = Math.min(technicalScore, 6);
-    problemSolvingScore = Math.min(problemSolvingScore, 6);
-    communicationScore = Math.min(communicationScore, 8);
-    overallScore = Math.min(overallScore, 8);
-  }
-
-  if (evidence.candidateRelevanceRatio < 0.03) {
+  // GUARD 1: Nearly empty transcripts (candidate said almost nothing)
+  // Only apply for truly silent/minimal candidates
+  if (evidence.candidateWordCount < 15 || evidence.candidateTurns < 1) {
     technicalScore = Math.min(technicalScore, 8);
     problemSolvingScore = Math.min(problemSolvingScore, 8);
     communicationScore = Math.min(communicationScore, 10);
+    overallScore = Math.min(overallScore, 8);
+  }
+
+  // GUARD 2: All responses are silence-like (one-word answers, "I don't know", etc.)
+  if (
+    evidence.candidateTurns >= 2 &&
+    evidence.silenceLikeResponseTurns >= evidence.candidateTurns
+  ) {
+    technicalScore = Math.min(technicalScore, 10);
+    problemSolvingScore = Math.min(problemSolvingScore, 10);
+    communicationScore = Math.min(communicationScore, 15);
+    overallScore = Math.min(overallScore, 12);
+  }
+
+  // GUARD 3: Interviewer asked many questions but candidate barely responded
+  if (evidence.interviewerTurns >= 5 && evidence.candidateTurns <= 1) {
     overallScore = Math.min(overallScore, 10);
   }
 
-  if (evidence.silenceLikeResponseTurns >= Math.max(2, evidence.candidateTurns - 1)) {
-    technicalScore = Math.min(technicalScore, 5);
-    problemSolvingScore = Math.min(problemSolvingScore, 5);
-    communicationScore = Math.min(communicationScore, 7);
-    overallScore = Math.min(overallScore, 7);
-  }
-
-  if (evidence.avgCandidateWords < 18 || evidence.candidateTurns < 4) {
-    communicationScore = Math.min(communicationScore, 42);
-  }
-
-  if (evidence.hasResumeDeflection && !evidence.hasTechnicalDepth) {
-    overallScore = Math.min(overallScore, 40);
-  }
-
-  if (!evidence.hasTechnicalDepth && !evidence.hasProblemSolvingDepth) {
-    overallScore = Math.min(overallScore, 14);
-  } else if (!evidence.hasTechnicalDepth || !evidence.hasProblemSolvingDepth) {
-    overallScore = Math.min(overallScore, 28);
-  }
-
-  if (evidence.interviewerTurns >= 5 && evidence.candidateTurns <= 1) {
-    overallScore = Math.min(overallScore, 6);
-  }
-
+  // GUARD 4: Ensure overall doesn't exceed component average
+  // (prevent AI from giving inflated overall with low components)
   const componentAverage = Math.round(
     (technicalScore + problemSolvingScore + communicationScore) / 3
   );
-  overallScore = Math.min(overallScore, componentAverage);
+  overallScore = Math.min(overallScore, componentAverage + 10);
 
   const normalizedOverall = clampScore(overallScore, 0, 100);
 
+  // Derive recommendation from overall score using sensible bands
   let recommendation = String(input.recommendation || "").toLowerCase().trim();
-  if (normalizedOverall >= 90) recommendation = "strong_hire";
-  else if (normalizedOverall >= 78) recommendation = "hire";
-  else if (normalizedOverall >= 60) recommendation = "maybe";
+  if (normalizedOverall >= 85) recommendation = "strong_hire";
+  else if (normalizedOverall >= 65) recommendation = "hire";
+  else if (normalizedOverall >= 40) recommendation = "maybe";
   else recommendation = "no_hire";
 
   return {

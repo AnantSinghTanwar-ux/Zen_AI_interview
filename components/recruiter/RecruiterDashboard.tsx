@@ -4,65 +4,14 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import {
   BarChart3, Users, CheckCircle2, Clock, TrendingUp,
-  Upload, Send, Trophy, Loader2, Building2, Globe,
-  Filter, ChevronDown, ThumbsUp, ThumbsDown, Mail,
-  Award, ExternalLink, Search, ArrowUpDown, Eye
+  Trophy, Loader2, Building2, Globe,
+  ThumbsUp, ThumbsDown,
+  Award, ExternalLink, Search, Eye, Download, RefreshCw,
+  UserCheck, FileSpreadsheet, SlidersHorizontal, Sparkles
 } from "lucide-react";
 import type { ExternalApplication, ApplicationScore, LeaderboardEntry } from "@/types/external-application";
 
-/**
- * FALLBACK SCORE: When backend scores are unavailable, compute a heuristic score
- * from available application data. Clearly marked as fallback in the UI.
- */
-function computeFallbackScore(app: ExternalApplication): ApplicationScore {
-  const clamp = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
-  let overall = 0;
-  let recommendation: ApplicationScore["recommendation"] = "no_hire";
-
-  // Deterministic strict fallback for missing backend scores.
-  if (app.interviewStatus === "completed") {
-    overall = 12;
-  } else if (app.interviewStatus === "in_progress") {
-    overall = 7;
-  } else if (app.interviewStatus === "invited") {
-    overall = 5;
-  } else {
-    overall = 4;
-  }
-
-  if (app.status === "shortlisted") {
-    overall = Math.max(overall, 18);
-  } else if (app.status === "rejected") {
-    overall = Math.min(overall, 6);
-    recommendation = "no_hire";
-  }
-
-  overall = clamp(overall);
-
-  if (app.status === "rejected") recommendation = "no_hire";
-  else if (overall >= 90) recommendation = "strong_hire";
-  else if (overall >= 80) recommendation = "hire";
-  else if (overall >= 60) recommendation = "maybe";
-  else recommendation = "no_hire";
-
-  return {
-    id: `fallback-${app.id}`,
-    applicationId: app.id,
-    interviewId: app.interviewId || "",
-    overallScore: overall,
-    technicalScore: clamp(Math.max(0, overall - 2)),
-    communicationScore: clamp(Math.max(0, overall - 1)),
-    problemSolvingScore: clamp(Math.max(0, overall - 3)),
-    recommendation,
-    strengths: [],
-    weaknesses: [],
-    feedbackSummary: "Score estimated from application data (backend score unavailable)",
-    generatedBy: "openrouter",
-    createdAt: new Date().toISOString(),
-  };
-}
-
-type Tab = "overview" | "applications" | "leaderboard" | "import";
+type Tab = "overview" | "applications" | "leaderboard" | "hiring";
 
 export default function RecruiterDashboard() {
   const [tab, setTab] = useState<Tab>("overview");
@@ -79,14 +28,16 @@ export default function RecruiterDashboard() {
   const [statusFilter, setStatusFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Selection
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [assigning, setAssigning] = useState(false);
+  // Hiring tab state
+  const [hiringCount, setHiringCount] = useState(5);
+  const [hiringRoleFilter, setHiringRoleFilter] = useState("");
+  const [hiringMinScore, setHiringMinScore] = useState(0);
+  const [hiringSourceFilter, setHiringSourceFilter] = useState("");
+  const [exportingCsv, setExportingCsv] = useState(false);
 
-  // Import
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [importPreview, setImportPreview] = useState<any[]>([]);
-  const [importing, setImporting] = useState(false);
+  // Rescoring state
+  const [rescoring, setRescoring] = useState(false);
+  const [rescoreProgress, setRescoreProgress] = useState("");
 
   // Detail
   const [detailApp, setDetailApp] = useState<(ExternalApplication & { score?: ApplicationScore | null }) | null>(null);
@@ -142,76 +93,78 @@ export default function RecruiterDashboard() {
   useEffect(() => { if (tab === "applications") fetchApplications(); }, [tab, fetchApplications]);
   useEffect(() => { if (tab === "leaderboard") fetchLeaderboard(); }, [tab, fetchLeaderboard]);
 
-  // Import handlers
-  const handleFileSelect = async (file: File) => {
-    setImportFile(file);
-    const text = await file.text();
-    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-    if (lines.length < 2) { toast.error("Invalid CSV"); return; }
-    const header = lines[0].split(",").map((h) => h.trim());
-    const preview = lines.slice(1, 6).map((line) => {
-      const cols = line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
-      const obj: Record<string, string> = {};
-      header.forEach((h, i) => { obj[h] = cols[i] || ""; });
-      return obj;
-    });
-    setImportPreview(preview);
-  };
-
-  const handleImport = async () => {
-    if (!importFile) return;
-    setImporting(true);
+  // === RESCORE ALL ===
+  const handleRescore = async () => {
+    setRescoring(true);
+    setRescoreProgress("Clearing old scores and queuing fresh AI analysis...");
     try {
-      const formData = new FormData();
-      formData.append("file", importFile);
-      const res = await fetch("/api/v2/recruiter/applications/import", { method: "POST", body: formData });
+      const res = await fetch("/api/v2/recruiter/rescore", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
-        toast.success(`Imported ${data.imported} applications (${data.skipped} skipped)`);
-        setImportFile(null);
-        setImportPreview([]);
-        fetchStats();
-        fetchApplications();
-        setTab("applications");
+        toast.success(`Queued ${data.enqueued} interviews for AI re-scoring`);
+        setRescoreProgress(`Processing ${data.enqueued} interviews with AI...`);
+
+        // Now trigger processing
+        let attempts = 0;
+        const maxAttempts = 12;
+        while (attempts < maxAttempts) {
+          attempts++;
+          setRescoreProgress(`AI analyzing interviews... (batch ${attempts}/${maxAttempts})`);
+          const processRes = await fetch("/api/v2/recruiter/process-scores", { method: "POST" });
+          if (!processRes.ok) break;
+          // Wait a bit between batches
+          await new Promise((r) => setTimeout(r, 3000));
+        }
+
+        setRescoreProgress("Refreshing data...");
+        await Promise.all([fetchStats(), fetchApplications(), fetchLeaderboard()]);
+        toast.success("All scores have been refreshed with AI analysis!");
       } else {
-        toast.error(data.error || "Import failed");
+        toast.error(data.error || "Re-scoring failed");
       }
-    } catch { toast.error("Import failed"); } finally { setImporting(false); }
+    } catch {
+      toast.error("Re-scoring failed");
+    } finally {
+      setRescoring(false);
+      setRescoreProgress("");
+    }
   };
 
-  // Selection & actions
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
-  const selectAllPending = () => {
-    const pending = applications.filter((a) => a.interviewStatus === "pending");
-    setSelectedIds(new Set(pending.map((a) => a.id)));
-  };
-
-  const handleAssign = async () => {
-    if (selectedIds.size === 0) return;
-    setAssigning(true);
+  // === HIRING CSV EXPORT ===
+  const handleExportCsv = async () => {
+    setExportingCsv(true);
     try {
-      const res = await fetch("/api/v2/recruiter/interview/assign", {
+      const res = await fetch("/api/v2/recruiter/hiring-export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ applicationIds: Array.from(selectedIds) }),
+        body: JSON.stringify({
+          count: hiringCount,
+          roleCategory: hiringRoleFilter || undefined,
+          sourcePlatform: hiringSourceFilter || undefined,
+          minScore: hiringMinScore || undefined,
+        }),
       });
-      const data = await res.json();
+
       if (res.ok) {
-        toast.success(`Assigned ${data.assigned} interviews${data.failed ? ` (${data.failed} failed)` : ""}`);
-        setSelectedIds(new Set());
-        fetchApplications();
-        fetchStats();
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `zenai_top_${hiringCount}_candidates.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast.success(`Downloaded top ${hiringCount} candidates as CSV`);
       } else {
-        toast.error(data.error || "Assignment failed");
+        const data = await res.json();
+        toast.error(data.error || "Export failed");
       }
-    } catch { toast.error("Assignment failed"); } finally { setAssigning(false); }
+    } catch {
+      toast.error("Export failed");
+    } finally {
+      setExportingCsv(false);
+    }
   };
 
   const handleStatusChange = async (appId: string, status: string) => {
@@ -229,7 +182,7 @@ export default function RecruiterDashboard() {
     } catch { toast.error("Update failed"); }
   };
 
-  // Enrich applications with fallback scores when backend scores are missing
+  // Enrich applications with scores
   const enrichedApps = useMemo(() => {
     return (searchQuery
       ? applications.filter((a) =>
@@ -238,16 +191,10 @@ export default function RecruiterDashboard() {
           a.roleTitle.toLowerCase().includes(searchQuery.toLowerCase())
         )
       : applications
-    ).map((app) => {
-      // If no score from backend, use fallback for completed/in-progress interviews
-      if (!app.score && (app.interviewStatus === "completed" || app.interviewStatus === "in_progress" || app.status === "shortlisted")) {
-        return { ...app, score: computeFallbackScore(app), _isFallbackScore: true };
-      }
-      return { ...app, _isFallbackScore: false };
-    });
+    );
   }, [applications, searchQuery]);
 
-  // Merge backend leaderboard with scored applications missing from backend leaderboard
+  // Merge backend leaderboard with scored applications
   const effectiveLeaderboard = useMemo((): LeaderboardEntry[] => {
     const merged = new Map<string, LeaderboardEntry>();
 
@@ -255,20 +202,10 @@ export default function RecruiterDashboard() {
       merged.set(entry.applicationId, { ...entry });
     });
 
+    // Also pull from application scores
     applications.forEach((app) => {
-      if (merged.has(app.id)) {
-        return;
-      }
-
-      const shouldCreateFallbackScore =
-        app.interviewStatus === "completed" ||
-        app.interviewStatus === "in_progress" ||
-        app.status === "shortlisted";
-      const score = app.score || (shouldCreateFallbackScore ? computeFallbackScore(app) : null);
-
-      if (!score) {
-        return;
-      }
+      if (merged.has(app.id)) return;
+      if (!app.score) return;
 
       merged.set(app.id, {
         rank: 0,
@@ -278,27 +215,46 @@ export default function RecruiterDashboard() {
         roleTitle: app.roleTitle,
         companyName: app.companyName,
         sourcePlatform: app.sourcePlatform,
-        overallScore: score.overallScore,
-        technicalScore: score.technicalScore,
-        communicationScore: score.communicationScore,
-        problemSolvingScore: score.problemSolvingScore,
-        recommendation: score.recommendation,
+        overallScore: app.score.overallScore,
+        technicalScore: app.score.technicalScore,
+        communicationScore: app.score.communicationScore,
+        problemSolvingScore: app.score.problemSolvingScore,
+        recommendation: app.score.recommendation,
       });
     });
 
     const scored = Array.from(merged.values())
-      .map((app) => {
-        return {
-          ...app,
-          overallScore: Number(app.overallScore || 0),
-        } as LeaderboardEntry;
-      })
+      .map((app) => ({
+        ...app,
+        overallScore: Number(app.overallScore || 0),
+      } as LeaderboardEntry))
       .filter((entry) => Number.isFinite(entry.overallScore));
 
     scored.sort((a, b) => b.overallScore - a.overallScore);
     scored.forEach((entry, idx) => { entry.rank = idx + 1; });
     return scored;
   }, [leaderboard, applications]);
+
+  // Filtered leaderboard for Hiring tab
+  const hiringLeaderboard = useMemo(() => {
+    let filtered = [...effectiveLeaderboard];
+    if (hiringRoleFilter) {
+      filtered = filtered.filter((e) =>
+        e.roleTitle.toLowerCase().includes(hiringRoleFilter.toLowerCase())
+      );
+    }
+    if (hiringSourceFilter) {
+      filtered = filtered.filter((e) => e.sourcePlatform === hiringSourceFilter);
+    }
+    if (hiringMinScore > 0) {
+      filtered = filtered.filter((e) => e.overallScore >= hiringMinScore);
+    }
+    return filtered;
+  }, [effectiveLeaderboard, hiringRoleFilter, hiringSourceFilter, hiringMinScore]);
+
+  const hiringTopCandidates = useMemo(() => {
+    return hiringLeaderboard.slice(0, hiringCount);
+  }, [hiringLeaderboard, hiringCount]);
 
   const overviewTopCandidates = useMemo((): LeaderboardEntry[] => {
     const statsCandidates = Array.isArray(stats?.topCandidates)
@@ -312,7 +268,7 @@ export default function RecruiterDashboard() {
     return effectiveLeaderboard.slice(0, 5);
   }, [stats, effectiveLeaderboard]);
 
-  const scoreColor = (s: number) => s >= 80 ? "text-emerald-400" : s >= 60 ? "text-yellow-400" : "text-red-400";
+  const scoreColor = (s: number) => s >= 80 ? "text-emerald-400" : s >= 60 ? "text-yellow-400" : s >= 40 ? "text-orange-400" : "text-red-400";
 
   const statusBadge = (status: string) => {
     const colors: Record<string, string> = {
@@ -327,12 +283,42 @@ export default function RecruiterDashboard() {
     return colors[status] || colors.pending;
   };
 
+  const recBadgeColor = (rec: string) => {
+    if (rec === "strong_hire") return "bg-emerald-500/15 border-emerald-500/30 text-emerald-400";
+    if (rec === "hire") return "bg-green-500/15 border-green-500/30 text-green-400";
+    if (rec === "maybe") return "bg-amber-500/15 border-amber-500/30 text-amber-400";
+    return "bg-red-500/15 border-red-500/30 text-red-500";
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="w-8 h-8 text-primary animate-spin" /></div>;
   }
 
   return (
     <>
+    {/* Mobile Tab Bar */}
+    <div className="flex md:hidden gap-2 mb-4 overflow-x-auto pb-2">
+      {([
+        { key: "overview", label: "Dashboard", icon: BarChart3 },
+        { key: "applications", label: "Apps", icon: Users },
+        { key: "leaderboard", label: "Rankings", icon: Trophy },
+        { key: "hiring", label: "Hire", icon: UserCheck },
+      ] as const).map(({ key, label, icon: Icon }) => (
+        <button
+          key={key}
+          onClick={() => setTab(key)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
+            tab === key
+              ? "bg-[#A3E635] text-black shadow-lg"
+              : "bg-white/[0.04] text-[#888] hover:text-white"
+          }`}
+        >
+          <Icon className="w-4 h-4" />
+          {label}
+        </button>
+      ))}
+    </div>
+
     <div className="flex flex-col md:flex-row gap-8">
       {/* Sidebar Dock */}
       <div className="hidden md:flex flex-col items-center py-6 gap-6 w-20 shrink-0 bg-[#0A0A0A]/40 border border-white/[0.04] backdrop-blur-3xl rounded-3xl sticky top-24 h-fit z-10 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
@@ -340,7 +326,7 @@ export default function RecruiterDashboard() {
           { key: "overview", label: "Dashboard", icon: BarChart3 },
           { key: "applications", label: "Applications", icon: Users },
           { key: "leaderboard", label: "Leaderboard", icon: Trophy },
-          { key: "import", label: "Import", icon: Upload },
+          { key: "hiring", label: "Hire Candidates", icon: UserCheck },
         ] as const).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -363,9 +349,28 @@ export default function RecruiterDashboard() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
           <div>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">Recruiter Analytics</h1>
-            <p className="text-muted-foreground mt-2 text-lg">External pipeline & algorithmic scoring workspace.</p>
+            <p className="text-muted-foreground mt-2 text-lg">AI-powered interview analysis & candidate scoring workspace.</p>
           </div>
+          <button
+            onClick={handleRescore}
+            disabled={rescoring}
+            className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white text-sm font-medium px-5 py-2.5 rounded-full transition-all disabled:opacity-50 shadow-lg shadow-violet-500/20"
+          >
+            {rescoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            {rescoring ? "AI Analyzing..." : "Re-Score All with AI"}
+          </button>
         </div>
+
+        {/* Rescore progress banner */}
+        {rescoring && rescoreProgress && (
+          <div className="bg-violet-500/10 border border-violet-500/20 rounded-xl px-5 py-3 flex items-center gap-3">
+            <Loader2 className="w-5 h-5 text-violet-400 animate-spin shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-violet-300">{rescoreProgress}</p>
+              <p className="text-xs text-violet-400/70 mt-0.5">This may take a few minutes. Each interview is being analyzed by AI individually.</p>
+            </div>
+          </div>
+        )}
 
       {/* ========== OVERVIEW TAB ========== */}
       {tab === "overview" && stats && (
@@ -433,6 +438,9 @@ export default function RecruiterDashboard() {
                       <p className="text-xs text-muted-foreground">{c.roleTitle} · {c.companyName}</p>
                     </div>
                     <span className={`text-lg font-bold ${scoreColor(c.overallScore)}`}>{c.overallScore}</span>
+                    <span className={`text-[9px] font-bold px-2 py-1 rounded-full border uppercase ${recBadgeColor(c.recommendation)}`}>
+                      {c.recommendation.replace("_", " ")}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -476,30 +484,9 @@ export default function RecruiterDashboard() {
             </select>
           </div>
 
-          {/* Actions bar */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <button onClick={selectAllPending} className="text-xs text-primary hover:underline">Select all pending</button>
-              {selectedIds.size > 0 && (
-                <span className="text-xs text-muted-foreground">{selectedIds.size} selected</span>
-              )}
-            </div>
-            {selectedIds.size > 0 && (
-              <button
-                onClick={handleAssign}
-                disabled={assigning}
-                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white text-xs font-medium px-4 py-2 rounded-full transition-all disabled:opacity-50"
-              >
-                {assigning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                Assign Interviews ({selectedIds.size})
-              </button>
-            )}
-          </div>
-
           {/* Table */}
-                    {/* Premium Card-List Apps */}
           <div className="space-y-3 mt-6">
-            <div className="hidden md:flex items-center px-4 md:px-6 py-2 text-xs font-semibold text-[#888] uppercase tracking-widest pl-14">
+            <div className="hidden md:flex items-center px-4 md:px-6 py-2 text-xs font-semibold text-[#888] uppercase tracking-widest">
                <div className="flex-1">Candidate Profile</div>
                <div className="w-48">Role & Company</div>
                <div className="w-32">Status</div>
@@ -515,11 +502,7 @@ export default function RecruiterDashboard() {
 
             {enrichedApps.map((app) => (
               <div key={app.id} className="group relative flex flex-col md:flex-row md:items-center gap-4 bg-[#0A0A0A]/40 hover:bg-[#FAFAFA]/[0.03] border border-white/[0.03] hover:border-white/10 p-4 md:p-5 rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 hidden md:block">
-                  <input type="checkbox" checked={selectedIds.has(app.id)} onChange={() => toggleSelect(app.id)} className="w-4 h-4 rounded border-white/20 accent-[#A3E635]" />
-                </div>
-                
-                <div className="flex items-center gap-4 flex-1 md:pl-8">
+                <div className="flex items-center gap-4 flex-1">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
                      <span className="text-lg font-bold text-white/80 uppercase">{app.candidateName.charAt(0)}</span>
                   </div>
@@ -548,14 +531,20 @@ export default function RecruiterDashboard() {
 
                 <div className="md:w-24 flex justify-center">
                   {app.score ? (
-                    <div className="relative w-12 h-12 flex items-center justify-center flex-shrink-0" title={app._isFallbackScore ? "Estimated score (fallback)" : "Backend score"}>
+                    <div className="relative w-12 h-12 flex items-center justify-center flex-shrink-0" title={`Score: ${app.score.overallScore}/100`}>
                       <svg className="absolute w-12 h-12 transform -rotate-90">
                         <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2.5" fill="transparent" className="text-white/5" />
-                        <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2.5" fill="transparent" className="text-[#A3E635] drop-shadow-[0_0_8px_rgba(163,230,53,0.4)]" strokeDasharray="125" strokeDashoffset={125 - (125 * Math.min(app.score.overallScore, 100) / 100)} strokeLinecap="round" />
+                        <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2.5" fill="transparent" className={`${scoreColor(app.score.overallScore).replace('text-', 'text-')} drop-shadow-[0_0_8px_rgba(163,230,53,0.4)]`} strokeDasharray="125" strokeDashoffset={125 - (125 * Math.min(app.score.overallScore, 100) / 100)} strokeLinecap="round" />
                       </svg>
-                      <span className="relative z-10 text-xs font-bold text-[#A3E635]">{Math.round(app.score.overallScore)}</span>
+                      <span className={`relative z-10 text-xs font-bold ${scoreColor(app.score.overallScore)}`}>{Math.round(app.score.overallScore)}</span>
                     </div>
-                  ) : <span className="text-sm text-[#888] font-medium">—</span>}
+                  ) : (
+                    <span className="text-sm text-[#888] font-medium flex items-center gap-1">
+                      {app.scoreStatus === "processing" ? (
+                        <><Loader2 className="w-3 h-3 animate-spin" /> <span className="text-xs">Scoring...</span></>
+                      ) : "—"}
+                    </span>
+                  )}
                 </div>
 
                 <div className="md:w-28 flex items-center justify-end gap-1.5">
@@ -584,7 +573,7 @@ export default function RecruiterDashboard() {
             </select>
           </div>
 
-                    {/* Premium Card List Leaderboard */}
+          {/* Leaderboard cards */}
           <div className="space-y-3 mt-6">
             <div className="hidden md:flex items-center px-4 py-2 text-xs font-semibold text-[#888] uppercase tracking-widest pl-4">
                <div className="w-16">Rank</div>
@@ -596,7 +585,7 @@ export default function RecruiterDashboard() {
             {effectiveLeaderboard.length === 0 && (
               <div className="text-center py-16 text-[#888] bg-white/[0.01] rounded-3xl border border-white/5">
                 <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p className="text-base">Algorithm requires sufficient candidate data points. Awaiting inputs.</p>
+                <p className="text-base">No scored candidates yet. Click &quot;Re-Score All with AI&quot; to analyze interviews.</p>
               </div>
             )}
 
@@ -625,21 +614,15 @@ export default function RecruiterDashboard() {
                     <div className="relative w-12 h-12 flex items-center justify-center flex-shrink-0">
                       <svg className="absolute w-12 h-12 transform -rotate-90">
                         <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2.5" fill="transparent" className="text-white/5" />
-                        <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2.5" fill="transparent" className="text-[#A3E635] drop-shadow-[0_0_8px_rgba(163,230,53,0.5)]" strokeDasharray="125" strokeDashoffset={125 - (125 * Math.min(entry.overallScore, 100) / 100)} strokeLinecap="round" />
+                        <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2.5" fill="transparent" className={`${scoreColor(entry.overallScore).replace('text-', 'text-')} drop-shadow-[0_0_8px_rgba(163,230,53,0.5)]`} strokeDasharray="125" strokeDashoffset={125 - (125 * Math.min(entry.overallScore, 100) / 100)} strokeLinecap="round" />
                       </svg>
-                      <span className="relative z-10 text-xs font-bold text-[#A3E635]">{Math.round(entry.overallScore)}</span>
+                      <span className={`relative z-10 text-xs font-bold ${scoreColor(entry.overallScore)}`}>{Math.round(entry.overallScore)}</span>
                     </div>
                   </div>
 
                   <div className="md:w-36 flex justify-end">
-                     <span className={`text-[10px] font-bold px-4 py-1.5 rounded-full border uppercase tracking-wider ${
-                        entry.recommendation === "strong_hire" || entry.recommendation === "hire"
-                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                          : entry.recommendation === "maybe"
-                          ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
-                          : "bg-red-500/10 border-red-500/20 text-red-500"
-                      }`}>
-                        {entry.recommendation.replace("_", " ")}
+                     <span className={`text-[10px] font-bold px-4 py-1.5 rounded-full border uppercase tracking-wider ${recBadgeColor(entry.recommendation)}`}>
+                       {entry.recommendation.replace("_", " ")}
                      </span>
                   </div>
                </div>
@@ -648,65 +631,152 @@ export default function RecruiterDashboard() {
         </div>
       )}
 
-      {/* ========== IMPORT TAB ========== */}
-      {tab === "import" && (
+      {/* ========== HIRING TAB ========== */}
+      {tab === "hiring" && (
         <div className="space-y-6">
-          <div className="rounded-xl border border-white/10 bg-card/60 backdrop-blur-sm p-8">
-            <h2 className="text-lg font-bold text-foreground mb-2">Import External Applications</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              Upload a CSV with columns: <code className="text-primary">name, email, company, role, source, category, resumeUrl, externalJobId, externalJobUrl</code>
-            </p>
+          {/* Hero card */}
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#0A0A0A]/60 to-[#1a1a2e]/40 backdrop-blur-sm p-8">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-[#A3E635]/15 flex items-center justify-center">
+                <UserCheck className="w-5 h-5 text-[#A3E635]" />
+              </div>
+              <h2 className="text-2xl font-bold text-foreground">Hiring Selection</h2>
+            </div>
+            <p className="text-muted-foreground text-sm mb-8">Configure your hiring criteria and download a shortlist of top candidates with their AI-analyzed scores.</p>
 
-            <div
-              className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center hover:border-primary/40 transition-colors cursor-pointer"
-              onClick={() => document.getElementById("ext-import-file")?.click()}
-            >
-              <input
-                id="ext-import-file" type="file" accept=".csv,.json"
-                onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
-                className="hidden"
-              />
-              <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
-              <p className="text-foreground font-medium">{importFile ? importFile.name : "Drop CSV or click to browse"}</p>
-              <p className="text-xs text-muted-foreground mt-1">Supports CSV and JSON formats</p>
+            {/* Configuration grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              {/* Number of hires */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-[#888] uppercase tracking-wider flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5" /> Candidates to Hire
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={500}
+                  value={hiringCount}
+                  onChange={(e) => setHiringCount(Math.max(1, Math.min(500, parseInt(e.target.value) || 1)))}
+                  className="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-foreground text-sm font-medium focus:outline-none focus:border-[#A3E635]/50 focus:ring-1 focus:ring-[#A3E635]/20 transition-all"
+                />
+              </div>
+
+              {/* Role filter */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-[#888] uppercase tracking-wider flex items-center gap-1.5">
+                  <Award className="w-3.5 h-3.5" /> Filter by Role
+                </label>
+                <select
+                  value={hiringRoleFilter}
+                  onChange={(e) => setHiringRoleFilter(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-foreground text-sm appearance-none focus:outline-none focus:border-[#A3E635]/50 focus:ring-1 focus:ring-[#A3E635]/20 transition-all"
+                >
+                  <option value="">All Roles</option>
+                  {filterOptions.roleCategories.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+
+              {/* Min score filter */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-[#888] uppercase tracking-wider flex items-center gap-1.5">
+                  <SlidersHorizontal className="w-3.5 h-3.5" /> Minimum Score
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={hiringMinScore}
+                  onChange={(e) => setHiringMinScore(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
+                  placeholder="0"
+                  className="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-foreground text-sm font-medium focus:outline-none focus:border-[#A3E635]/50 focus:ring-1 focus:ring-[#A3E635]/20 transition-all"
+                />
+              </div>
+
+              {/* Source filter */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-[#888] uppercase tracking-wider flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5" /> Filter by Source
+                </label>
+                <select
+                  value={hiringSourceFilter}
+                  onChange={(e) => setHiringSourceFilter(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-foreground text-sm appearance-none focus:outline-none focus:border-[#A3E635]/50 focus:ring-1 focus:ring-[#A3E635]/20 transition-all"
+                >
+                  <option value="">All Sources</option>
+                  {filterOptions.sources.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
             </div>
 
-            {importPreview.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-sm font-semibold text-foreground mb-3">Preview (first 5 rows):</h3>
-                <div className="overflow-x-auto rounded-lg border border-white/10">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-white/[0.03]">
-                        {Object.keys(importPreview[0]).map((key) => (
-                          <th key={key} className="p-2 text-left text-muted-foreground">{key}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                      {importPreview.map((row, i) => (
-                        <tr key={i}>
-                          {Object.values(row).map((val, j) => (
-                            <td key={j} className="p-2 text-foreground truncate max-w-[150px]">{val as string}</td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="flex justify-end mt-4">
-                  <button
-                    onClick={handleImport}
-                    disabled={importing}
-                    className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white text-sm font-medium px-6 py-2.5 rounded-full transition-all disabled:opacity-50"
-                  >
-                    {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                    Import All
-                  </button>
-                </div>
-              </div>
-            )}
+            {/* Export button */}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleExportCsv}
+                disabled={exportingCsv || hiringTopCandidates.length === 0}
+                className="flex items-center gap-2.5 bg-[#A3E635] hover:bg-[#B3F245] text-black font-semibold px-6 py-3 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-[#A3E635]/20 hover:shadow-[#A3E635]/30 hover:scale-[1.02] active:scale-[0.98]"
+              >
+                {exportingCsv ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileSpreadsheet className="w-5 h-5" />}
+                Download CSV ({hiringTopCandidates.length} Candidates)
+              </button>
+              <p className="text-xs text-[#888]">
+                {hiringLeaderboard.length > 0
+                  ? `${hiringLeaderboard.length} matching candidates found · Showing top ${Math.min(hiringCount, hiringLeaderboard.length)}`
+                  : "No candidates match your criteria"}
+              </p>
+            </div>
           </div>
+
+          {/* Preview of selected candidates */}
+          {hiringTopCandidates.length > 0 && (
+            <div className="rounded-2xl border border-white/10 bg-[#0A0A0A]/40 backdrop-blur-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-[#A3E635]" />
+                  <h3 className="text-sm font-semibold text-foreground">Selected Candidates Preview</h3>
+                </div>
+                <span className="text-xs text-[#888] bg-white/5 px-3 py-1 rounded-full">
+                  Top {hiringTopCandidates.length} of {hiringLeaderboard.length}
+                </span>
+              </div>
+              <div className="divide-y divide-white/[0.03]">
+                {hiringTopCandidates.map((entry, idx) => (
+                  <div key={entry.applicationId} className="flex items-center gap-4 px-6 py-4 hover:bg-white/[0.02] transition-colors">
+                    <span className={`text-xl font-black w-8 text-center ${idx < 3 ? "text-[#A3E635]" : "text-white/20"}`}>
+                      #{idx + 1}
+                    </span>
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center shrink-0">
+                      <span className="text-sm font-bold text-white/70 uppercase">{entry.candidateName.charAt(0)}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{entry.candidateName}</p>
+                      <p className="text-xs text-[#888] truncate">{entry.candidateEmail}</p>
+                    </div>
+                    <div className="hidden md:block w-40">
+                      <p className="text-xs font-medium text-foreground truncate">{entry.roleTitle}</p>
+                      <p className="text-xs text-[#888] truncate">{entry.companyName}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className={`text-lg font-bold ${scoreColor(entry.overallScore)}`}>{Math.round(entry.overallScore)}</p>
+                        <p className="text-[9px] text-[#888] uppercase">Score</p>
+                      </div>
+                      <span className={`text-[9px] font-bold px-3 py-1 rounded-full border uppercase tracking-wider ${recBadgeColor(entry.recommendation)}`}>
+                        {entry.recommendation.replace("_", " ")}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {hiringTopCandidates.length === 0 && (
+            <div className="text-center py-16 text-[#888] bg-white/[0.01] rounded-3xl border border-white/5">
+              <UserCheck className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p className="text-base mb-2">No candidates match your criteria</p>
+              <p className="text-xs text-[#666]">Try adjusting the filters or lowering the minimum score. Make sure interviews have been scored using the &quot;Re-Score All with AI&quot; button.</p>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -754,7 +824,10 @@ export default function RecruiterDashboard() {
 
               {detailApp.score && (
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground">Scores</h3>
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-violet-400" />
+                    AI Interview Analysis
+                  </h3>
                   {[
                     { label: "Overall", score: detailApp.score.overallScore },
                     { label: "Technical", score: detailApp.score.technicalScore },
@@ -764,18 +837,63 @@ export default function RecruiterDashboard() {
                     <div key={label}>
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-muted-foreground">{label}</span>
-                        <span className={scoreColor(score)}>{score}</span>
+                        <span className={scoreColor(score)}>{score}/100</span>
                       </div>
                       <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                        <div className="h-full rounded-full bg-primary" style={{ width: `${score}%` }} />
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            score >= 80 ? "bg-emerald-500" : score >= 60 ? "bg-yellow-500" : score >= 40 ? "bg-orange-500" : "bg-red-500"
+                          }`}
+                          style={{ width: `${score}%` }}
+                        />
                       </div>
                     </div>
                   ))}
+
+                  {/* Recommendation */}
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-xs text-muted-foreground">Recommendation:</span>
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full border uppercase ${recBadgeColor(detailApp.score.recommendation)}`}>
+                      {detailApp.score.recommendation.replace("_", " ")}
+                    </span>
+                  </div>
+
+                  {/* Strengths */}
+                  {detailApp.score.strengths && detailApp.score.strengths.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold text-emerald-400">Strengths:</p>
+                      {detailApp.score.strengths.map((s, i) => (
+                        <p key={i} className="text-xs text-foreground/70 pl-3 border-l-2 border-emerald-500/30">
+                          {s}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Weaknesses */}
+                  {detailApp.score.weaknesses && detailApp.score.weaknesses.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold text-red-400">Weaknesses:</p>
+                      {detailApp.score.weaknesses.map((w, i) => (
+                        <p key={i} className="text-xs text-foreground/70 pl-3 border-l-2 border-red-500/30">
+                          {w}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
                   {detailApp.score.feedbackSummary && (
-                    <div className="p-3 rounded-lg bg-white/[0.03] text-xs text-foreground/80 leading-relaxed">
+                    <div className="p-3 rounded-lg bg-white/[0.03] text-xs text-foreground/80 leading-relaxed border-l-2 border-violet-500/30">
+                      <p className="text-xs font-semibold text-violet-400 mb-1">AI Assessment:</p>
                       {detailApp.score.feedbackSummary}
                     </div>
                   )}
+                </div>
+              )}
+
+              {!detailApp.score && (
+                <div className="p-4 rounded-lg bg-white/[0.02] text-center">
+                  <p className="text-xs text-[#888]">No AI analysis available yet. Click &quot;Re-Score All with AI&quot; to analyze this interview.</p>
                 </div>
               )}
 
