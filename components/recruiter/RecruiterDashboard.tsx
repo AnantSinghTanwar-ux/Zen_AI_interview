@@ -13,6 +13,8 @@ import type { ExternalApplication, ApplicationScore, LeaderboardEntry } from "@/
 
 type Tab = "overview" | "applications" | "leaderboard" | "hiring";
 
+const TEMP_RESCORE_BUTTON_ENABLED = true;
+
 export default function RecruiterDashboard() {
   const [tab, setTab] = useState<Tab>("overview");
   const [stats, setStats] = useState<any>(null);
@@ -34,6 +36,7 @@ export default function RecruiterDashboard() {
   const [hiringMinScore, setHiringMinScore] = useState(0);
   const [hiringSourceFilter, setHiringSourceFilter] = useState("");
   const [exportingCsv, setExportingCsv] = useState(false);
+  const [rescoringAll, setRescoringAll] = useState(false);
 
 
 
@@ -158,6 +161,53 @@ export default function RecruiterDashboard() {
         fetchStats();
       }
     } catch { toast.error("Update failed"); }
+  };
+
+  const handleTemporaryRescoreAll = async () => {
+    if (rescoringAll) return;
+
+    const confirmed = window.confirm(
+      "This will clear existing interview scores and re-run AI scoring for completed interviews. Continue?"
+    );
+    if (!confirmed) return;
+
+    setRescoringAll(true);
+    try {
+      const rescoreRes = await fetch("/api/v2/recruiter/rescore", {
+        method: "POST",
+      });
+      const rescoreData = await rescoreRes.json().catch(() => ({}));
+      if (!rescoreRes.ok) {
+        throw new Error(
+          rescoreData?.error ||
+          rescoreData?.details ||
+          "Failed to start re-scoring"
+        );
+      }
+
+      const processRes = await fetch("/api/v2/recruiter/process-scores", {
+        method: "POST",
+      });
+      const processData = await processRes.json().catch(() => ({}));
+
+      if (!processRes.ok) {
+        toast.warning("Re-score queued, but immediate score processing trigger failed.");
+      }
+
+      await Promise.all([fetchStats(), fetchApplications(), fetchLeaderboard()]);
+
+      const enqueued = Number(rescoreData?.enqueued || 0);
+      const processed = Number(processData?.processed || 0);
+      toast.success(
+        processed > 0
+          ? `Re-score queued for ${enqueued} applications. Processed ${processed} jobs.`
+          : `Re-score queued for ${enqueued} applications.`
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to re-score interviews");
+    } finally {
+      setRescoringAll(false);
+    }
   };
 
   // Enrich applications with scores
@@ -329,6 +379,21 @@ export default function RecruiterDashboard() {
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">Recruiter Analytics</h1>
             <p className="text-muted-foreground mt-2 text-lg">AI-powered interview analysis & candidate scoring workspace.</p>
           </div>
+          {TEMP_RESCORE_BUTTON_ENABLED && (
+            <button
+              onClick={handleTemporaryRescoreAll}
+              disabled={rescoringAll}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#A3E635]/40 bg-[#A3E635]/10 text-[#D6FF6D] text-xs font-semibold uppercase tracking-wider hover:bg-[#A3E635]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Temporary testing control: clear and re-run AI scoring"
+            >
+              {rescoringAll ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              {rescoringAll ? "Re-scoring..." : "Temp: Re-score All"}
+            </button>
+          )}
         </div>
 
       {/* ========== OVERVIEW TAB ========== */}
@@ -852,7 +917,7 @@ export default function RecruiterDashboard() {
 
               {!detailApp.score && (
                 <div className="p-4 rounded-lg bg-white/[0.02] text-center">
-                  <p className="text-xs text-[#888]">No AI analysis available yet. Click &quot;Re-Score All with AI&quot; to analyze this interview.</p>
+                  <p className="text-xs text-[#888]">No AI analysis available yet. Use &quot;Temp: Re-score All&quot; to analyze this interview.</p>
                 </div>
               )}
 
