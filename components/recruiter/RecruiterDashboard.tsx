@@ -35,9 +35,7 @@ export default function RecruiterDashboard() {
   const [hiringSourceFilter, setHiringSourceFilter] = useState("");
   const [exportingCsv, setExportingCsv] = useState(false);
 
-  // Rescoring state
-  const [rescoring, setRescoring] = useState(false);
-  const [rescoreProgress, setRescoreProgress] = useState("");
+
 
   // Detail
   const [detailApp, setDetailApp] = useState<(ExternalApplication & { score?: ApplicationScore | null }) | null>(null);
@@ -108,60 +106,7 @@ export default function RecruiterDashboard() {
     return () => clearInterval(timer);
   }, [applications, fetchApplications, fetchStats]);
 
-  // === RESCORE ALL ===
-  const handleRescore = async () => {
-    setRescoring(true);
-    setRescoreProgress("Clearing old scores and queuing fresh AI analysis...");
-    try {
-      const res = await fetch("/api/v2/recruiter/rescore", { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        const enqueued = data.enqueued ?? 0;
-        toast.success(`Queued ${enqueued} interviews for AI re-scoring`);
-        if (enqueued === 0) {
-          toast.info("No completed interviews found to re-score.");
-          return;
-        }
 
-        // Jobs auto-process now — just poll for results
-        setRescoreProgress(`AI is analyzing ${enqueued} interviews in the background...`);
-        const pollInterval = 10_000; // 10s
-        const maxWaitMs = enqueued * 35_000; // ~35s per job estimate
-        const deadline = Date.now() + Math.min(maxWaitMs, 5 * 60_000); // cap at 5 min
-
-        let lastPendingCount = enqueued;
-        while (Date.now() < deadline) {
-          await new Promise((r) => setTimeout(r, pollInterval));
-          await fetchApplications();
-          const stillPending = applications.filter(
-            (a) => a.scoreStatus === "processing" || a.scoreStatus === "pending"
-          ).length;
-          setRescoreProgress(
-            stillPending > 0
-              ? `AI analyzing... (${stillPending} remaining)`
-              : "Finalizing scores..."
-          );
-          if (stillPending === 0) break;
-          if (stillPending === lastPendingCount) {
-            // Nudge the queue in case a job got stuck
-            await fetch("/api/v2/recruiter/process-scores", { method: "POST" }).catch(() => {});
-          }
-          lastPendingCount = stillPending;
-        }
-
-        setRescoreProgress("Refreshing data...");
-        await Promise.all([fetchStats(), fetchApplications(), fetchLeaderboard()]);
-        toast.success("All scores have been refreshed with AI analysis!");
-      } else {
-        toast.error(data.error || "Re-scoring failed");
-      }
-    } catch {
-      toast.error("Re-scoring failed");
-    } finally {
-      setRescoring(false);
-      setRescoreProgress("");
-    }
-  };
 
   // === HIRING CSV EXPORT ===
   const handleExportCsv = async () => {
@@ -384,26 +329,7 @@ export default function RecruiterDashboard() {
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">Recruiter Analytics</h1>
             <p className="text-muted-foreground mt-2 text-lg">AI-powered interview analysis & candidate scoring workspace.</p>
           </div>
-          <button
-            onClick={handleRescore}
-            disabled={rescoring}
-            className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white text-sm font-medium px-5 py-2.5 rounded-full transition-all disabled:opacity-50 shadow-lg shadow-violet-500/20"
-          >
-            {rescoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            {rescoring ? "AI Analyzing..." : "Re-Score All with AI"}
-          </button>
         </div>
-
-        {/* Rescore progress banner */}
-        {rescoring && rescoreProgress && (
-          <div className="bg-violet-500/10 border border-violet-500/20 rounded-xl px-5 py-3 flex items-center gap-3">
-            <Loader2 className="w-5 h-5 text-violet-400 animate-spin shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-violet-300">{rescoreProgress}</p>
-              <p className="text-xs text-violet-400/70 mt-0.5">This may take a few minutes. Each interview is being analyzed by AI individually.</p>
-            </div>
-          </div>
-        )}
 
       {/* ========== OVERVIEW TAB ========== */}
       {tab === "overview" && stats && (
@@ -618,7 +544,7 @@ export default function RecruiterDashboard() {
             {effectiveLeaderboard.length === 0 && (
               <div className="text-center py-16 text-[#888] bg-white/[0.01] rounded-3xl border border-white/5">
                 <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p className="text-base">No scored candidates yet. Click &quot;Re-Score All with AI&quot; to analyze interviews.</p>
+                <p className="text-base">No scored candidates yet. Interviews are analyzed automatically after completion.</p>
               </div>
             )}
 
@@ -807,7 +733,7 @@ export default function RecruiterDashboard() {
             <div className="text-center py-16 text-[#888] bg-white/[0.01] rounded-3xl border border-white/5">
               <UserCheck className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p className="text-base mb-2">No candidates match your criteria</p>
-              <p className="text-xs text-[#666]">Try adjusting the filters or lowering the minimum score. Make sure interviews have been scored using the &quot;Re-Score All with AI&quot; button.</p>
+              <p className="text-xs text-[#666]">Try adjusting the filters or lowering the minimum score.</p>
             </div>
           )}
         </div>
