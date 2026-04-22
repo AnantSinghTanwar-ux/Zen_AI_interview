@@ -54,6 +54,56 @@ interface RecruiterScoreJob {
   error: string | null;
 }
 
+function isMissingIndexError(error: unknown): boolean {
+  const message =
+    error instanceof Error ? error.message : String(error || "");
+  const code = (error as { code?: unknown })?.code;
+
+  return (
+    code === 9 ||
+    code === "failed-precondition" ||
+    message.includes("FAILED_PRECONDITION") ||
+    message.toLowerCase().includes("index")
+  );
+}
+
+async function getPendingScoreJobSnapshot(safeLimit: number) {
+  try {
+    return await db
+      .collection(COLLECTION)
+      .where("status", "==", "pending")
+      .orderBy("createdAt", "asc")
+      .limit(safeLimit)
+      .get();
+  } catch (error) {
+    if (!isMissingIndexError(error)) {
+      throw error;
+    }
+
+    console.warn(
+      "[ScoreQueue] Missing Firestore index for pending score jobs query, using in-memory fallback sort."
+    );
+
+    const fallbackSize = Math.max(100, safeLimit * 5);
+    const fallbackSnapshot = await db
+      .collection(COLLECTION)
+      .where("status", "==", "pending")
+      .limit(fallbackSize)
+      .get();
+
+    const sortedDocs = [...fallbackSnapshot.docs].sort((a, b) => {
+      const aMillis = new Date(String(a.data()?.createdAt || "")).getTime();
+      const bMillis = new Date(String(b.data()?.createdAt || "")).getTime();
+      return (Number.isFinite(aMillis) ? aMillis : 0) - (Number.isFinite(bMillis) ? bMillis : 0);
+    });
+
+    return {
+      empty: sortedDocs.length === 0,
+      docs: sortedDocs.slice(0, safeLimit),
+    };
+  }
+}
+
 function buildTranscriptFromMessages(messages: any[]): string {
   return (messages as any[])
     .filter((msg: any) => {
@@ -335,7 +385,7 @@ export async function enqueueRecruiterScoreJob(params: {
   const ref = await db.collection(COLLECTION).add(payload);
 
   await updateApplicationScoreState(applicationId, {
-    scoreStatus: "processing",
+    scoreStatus: "pending",
   }).catch(() => {
     // Queue creation should still succeed even if status update fails.
   });
@@ -424,6 +474,12 @@ export async function processRecruiterScoreJob(jobId: string, job: RecruiterScor
       startedAt: new Date().toISOString(),
     });
 
+    await updateApplicationScoreState(job.applicationId, {
+      scoreStatus: "processing",
+    }).catch(() => {
+      // no-op
+    });
+
     const existingScore = await getScoreByApplication(job.applicationId);
     if (existingScore) {
       await updateApplicationScoreState(job.applicationId, {
@@ -506,6 +562,12 @@ export async function processRecruiterScoreJob(jobId: string, job: RecruiterScor
       }).catch(() => {
         // no-op
       });
+    } else {
+      await updateApplicationScoreState(job.applicationId, {
+        scoreStatus: "pending",
+      }).catch(() => {
+        // no-op
+      });
     }
   }
 }
@@ -513,12 +575,7 @@ export async function processRecruiterScoreJob(jobId: string, job: RecruiterScor
 export async function processPendingRecruiterScoreJobs(limit: number = 5) {
   const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.min(Math.floor(limit), 20) : 5;
 
-  const snapshot = await db
-    .collection(COLLECTION)
-    .where("status", "==", "pending")
-    .orderBy("createdAt", "asc")
-    .limit(safeLimit)
-    .get();
+  const snapshot = await getPendingScoreJobSnapshot(safeLimit);
 
   if (snapshot.empty) return { processed: 0, failed: 0 };
 
@@ -543,6 +600,13 @@ export async function processPendingRecruiterScoreJobs(limit: number = 5) {
         status: "failed",
         error: err instanceof Error ? err.message : "Job timed out",
       }).catch(() => {/* no-op */});
+
+      const jobData = doc.data() as RecruiterScoreJob;
+      await updateApplicationScoreState(jobData.applicationId, {
+        scoreStatus: "failed",
+      }).catch(() => {
+        // no-op
+      });
     }
     await new Promise<void>((resolve) => setTimeout(resolve, 100));
   }
