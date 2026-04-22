@@ -428,7 +428,11 @@ export async function POST(request: NextRequest) {
         return false;
       })
       .map((msg) => {
-        const role = msg.role === "user" ? "Candidate" : "Interviewer";
+        const roleValue = String(msg.role || "").toLowerCase();
+        const role =
+          roleValue === "user" || roleValue === "human" || roleValue === "candidate"
+            ? "Candidate"
+            : "Interviewer";
         const content =
           (typeof msg.transcript === "string" && msg.transcript) ||
           (typeof msg.content === "string" && msg.content) ||
@@ -436,11 +440,18 @@ export async function POST(request: NextRequest) {
           "";
         return `${role}: ${content}`;
       })
-      .join("\n");
+      .join("\n")
+      .trim();
 
-    const transcript = artifactTranscript.trim().length >= 50
-      ? artifactTranscript.trim()
-      : transcriptFromMessages;
+    const normalizedArtifactTranscript = artifactTranscript.trim();
+
+    const transcript =
+      transcriptFromMessages.length >= 50 &&
+      /(^|\n)\s*Candidate\s*:/i.test(transcriptFromMessages)
+        ? transcriptFromMessages
+        : normalizedArtifactTranscript.length >= 50
+          ? normalizedArtifactTranscript
+          : transcriptFromMessages || normalizedArtifactTranscript;
 
     // Extract relevant data for Firestore
     const callLogData = {
@@ -466,7 +477,7 @@ export async function POST(request: NextRequest) {
         vapiCallData?.recordingUrl
       ),
       hasTranscript: !!(
-        vapiCallData?.artifact?.transcript || vapiCallData?.transcript
+        transcript || vapiCallData?.artifact?.transcript || vapiCallData?.transcript
       ),
       transcript: transcript || null,
       summary: vapiCallData?.summary || null,

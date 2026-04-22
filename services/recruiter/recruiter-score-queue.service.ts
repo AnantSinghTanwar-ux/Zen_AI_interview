@@ -8,10 +8,18 @@ import {
   getOpenRouterModelCandidates,
   hasOpenRouterKey,
 } from "@/services/ai/openrouter-client";
-import { applyRecruiterScoreGuardrails } from "@/services/ai/analysis-guardrails";
+import {
+  analyzeTranscriptEvidence,
+  applyRecruiterScoreGuardrails,
+} from "@/services/ai/analysis-guardrails";
 
 const COLLECTION = "recruiter_score_jobs";
 const MAX_RETRIES = Number(process.env.RECRUITER_SCORE_JOB_MAX_RETRIES ?? 3);
+const TRANSCRIPT_FETCH_ATTEMPTS = Number(process.env.RECRUITER_TRANSCRIPT_FETCH_ATTEMPTS ?? 3);
+const TRANSCRIPT_FETCH_DELAY_MS = Number(process.env.RECRUITER_TRANSCRIPT_FETCH_DELAY_MS ?? 1500);
+const MIN_TRANSCRIPT_LENGTH = Number(process.env.RECRUITER_MIN_TRANSCRIPT_LENGTH ?? 50);
+const MIN_CANDIDATE_WORDS = Number(process.env.RECRUITER_MIN_CANDIDATE_WORDS ?? 15);
+const MIN_CANDIDATE_TURNS = Number(process.env.RECRUITER_MIN_CANDIDATE_TURNS ?? 2);
 
 const SCORE_MODEL_CANDIDATES = getOpenRouterModelCandidates(
   process.env.OPENROUTER_RECRUITER_STRICT_MODEL,
@@ -46,42 +54,85 @@ interface RecruiterScoreJob {
   error: string | null;
 }
 
-function buildTranscriptFromCallData(callData: any): string {
-  const artifactTranscript =
-    typeof callData?.artifact?.transcript === "string"
-      ? String(callData.artifact.transcript)
-      : "";
-
-  if (artifactTranscript.trim().length >= 50) {
-    return artifactTranscript.trim();
-  }
-
-  const messages = callData?.artifact?.messages || callData?.messages || [];
-
+function buildTranscriptFromMessages(messages: any[]): string {
   return (messages as any[])
     .filter((msg: any) => {
       if (msg.type === "transcript" && msg.transcriptType === "final") return true;
       if (
-        (msg.role === "user" || msg.role === "assistant" || msg.role === "bot") &&
+        (msg.role === "user" ||
+          msg.role === "assistant" ||
+          msg.role === "bot" ||
+          msg.role === "human" ||
+          msg.role === "candidate") &&
         (msg.content || msg.message || msg.transcript)
-      )
+      ) {
         return true;
+      }
       return false;
     })
     .map((msg: any) => {
-      const role = msg.role === "user" ? "Candidate" : "Interviewer";
+      const roleValue = String(msg.role || "").toLowerCase();
+      const role =
+        roleValue === "user" || roleValue === "human" || roleValue === "candidate"
+          ? "Candidate"
+          : "Interviewer";
       const content = msg.transcript || msg.content || msg.message || "";
       return `${role}: ${content}`;
     })
-    .join("\n");
+    .join("\n")
+    .trim();
+}
+
+function buildTranscriptFromCallData(callData: any): string {
+  const messages = callData?.artifact?.messages || callData?.messages || [];
+  const transcriptFromMessages = buildTranscriptFromMessages(messages);
+
+  if (
+    transcriptFromMessages.length >= 50 &&
+    /(^|\n)\s*Candidate\s*:/i.test(transcriptFromMessages)
+  ) {
+    return transcriptFromMessages;
+  }
+
+  const artifactTranscript =
+    typeof callData?.artifact?.transcript === "string"
+      ? String(callData.artifact.transcript)
+        .trim()
+      : "";
+
+  if (artifactTranscript.length >= 50) {
+    return artifactTranscript;
+  }
+
+  return transcriptFromMessages;
+}
+
+function isTranscriptReadyForScoring(transcript: string): boolean {
+  const normalized = String(transcript || "").trim();
+  if (normalized.length < MIN_TRANSCRIPT_LENGTH) {
+    return false;
+  }
+
+  const evidence = analyzeTranscriptEvidence(normalized);
+  if (evidence.candidateTurns < MIN_CANDIDATE_TURNS) {
+    return false;
+  }
+
+  if (evidence.candidateWordCount < MIN_CANDIDATE_WORDS) {
+    return false;
+  }
+
+  return true;
 }
 
 async function getTranscript(interviewId: string): Promise<string> {
+  let bestTranscript = "";
+
   try {
     const callData = await vapiCallDataService.getCall(interviewId);
     const transcript = buildTranscriptFromCallData(callData);
-    if (transcript.trim().length >= 50) {
-      return transcript;
+    if (transcript.trim().length > bestTranscript.length) {
+      bestTranscript = transcript.trim();
     }
   } catch {
     // fall through to Firestore fallback
@@ -92,8 +143,8 @@ async function getTranscript(interviewId: string): Promise<string> {
     typeof (logByVapiId as any)?.transcript === "string"
       ? String((logByVapiId as any).transcript)
       : "";
-  if (fromVapiLog.trim().length >= 50) {
-    return fromVapiLog;
+  if (fromVapiLog.trim().length > bestTranscript.length) {
+    bestTranscript = fromVapiLog.trim();
   }
 
   const logByDocId = await callLogService.getCallLogById(interviewId).catch(() => null);
@@ -102,7 +153,40 @@ async function getTranscript(interviewId: string): Promise<string> {
       ? String((logByDocId as any).transcript)
       : "";
 
-  return fromDocLog;
+  if (fromDocLog.trim().length > bestTranscript.length) {
+    bestTranscript = fromDocLog.trim();
+  }
+
+  return bestTranscript;
+}
+
+async function getTranscriptWithRetries(interviewId: string): Promise<string> {
+  const attempts = Number.isFinite(TRANSCRIPT_FETCH_ATTEMPTS)
+    ? Math.min(5, Math.max(1, Math.floor(TRANSCRIPT_FETCH_ATTEMPTS)))
+    : 3;
+  const delayMs = Number.isFinite(TRANSCRIPT_FETCH_DELAY_MS)
+    ? Math.max(200, Math.floor(TRANSCRIPT_FETCH_DELAY_MS))
+    : 1500;
+
+  let bestTranscript = "";
+
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const transcript = await getTranscript(interviewId);
+
+    if (transcript.trim().length > bestTranscript.length) {
+      bestTranscript = transcript.trim();
+    }
+
+    if (isTranscriptReadyForScoring(transcript)) {
+      return transcript;
+    }
+
+    if (attempt < attempts) {
+      await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  return bestTranscript;
 }
 
 function buildRecruiterPrompt(transcript: string): string {
@@ -360,29 +444,20 @@ export async function processRecruiterScoreJob(jobId: string, job: RecruiterScor
       throw new Error("OPENROUTER_API_KEY is not configured");
     }
 
-    const transcript = await getTranscript(job.interviewId);
+    const transcript = await getTranscriptWithRetries(job.interviewId);
+    if (!isTranscriptReadyForScoring(transcript)) {
+      const evidence = analyzeTranscriptEvidence(transcript);
+      throw new Error(
+        `Transcript not ready for scoring yet (candidateTurns=${evidence.candidateTurns}, candidateWords=${evidence.candidateWordCount}, interviewerTurns=${evidence.interviewerTurns})`
+      );
+    }
 
-    const rawScore =
-      !transcript || transcript.trim().length < 20
-        ? {
-            overallScore: 0,
-            technicalScore: 0,
-            communicationScore: 4,
-            problemSolvingScore: 0,
-            recommendation: "no_hire",
-            strengths: [],
-            weaknesses: [
-              "No meaningful candidate response found in transcript",
-            ],
-            feedbackSummary:
-              "Candidate provided little or no usable response during the interview.",
-          }
-        : await generateOpenRouterJson<any>({
-            prompt: buildRecruiterPrompt(transcript),
-            modelCandidates: SCORE_MODEL_CANDIDATES,
-            temperature: 0.1,
-            maxTokens: 2_500,
-          });
+    const rawScore = await generateOpenRouterJson<any>({
+      prompt: buildRecruiterPrompt(transcript),
+      modelCandidates: SCORE_MODEL_CANDIDATES,
+      temperature: 0,
+      maxTokens: 2_500,
+    });
 
     const guarded = applyRecruiterScoreGuardrails(rawScore, transcript);
 
@@ -399,7 +474,7 @@ export async function processRecruiterScoreJob(jobId: string, job: RecruiterScor
       feedbackSummary: guarded.feedbackSummary || "",
       generatedBy: "openrouter" as any,
     }, {
-      scoringVersion: "recruiter-strict-v2",
+      scoringVersion: "recruiter-strict-v3",
       modelCandidates: SCORE_MODEL_CANDIDATES,
     });
 

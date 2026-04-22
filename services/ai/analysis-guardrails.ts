@@ -91,16 +91,50 @@ function getCandidateSegments(transcript: string): string[] {
     .filter(Boolean);
 
   const candidateLines = lines
-    .filter((line) => /^candidate\s*:/i.test(line))
-    .map((line) => line.replace(/^candidate\s*:/i, "").trim())
+    .filter((line) => /^(candidate|user|human|applicant|interviewee)\s*:/i.test(line))
+    .map((line) =>
+      line
+        .replace(/^(candidate|user|human|applicant|interviewee)\s*:/i, "")
+        .trim()
+    )
     .filter(Boolean);
 
   if (candidateLines.length > 0) {
     return candidateLines;
   }
 
+  const labeledDialogueLines = lines
+    .filter((line) => /^[a-z][a-z0-9 _-]{1,30}\s*:/i.test(line))
+    .map((line) => {
+      const [speaker, ...rest] = line.split(":");
+      return {
+        speaker: String(speaker || "").trim().toLowerCase(),
+        text: rest.join(":").trim(),
+      };
+    })
+    .filter((entry) => entry.text.length > 0);
+
+  if (labeledDialogueLines.length > 0) {
+    const likelyCandidate = labeledDialogueLines
+      .filter(
+        (entry) =>
+          !/^(interviewer|assistant|bot|ai|system|question|q)$/i.test(entry.speaker)
+      )
+      .map((entry) => entry.text)
+      .filter(Boolean);
+
+    if (likelyCandidate.length > 0) {
+      return likelyCandidate;
+    }
+  }
+
   // Fallback when role labels are absent.
-  return lines.filter((line) => line.length >= 8);
+  return lines.filter((line) => {
+    if (line.length < 8) return false;
+    if (/^\s*(interviewer|assistant|bot|ai)\s*:/i.test(line)) return false;
+    if (/\?\s*$/.test(line) && line.length <= 220) return false;
+    return true;
+  });
 }
 
 export function analyzeTranscriptEvidence(transcript: string): TranscriptEvidenceSnapshot {
@@ -115,7 +149,7 @@ export function analyzeTranscriptEvidence(transcript: string): TranscriptEvidenc
   const candidateText = candidateSegments.join(" ").toLowerCase();
 
   const interviewerTurns = transcriptLines.filter((line) =>
-    /^(interviewer|assistant|bot)\s*:/i.test(line)
+    /^(interviewer|assistant|bot|ai|system|question)\s*:/i.test(line)
   ).length;
 
   const technicalPatterns = [
@@ -330,12 +364,50 @@ export function applyRecruiterScoreGuardrails<T extends RecruiterScoreShape>(
     overallScore = Math.min(overallScore, 10);
   }
 
-  // GUARD 4: Ensure overall doesn't exceed component average
-  // (prevent AI from giving inflated overall with low components)
-  const componentAverage = Math.round(
-    (technicalScore + problemSolvingScore + communicationScore) / 3
-  );
-  overallScore = Math.min(overallScore, componentAverage + 10);
+  // GUARD 4: Candidate talked, but mostly non-technical/irrelevant content.
+  if (evidence.candidateWordCount >= 25 && evidence.candidateRelevantWordCount < 3) {
+    technicalScore = Math.min(technicalScore, 28);
+    problemSolvingScore = Math.min(problemSolvingScore, 26);
+    overallScore = Math.min(overallScore, 36);
+  }
+
+  if (evidence.candidateWordCount >= 40 && evidence.candidateRelevantWordCount < 5) {
+    technicalScore = Math.min(technicalScore, 34);
+    problemSolvingScore = Math.min(problemSolvingScore, 32);
+    overallScore = Math.min(overallScore, 45);
+  }
+
+  // GUARD 5: Low answer coverage relative to interviewer prompts.
+  const coverageRatio =
+    evidence.interviewerTurns > 0
+      ? evidence.candidateTurns / Math.max(1, evidence.interviewerTurns)
+      : evidence.candidateTurns > 0
+        ? 1
+        : 0;
+
+  if (evidence.interviewerTurns >= 4 && coverageRatio < 0.35) {
+    technicalScore = Math.min(technicalScore, 32);
+    problemSolvingScore = Math.min(problemSolvingScore, 30);
+    communicationScore = Math.min(communicationScore, 45);
+    overallScore = Math.min(overallScore, 42);
+  }
+
+  if (evidence.avgCandidateWords < 8 && evidence.candidateTurns >= 2) {
+    communicationScore = Math.min(communicationScore, 38);
+    overallScore = Math.min(overallScore, 36);
+  }
+
+  // GUARD 6: Blend model overall with deterministic weighted overall.
+  // This keeps scores stable across reruns and prevents outlier swings.
+  const weightedOverall =
+    technicalScore * 0.4 + problemSolvingScore * 0.3 + communicationScore * 0.3;
+  const blendedOverall = weightedOverall * 0.75 + overallScore * 0.25;
+  overallScore = Math.min(blendedOverall, weightedOverall + 6);
+
+  // Avoid hard-zero when there is meaningful candidate participation.
+  if (evidence.candidateTurns >= 2 && evidence.candidateWordCount >= 20) {
+    overallScore = Math.max(overallScore, 8);
+  }
 
   const normalizedOverall = clampScore(overallScore, 0, 100);
 

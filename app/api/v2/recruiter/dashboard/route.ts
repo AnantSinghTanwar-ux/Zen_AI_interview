@@ -11,7 +11,10 @@ import {
 } from "@/services/recruiter/application-score.service";
 import type { ExternalApplication } from "@/types/external-application";
 import { checkRateLimit } from "@/lib/services/rate-limit.service";
-import { enqueueRecruiterScoreBackfillJobs } from "@/services/recruiter/recruiter-score-queue.service";
+import {
+  enqueueRecruiterScoreBackfillJobs,
+  processPendingRecruiterScoreJobs,
+} from "@/services/recruiter/recruiter-score-queue.service";
 
 async function backfillScoresForCompletedApps(apps: ExternalApplication[]) {
   const candidates = apps.filter((a) => a.interviewStatus === "completed" && Boolean(a.interviewId));
@@ -48,6 +51,9 @@ export async function GET(request: NextRequest) {
 
     // Fix missing scores so the dashboard + leaderboard populate.
     await backfillScoresForCompletedApps(allApps);
+    await processPendingRecruiterScoreJobs(5).catch((queueError) => {
+      console.error("[RecruiterDashboard] Failed to process pending score jobs", queueError);
+    });
 
     const filterOptions = await getDistinctValues();
     const topCandidates = await getLeaderboard();
