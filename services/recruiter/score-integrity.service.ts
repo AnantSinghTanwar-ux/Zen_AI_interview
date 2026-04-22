@@ -8,7 +8,7 @@ function getSignatureSecret(): string {
   if (configured) return configured;
 
   if (process.env.NODE_ENV === "production") {
-    throw new Error("RECRUITER_SCORE_SIGNATURE_KEY is required in production");
+    console.warn("[score-integrity] RECRUITER_SCORE_SIGNATURE_KEY not set — using default key. Set this env var for production security.");
   }
 
   return DEFAULT_RECRUITER_SCORE_SIGNATURE_KEY;

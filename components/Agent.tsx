@@ -1080,7 +1080,8 @@
           </div>
         </div>
 
-        {/* Code Editor Panel */}
+        {/* Code Editor Panel — only shown when a coding question is detected */}
+        {showChat && (
         <div className="w-full lg:w-[550px] h-[52vh] md:h-[46vh] lg:h-full bg-background/50 backdrop-blur-3xl border-t border-t-white/10 lg:border-t-0 lg:border-l lg:border-l-white/10 flex flex-col z-20 shadow-2xl relative">
           <div className="absolute inset-y-0 left-0 w-px bg-gradient-to-b from-transparent via-primary/30 to-transparent hidden lg:block"></div>
           {/* Header */}
@@ -1290,6 +1291,7 @@
             </div>
           </div>
         </div>
+        )}
 
         {callStatus === CallStatus.ACTIVE && (
           <div className="lg:hidden fixed top-[96px] right-4 z-[80]">
