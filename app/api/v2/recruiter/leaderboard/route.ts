@@ -17,7 +17,14 @@ export async function GET(request: NextRequest) {
     const companyName = searchParams.get("companyName") || undefined;
     const sourcePlatform = searchParams.get("sourcePlatform") || undefined;
 
-    const leaderboard = await getLeaderboard({ roleCategory, companyName, sourcePlatform });
+    let leaderboard: Awaited<ReturnType<typeof getLeaderboard>> = [];
+    try {
+      leaderboard = await getLeaderboard({ roleCategory, companyName, sourcePlatform });
+    } catch (fbErr) {
+      console.error("[Leaderboard] Firebase error:", (fbErr as Error).message);
+      // Return empty leaderboard gracefully instead of 500
+      return NextResponse.json({ leaderboard: [], total: 0 }, { status: 200 });
+    }
 
     return NextResponse.json({ leaderboard, total: leaderboard.length }, { status: 200 });
   } catch (err) {

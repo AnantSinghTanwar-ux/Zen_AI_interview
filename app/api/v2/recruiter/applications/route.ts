@@ -25,37 +25,54 @@ export async function GET(request: NextRequest) {
     const interviewStatus = searchParams.get("interviewStatus") || undefined;
     const includeFilters = searchParams.get("includeFilters") === "true";
 
-    const applications = await getApplications({
-      roleCategory,
-      companyName,
-      sourcePlatform,
-      roleTitle,
-      status,
-      interviewStatus,
-    });
+    let applications: Awaited<ReturnType<typeof getApplications>> = [];
+    try {
+      applications = await getApplications({
+        roleCategory,
+        companyName,
+        sourcePlatform,
+        roleTitle,
+        status,
+        interviewStatus,
+      });
+    } catch (fbErr) {
+      console.error("[Applications] Firebase error:", (fbErr as Error).message);
+      return NextResponse.json(
+        { applications: [], total: 0, _warning: "Data temporarily unavailable. Firebase quota may be exceeded." },
+        { status: 200 }
+      );
+    }
 
     // Enrich with scores where available
     const enriched = await Promise.all(
       applications.map(async (app) => {
         if (app.scoreStatus === "available") {
-          const score = await getScoreByApplication(app.id);
-          return {
-            ...app,
-            score: score ? normalizeRecruiterScoreForDisplay(score) : null,
-          };
+          try {
+            const score = await getScoreByApplication(app.id);
+            return {
+              ...app,
+              score: score ? normalizeRecruiterScoreForDisplay(score) : null,
+            };
+          } catch {
+            return { ...app, score: null };
+          }
         }
         return { ...app, score: null };
       })
     );
 
-    const response: any = { applications: enriched, total: enriched.length };
+    const responseBody: any = { applications: enriched, total: enriched.length };
 
     // Optionally include filter options for the UI
     if (includeFilters) {
-      response.filterOptions = await getDistinctValues();
+      try {
+        responseBody.filterOptions = await getDistinctValues();
+      } catch {
+        responseBody.filterOptions = { roleCategories: [], companies: [], sources: [] };
+      }
     }
 
-    return NextResponse.json(response, { status: 200 });
+    return NextResponse.json(responseBody, { status: 200 });
   } catch (err) {
     console.error("Applications list error:", err);
     return NextResponse.json({ error: "Failed", details: (err as Error).message }, { status: 500 });

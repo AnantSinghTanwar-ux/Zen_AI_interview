@@ -47,7 +47,30 @@ export async function GET(request: NextRequest) {
   if (!allowed) return response!;
 
   try {
-    const allApps = await getApplications();
+    // Fetch applications — return empty state if Firebase is unavailable
+    let allApps: ExternalApplication[] = [];
+    try {
+      allApps = await getApplications();
+    } catch (fbErr) {
+      console.error("[RecruiterDashboard] Firebase getApplications failed:", (fbErr as Error).message);
+      // Return a graceful empty dashboard rather than 500
+      return NextResponse.json(
+        {
+          totalApplications: 0,
+          completedInterviews: 0,
+          pendingInterviews: 0,
+          invitedInterviews: 0,
+          averageScore: 0,
+          byRole: {},
+          byCompany: {},
+          bySource: {},
+          topCandidates: [],
+          filterOptions: { roleCategories: [], companies: [], sources: [] },
+          _warning: "Data temporarily unavailable. Firebase quota may be exceeded — please upgrade to Blaze plan.",
+        },
+        { status: 200 }
+      );
+    }
 
     // Fire-and-forget: backfill + queue processing in background.
     // This avoids blocking the dashboard response while AI scores generate.
@@ -58,8 +81,18 @@ export async function GET(request: NextRequest) {
         console.error("[RecruiterDashboard] Background scoring error (non-blocking):", bgErr);
       });
 
-    const filterOptions = await getDistinctValues();
-    const topCandidates = await getLeaderboard();
+    let filterOptions = { roleCategories: [] as string[], companies: [] as string[], sources: [] as string[] };
+    let topCandidates: Awaited<ReturnType<typeof getLeaderboard>> = [];
+
+    try {
+      [filterOptions, topCandidates] = await Promise.all([
+        getDistinctValues(),
+        getLeaderboard(),
+      ]);
+    } catch (fbErr) {
+      console.error("[RecruiterDashboard] Firebase secondary fetch failed:", (fbErr as Error).message);
+      // Continue with empty values — don't 500
+    }
 
     const totalApplications = allApps.length;
     const completedInterviews = allApps.filter((a) => a.interviewStatus === "completed").length;

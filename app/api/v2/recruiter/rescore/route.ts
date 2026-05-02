@@ -19,7 +19,17 @@ export async function POST(request: NextRequest) {
   if (!allowed) return response!;
 
   try {
-    const allApps = await getApplications();
+    let allApps;
+    try {
+      allApps = await getApplications();
+    } catch (fbErr) {
+      console.error("[Rescore] Firebase error fetching apps:", (fbErr as Error).message);
+      return NextResponse.json(
+        { error: "Quota Exhausted", details: "Firebase quota reached. Please upgrade to Blaze plan or try again tomorrow." },
+        { status: 429 }
+      );
+    }
+
     const completedApps = allApps.filter(
       (a) => a.interviewStatus === "completed" && Boolean(a.interviewId)
     );
@@ -32,45 +42,62 @@ export async function POST(request: NextRequest) {
     let cleared = 0;
 
     for (const app of completedApps) {
-      // Clear existing stale scores for this application
-      const existingScores = await db
-        .collection("application_scores")
-        .where("applicationId", "==", app.id)
-        .get();
+      try {
+        // Clear existing stale scores for this application
+        const existingScores = await db
+          .collection("application_scores")
+          .where("applicationId", "==", app.id)
+          .get();
 
-      if (!existingScores.empty) {
-        const batch = db.batch();
-        existingScores.docs.forEach((doc) => batch.delete(doc.ref));
-        await batch.commit();
-        cleared += existingScores.size;
+        if (!existingScores.empty) {
+          const batch = db.batch();
+          existingScores.docs.forEach((doc) => batch.delete(doc.ref));
+          await batch.commit();
+          cleared += existingScores.size;
+        }
+
+        // Clear existing jobs so they can be re-enqueued
+        const existingJobs = await db
+          .collection("recruiter_score_jobs")
+          .where("applicationId", "==", app.id)
+          .get();
+
+        if (!existingJobs.empty) {
+          const batch = db.batch();
+          existingJobs.docs.forEach((doc) => batch.delete(doc.ref));
+          await batch.commit();
+        }
+
+        // Update application score status to pending
+        await db.collection("external_applications").doc(app.id).update({
+          scoreStatus: "pending",
+          scoreId: "",
+          updatedAt: new Date().toISOString(),
+        });
+
+        // Enqueue fresh scoring job
+        await enqueueRecruiterScoreJob({
+          applicationId: app.id,
+          interviewId: String(app.interviewId),
+        });
+
+        enqueued++;
+      } catch (innerErr) {
+        console.error(`[Rescore] Error processing app ${app.id}:`, (innerErr as Error).message);
+        // If we hit a quota error mid-loop, stop and return what we managed to do
+        if ((innerErr as Error).message.includes("Quota") || (innerErr as Error).message.includes("exhausted")) {
+          return NextResponse.json(
+            {
+              message: `Re-scoring partially initiated before quota limit.`,
+              enqueued,
+              clearedScores: cleared,
+              error: "Firebase quota reached mid-process."
+            },
+            { status: 200 } // Return 200 because some work was done
+          );
+        }
+        // Continue for other apps on minor errors
       }
-
-      // Clear existing jobs so they can be re-enqueued
-      const existingJobs = await db
-        .collection("recruiter_score_jobs")
-        .where("applicationId", "==", app.id)
-        .get();
-
-      if (!existingJobs.empty) {
-        const batch = db.batch();
-        existingJobs.docs.forEach((doc) => batch.delete(doc.ref));
-        await batch.commit();
-      }
-
-      // Update application score status to pending
-      await db.collection("external_applications").doc(app.id).update({
-        scoreStatus: "pending",
-        scoreId: "",
-        updatedAt: new Date().toISOString(),
-      });
-
-      // Enqueue fresh scoring job
-      await enqueueRecruiterScoreJob({
-        applicationId: app.id,
-        interviewId: String(app.interviewId),
-      });
-
-      enqueued++;
     }
 
     return NextResponse.json(
