@@ -4,10 +4,7 @@ import { emotionDetectionService } from '@/services/emotion/emotion-detection.se
 import { callLogService } from '@/services/firebase/call-log.service';
 import { getCurrentUser } from '@/lib/actions/auth.actions';
 import { checkRateLimit } from '@/lib/services/rate-limit.service';
-import {
-  checkPremiumAccessForCall,
-  getPremiumRequiredErrorPayload,
-} from '@/lib/services/premium-access.service';
+
 
 export async function GET(
   request: NextRequest,
@@ -55,15 +52,7 @@ export async function GET(
       console.warn('Firestore ID resolution failed, using callId directly:', lookupError);
     }
 
-    const premiumAccess = await checkPremiumAccessForCall({
-      userId: user.id,
-      email: user.email,
-      callIds: [callId, vapiCallId],
-    });
-
-    if (!premiumAccess.allowed) {
-      return NextResponse.json(getPremiumRequiredErrorPayload(), { status: 402 });
-    }
+    // Premium check removed — all authenticated users have access
 
     // Get the full call details from VAPI using the real UUID
     const callDetails = await vapiCallDataService.getCall(vapiCallId);

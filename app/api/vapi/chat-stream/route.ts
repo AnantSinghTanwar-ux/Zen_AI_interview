@@ -1,10 +1,7 @@
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { checkRateLimit } from "@/lib/services/rate-limit.service";
-import {
-  checkPremiumAccessForFeature,
-  getPremiumRequiredErrorPayload,
-} from "@/lib/services/premium-access.service";
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,24 +15,7 @@ export async function POST(request: NextRequest) {
 
     const { message, previousChatId, stage, premiumUsageKey } = await request.json();
 
-    const premiumAccess = await checkPremiumAccessForFeature({
-      userId: user.id,
-      email: user.email,
-      featureKeys: [
-        premiumUsageKey,
-        previousChatId,
-        stage ? `vapi-chat-stream:${stage}` : null,
-      ],
-    });
-
-    if (!premiumAccess.allowed) {
-      return new Response(JSON.stringify(getPremiumRequiredErrorPayload()), {
-        status: 402,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-    }
+    // Premium check removed — all authenticated users have access
 
     const apiKey = process.env.VAPI_PRIVATE_API_KEY || "";
     if (!apiKey) {

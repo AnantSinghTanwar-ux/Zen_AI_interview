@@ -1,0 +1,502 @@
+{
+  "info": {
+    "name": "Application & Pipeline APIs – Arnav",
+    "_postman_id": "roadmap-api-collection-arnav",
+    "description": "Complete API testing collection for the Roadmap Ingestion System and Pipeline APIs.\n\nIncludes health check, ingestion trigger, and all roadmap CRUD endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5001/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "roadmapId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ingestionRunId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Verify that the API server is running and responsive."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/health",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["health"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"API is running\",\n  \"timestamp\": \"2026-03-23T10:00:00.000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has success flag', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.eql(true);",
+                  "  pm.expect(jsonData.message).to.eql('API is running');",
+                  "  pm.expect(jsonData.timestamp).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Ingestion",
+      "item": [
+        {
+          "name": "Trigger Full Ingestion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dryRun\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/roadmaps/ingest",
+              "host": ["{{baseUrl}}"],
+              "path": ["roadmaps", "ingest"]
+            },
+            "description": "Trigger the full roadmap ingestion pipeline. Set dryRun: true to parse without DB writes."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/roadmaps/ingest",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["roadmaps", "ingest"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Ingestion completed\",\n  \"data\": {\n    \"runId\": \"uuid-here\",\n    \"status\": \"completed\",\n    \"dryRun\": false,\n    \"totalRoadmaps\": 46,\n    \"successCount\": 44,\n    \"failCount\": 2,\n    \"durationMs\": 45000\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Ingestion returns success', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.eql(true);",
+                  "  pm.expect(jsonData.data).to.have.property('runId');",
+                  "  pm.expect(jsonData.data).to.have.property('status');",
+                  "  pm.expect(jsonData.data).to.have.property('totalRoadmaps');",
+                  "",
+                  "  // Save run ID for later use",
+                  "  if (jsonData.data.runId) {",
+                  "    pm.collectionVariables.set('ingestionRunId', jsonData.data.runId);",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Trigger Dry Run Ingestion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dryRun\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/roadmaps/ingest",
+              "host": ["{{baseUrl}}"],
+              "path": ["roadmaps", "ingest"]
+            },
+            "description": "Trigger ingestion in dry-run mode — parses data without writing to database."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/roadmaps/ingest",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["roadmaps", "ingest"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Ingestion completed\",\n  \"data\": {\n    \"runId\": \"uuid-here\",\n    \"status\": \"completed\",\n    \"dryRun\": true,\n    \"totalRoadmaps\": 46,\n    \"successCount\": 46,\n    \"failCount\": 0\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Dry run returns success', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.eql(true);",
+                  "  pm.expect(jsonData.data.dryRun).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Ingestion Run Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roadmaps/ingestion/{{ingestionRunId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["roadmaps", "ingestion", "{{ingestionRunId}}"]
+            },
+            "description": "Get the status and logs of a specific ingestion run."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/roadmaps/ingestion/{{ingestionRunId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["roadmaps", "ingestion", "{{ingestionRunId}}"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Ingestion run retrieved successfully\",\n  \"data\": {\n    \"id\": \"uuid-here\",\n    \"source\": \"github\",\n    \"status\": \"completed\",\n    \"started_at\": \"2026-03-23T10:00:00.000Z\",\n    \"completed_at\": \"2026-03-23T10:01:00.000Z\",\n    \"logs\": []\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Ingestion run retrieved', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.eql(true);",
+                  "  pm.expect(jsonData.data).to.have.property('status');",
+                  "  pm.expect(jsonData.data).to.have.property('logs');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Roadmaps",
+      "item": [
+        {
+          "name": "List All Roadmaps",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roadmaps?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["roadmaps"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "Returns a paginated list of all roadmaps with metadata and node count."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/roadmaps?page=1&limit=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["roadmaps"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "20" }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Roadmaps retrieved successfully\",\n  \"data\": [\n    {\n      \"id\": \"uuid-here\",\n      \"slug\": \"frontend\",\n      \"title\": \"Frontend Developer\",\n      \"description\": \"Step by step guide to becoming a frontend developer\",\n      \"node_count\": 45\n    }\n  ],\n  \"pagination\": {\n    \"total\": 46,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 3\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has paginated data', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.eql(true);",
+                  "  pm.expect(jsonData.data).to.be.an('array');",
+                  "  pm.expect(jsonData.pagination).to.have.property('total');",
+                  "  pm.expect(jsonData.pagination).to.have.property('page');",
+                  "  pm.expect(jsonData.pagination).to.have.property('totalPages');",
+                  "",
+                  "  // Save first roadmap ID for other requests",
+                  "  if (jsonData.data.length > 0) {",
+                  "    pm.collectionVariables.set('roadmapId', jsonData.data[0].id);",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Roadmap by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roadmaps/{{roadmapId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["roadmaps", "{{roadmapId}}"]
+            },
+            "description": "Returns full metadata for a specific roadmap. Accepts UUID or slug."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/roadmaps/{{roadmapId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["roadmaps", "{{roadmapId}}"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Roadmap retrieved successfully\",\n  \"data\": {\n    \"id\": \"uuid-here\",\n    \"slug\": \"frontend\",\n    \"title\": \"Frontend Developer\",\n    \"description\": \"Step by step guide to becoming a frontend developer\",\n    \"source_url\": \"https://roadmap.sh/frontend\",\n    \"version\": 1,\n    \"node_count\": 45\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Roadmap retrieved', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.eql(true);",
+                  "  pm.expect(jsonData.data).to.have.property('id');",
+                  "  pm.expect(jsonData.data).to.have.property('slug');",
+                  "  pm.expect(jsonData.data).to.have.property('title');",
+                  "  pm.expect(jsonData.data).to.have.property('node_count');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Roadmap by Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roadmaps/frontend",
+              "host": ["{{baseUrl}}"],
+              "path": ["roadmaps", "frontend"]
+            },
+            "description": "Returns full metadata for a roadmap using its slug."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/roadmaps/frontend",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["roadmaps", "frontend"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Roadmap retrieved successfully\",\n  \"data\": {\n    \"id\": \"uuid-here\",\n    \"slug\": \"frontend\",\n    \"title\": \"Frontend Developer\",\n    \"description\": \"Step by step guide to becoming a frontend developer\"\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Roadmap retrieved by slug', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.eql(true);",
+                  "  pm.expect(jsonData.data.slug).to.eql('frontend');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Roadmap Nodes & Edges",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roadmaps/{{roadmapId}}/nodes",
+              "host": ["{{baseUrl}}"],
+              "path": ["roadmaps", "{{roadmapId}}", "nodes"]
+            },
+            "description": "Returns the full node hierarchy and edge relationships for a specific roadmap."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/roadmaps/{{roadmapId}}/nodes",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["roadmaps", "{{roadmapId}}", "nodes"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Roadmap nodes and edges retrieved successfully\",\n  \"data\": {\n    \"roadmap\": {\n      \"id\": \"uuid-here\",\n      \"slug\": \"frontend\",\n      \"title\": \"Frontend Developer\"\n    },\n    \"nodes\": [\n      {\n        \"id\": \"uuid-here\",\n        \"slug\": \"html\",\n        \"title\": \"HTML\",\n        \"type\": \"topic\",\n        \"parent_id\": null\n      }\n    ],\n    \"edges\": [\n      {\n        \"id\": \"uuid-here\",\n        \"source_node_id\": \"uuid-1\",\n        \"target_node_id\": \"uuid-2\"\n      }\n    ]\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Nodes and edges retrieved', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.eql(true);",
+                  "  pm.expect(jsonData.data).to.have.property('roadmap');",
+                  "  pm.expect(jsonData.data).to.have.property('nodes');",
+                  "  pm.expect(jsonData.data).to.have.property('edges');",
+                  "  pm.expect(jsonData.data.nodes).to.be.an('array');",
+                  "  pm.expect(jsonData.data.edges).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Roadmap - Not Found",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roadmaps/non-existent-roadmap",
+              "host": ["{{baseUrl}}"],
+              "path": ["roadmaps", "non-existent-roadmap"]
+            },
+            "description": "Test 404 response for a non-existent roadmap."
+          },
+          "response": [
+            {
+              "name": "Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/roadmaps/non-existent-roadmap",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["roadmaps", "non-existent-roadmap"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Roadmap not found\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 404 for non-existent roadmap', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.eql(false);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

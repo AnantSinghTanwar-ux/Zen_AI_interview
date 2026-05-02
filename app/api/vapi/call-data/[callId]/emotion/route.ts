@@ -4,10 +4,7 @@ import { emotionDetectionService } from '@/services/emotion/emotion-detection.se
 import { getCurrentUser } from '@/lib/actions/auth.actions';
 import { checkRateLimit } from '@/lib/services/rate-limit.service';
 import { cacheService } from '@/lib/services/cache.service';
-import {
-  checkPremiumAccessForCall,
-  getPremiumRequiredErrorPayload,
-} from '@/lib/services/premium-access.service';
+
 
 export async function GET(
   request: NextRequest,
@@ -24,15 +21,7 @@ export async function GET(
 
     const { callId } = await params;
 
-    const premiumAccess = await checkPremiumAccessForCall({
-      userId: user.id,
-      email: user.email,
-      callIds: [callId],
-    });
-
-    if (!premiumAccess.allowed) {
-      return NextResponse.json(getPremiumRequiredErrorPayload(), { status: 402 });
-    }
+    // Premium check removed — all authenticated users have access
 
     if (!callId) {
       return NextResponse.json(
@@ -154,15 +143,7 @@ export async function POST(
     const { callId } = await params;
     const { transcript, timestamp, isPartial } = await request.json();
 
-    const premiumAccess = await checkPremiumAccessForCall({
-      userId: user.id,
-      email: user.email,
-      callIds: [callId],
-    });
-
-    if (!premiumAccess.allowed) {
-      return NextResponse.json(getPremiumRequiredErrorPayload(), { status: 402 });
-    }
+    // Premium check removed — all authenticated users have access
 
     if (!callId || !transcript) {
       return NextResponse.json(

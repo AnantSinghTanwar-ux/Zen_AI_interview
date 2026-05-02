@@ -35,7 +35,7 @@ export default function RecruiterDashboard() {
   const [hiringRoleFilter, setHiringRoleFilter] = useState("");
   const [hiringMinScore, setHiringMinScore] = useState(0);
   const [hiringSourceFilter, setHiringSourceFilter] = useState("");
-  const [exportingCsv, setExportingCsv] = useState(false);
+  const [exportingSheet, setExportingSheet] = useState(false);
   const [rescoringAll, setRescoringAll] = useState(false);
 
 
@@ -111,9 +111,9 @@ export default function RecruiterDashboard() {
 
 
 
-  // === HIRING CSV EXPORT ===
-  const handleExportCsv = async () => {
-    setExportingCsv(true);
+  // === HIRING EXCEL EXPORT ===
+  const handleExportSheet = async () => {
+    setExportingSheet(true);
     try {
       const res = await fetch("/api/v2/recruiter/hiring-export", {
         method: "POST",
@@ -128,15 +128,18 @@ export default function RecruiterDashboard() {
 
       if (res.ok) {
         const blob = await res.blob();
+        const contentDisposition = res.headers.get("Content-Disposition") || "";
+        const fileNameMatch = contentDisposition.match(/filename=\"?([^\"]+)\"?/i);
+        const fileName = fileNameMatch?.[1] || `zenai_top_${hiringCount}_candidates.xlsx`;
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `zenai_top_${hiringCount}_candidates.csv`;
+        a.download = fileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        toast.success(`Downloaded top ${hiringCount} candidates as CSV`);
+        toast.success(`Downloaded top ${hiringCount} candidates as Excel sheet`);
       } else {
         const data = await res.json();
         toast.error(data.error || "Export failed");
@@ -144,7 +147,7 @@ export default function RecruiterDashboard() {
     } catch {
       toast.error("Export failed");
     } finally {
-      setExportingCsv(false);
+      setExportingSheet(false);
     }
   };
 
@@ -735,12 +738,12 @@ export default function RecruiterDashboard() {
             {/* Export button */}
             <div className="flex items-center gap-4">
               <button
-                onClick={handleExportCsv}
-                disabled={exportingCsv || hiringTopCandidates.length === 0}
+                onClick={handleExportSheet}
+                disabled={exportingSheet || hiringTopCandidates.length === 0}
                 className="flex items-center gap-2.5 bg-[#A3E635] hover:bg-[#B3F245] text-black font-semibold px-6 py-3 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-[#A3E635]/20 hover:shadow-[#A3E635]/30 hover:scale-[1.02] active:scale-[0.98]"
               >
-                {exportingCsv ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileSpreadsheet className="w-5 h-5" />}
-                Download CSV ({hiringTopCandidates.length} Candidates)
+                {exportingSheet ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileSpreadsheet className="w-5 h-5" />}
+                Download Excel Sheet ({hiringTopCandidates.length} Candidates)
               </button>
               <p className="text-xs text-[#888]">
                 {hiringLeaderboard.length > 0

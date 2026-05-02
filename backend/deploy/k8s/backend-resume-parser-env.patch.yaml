@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: internship-backend
+spec:
+  template:
+    spec:
+      containers:
+        - name: backend
+          env:
+            - name: PYTHON_RESUME_PARSER_URL
+              value: http://resume-parser:8000/parse
+            - name: PYTHON_RESUME_PARSER_TIMEOUT_MS
+              value: "8000"
+            - name: PYTHON_RESUME_PARSER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: resume-parser-secrets
+                  key: RESUME_PARSER_API_KEY

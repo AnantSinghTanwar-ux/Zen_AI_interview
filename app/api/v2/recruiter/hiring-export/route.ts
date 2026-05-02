@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { recruiterGuard } from "@/app/api/v2/recruiter/_guard";
 import { getLeaderboard } from "@/services/recruiter/application-score.service";
 import { checkRateLimit } from "@/lib/services/rate-limit.service";
+import XLSX from "xlsx";
 
 /**
  * POST /api/v2/recruiter/hiring-export
- * Export top N candidates as CSV for recruiter download.
+ * Export top N candidates as an Excel sheet (.xlsx) for recruiter download.
  * 
  * Body: {
  *   count: number,          // number of top candidates to export
@@ -48,8 +49,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build CSV
-    const csvHeaders = [
+    const sheetHeaders = [
       "Rank",
       "Name",
       "Email",
@@ -63,29 +63,44 @@ export async function POST(request: NextRequest) {
       "Recommendation",
     ];
 
-    const csvRows = topCandidates.map((c) =>
-      [
-        c.rank,
-        `"${(c.candidateName || "").replace(/"/g, '""')}"`,
-        c.candidateEmail,
-        `"${(c.roleTitle || "").replace(/"/g, '""')}"`,
-        `"${(c.companyName || "").replace(/"/g, '""')}"`,
-        c.sourcePlatform,
-        c.overallScore,
-        c.technicalScore,
-        c.communicationScore,
-        c.problemSolvingScore,
-        c.recommendation,
-      ].join(",")
-    );
+    const sheetRows = topCandidates.map((c) => [
+      c.rank,
+      c.candidateName || "",
+      c.candidateEmail || "",
+      c.roleTitle || "",
+      c.companyName || "",
+      c.sourcePlatform || "",
+      c.overallScore,
+      c.technicalScore,
+      c.communicationScore,
+      c.problemSolvingScore,
+      c.recommendation,
+    ]);
 
-    const csvContent = [csvHeaders.join(","), ...csvRows].join("\n");
+    const worksheet = XLSX.utils.aoa_to_sheet([sheetHeaders, ...sheetRows]);
+    worksheet["!cols"] = [
+      { wch: 8 },
+      { wch: 24 },
+      { wch: 30 },
+      { wch: 24 },
+      { wch: 20 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 20 },
+      { wch: 22 },
+      { wch: 18 },
+    ];
 
-    return new NextResponse(csvContent, {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Top Candidates");
+    const fileData = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+
+    return new NextResponse(fileData, {
       status: 200,
       headers: {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="zenai_top_${count}_candidates_${Date.now()}.csv"`,
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="zenai_top_${count}_candidates_${Date.now()}.xlsx"`,
       },
     });
   } catch (err) {

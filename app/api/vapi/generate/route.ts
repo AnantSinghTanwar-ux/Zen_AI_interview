@@ -8,10 +8,7 @@ import {
   generateOpenRouterJson,
   getOpenRouterModelCandidates,
 } from "@/services/ai/openrouter-client";
-import {
-  checkPremiumAccessForFeature,
-  getPremiumRequiredErrorPayload,
-} from "@/lib/services/premium-access.service";
+
 
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser();
@@ -37,18 +34,7 @@ export async function POST(request: NextRequest) {
   const payload = await request.json();
   const { type, role, level, techStack, amount, userId } = payload;
 
-  const premiumAccess = await checkPremiumAccessForFeature({
-    userId: user.id,
-    email: user.email,
-    featureKeys: [
-      typeof payload?.premiumUsageKey === "string" ? payload.premiumUsageKey : null,
-      `vapi-generate:${Date.now()}`,
-    ],
-  });
-
-  if (!premiumAccess.allowed) {
-    return Response.json(getPremiumRequiredErrorPayload(), { status: 402 });
-  }
+  // Premium check removed — all authenticated users have access
 
   try {
     const generated = await generateOpenRouterJson<any>({

@@ -17,6 +17,8 @@ const ensureUserProfile = async (params: {
 }) => {
   const { uid, email, name } = params;
   const userRef = db.collection("users").doc(uid);
+  
+  // 1. Get the current snapshot
   const userSnap = await userRef.get();
 
   if (userSnap.exists) {
@@ -26,9 +28,11 @@ const ensureUserProfile = async (params: {
       email?.trim() ||
       "";
 
+    // 2. Only write/update if premium status needs syncing (Seed emails)
     if (isSeedPremiumEmail(existingEmail) && existingData.isPremium !== true) {
       await ensureSeedPremiumAccess({ userId: uid, email: existingEmail });
-
+      
+      // Return updated data
       return {
         ...existingData,
         email: existingEmail,
@@ -38,36 +42,36 @@ const ensureUserProfile = async (params: {
       } as User;
     }
 
+    // 3. Just return existing data, no write performed
     return {
       ...existingData,
       id: userSnap.id,
     } as User;
   }
 
+  // 4. User doesn't exist, create them (1 Write)
   const fallbackName = name?.trim() || email?.split("@")[0] || "User";
   const fallbackEmail = email?.trim() || "";
   const seedPremium = isSeedPremiumEmail(fallbackEmail);
 
-  await userRef.set(
-    {
-      name: fallbackName,
-      email: fallbackEmail,
-      createdAt: new Date().toISOString(),
-      source: "auto-created-on-signin",
-      ...(seedPremium
-        ? {
-            isPremium: true,
-            premiumSource: "seed-email",
-            premiumGrantedAt: new Date().toISOString(),
-          }
-        : {}),
-    },
-    { merge: true }
-  );
+  const newUser = {
+    name: fallbackName,
+    email: fallbackEmail,
+    createdAt: new Date().toISOString(),
+    source: "auto-created-on-signin",
+    ...(seedPremium
+      ? {
+          isPremium: true,
+          premiumSource: "seed-email",
+          premiumGrantedAt: new Date().toISOString(),
+        }
+      : {}),
+  };
 
-  const createdSnap = await userRef.get();
+  await userRef.set(newUser, { merge: true });
+
   return {
-    ...(createdSnap.data() || { name: fallbackName, email: fallbackEmail }),
+    ...newUser,
     id: uid,
   } as User;
 };
@@ -169,7 +173,6 @@ export const getCurrentUser = async () => {
   const session = cookieStore.get("session");
 
   if (!session) {
-    // console.log("No session cookie found");
     return null;
   }
 
@@ -177,24 +180,20 @@ export const getCurrentUser = async () => {
     const token = await auth.verifySessionCookie(session.value, true);
     
     if (!token?.uid) {
-       console.log("Token verification failed or no UID");
        return null;
     }
 
-    let userRecord = null;
-    try {
-      userRecord = await auth.getUser(token.uid);
-    } catch (error) {
-      console.warn("Could not load firebase auth user for UID:", token.uid, error);
-    }
-
-    return await ensureUserProfile({
+    // Optimization: Return user data from token if possible to avoid Firestore READ on every page load
+    // If you need full Firestore data (like isPremium), you should call a specific function for that.
+    return {
+      id: token.uid,
       uid: token.uid,
-      email: token.email || userRecord?.email,
-      name: token.name || userRecord?.displayName,
-    });
+      email: token.email || "",
+      name: token.name || "User",
+      // These will be missing if only using token, which is fine for basic UI
+    } as User;
+
   } catch (error) {
-    // Log the actual error to help debugging
     console.error("Error verifying session cookie:", error);
     return null;
   }

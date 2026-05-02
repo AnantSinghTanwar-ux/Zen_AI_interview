@@ -3,10 +3,7 @@ import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { callLogService } from "@/services/firebase/call-log.service";
 import { vapiCallDataService } from "@/services/vapi/call-data.service";
 import { checkRateLimit } from "@/lib/services/rate-limit.service";
-import {
-	checkPremiumAccessForFeature,
-	getPremiumRequiredErrorPayload,
-} from "@/lib/services/premium-access.service";
+
 
 function parseSyncLimit(raw: unknown, fallback: number = 3): number {
 	const parsed = Number(raw);
@@ -111,15 +108,7 @@ async function handleSync(request: NextRequest, body?: any) {
 	const { allowed, response } = await checkRateLimit(request, user.id, "call-data-sync");
 	if (!allowed) return response!;
 
-	const premiumAccess = await checkPremiumAccessForFeature({
-		userId: user.id,
-		email: user.email,
-		featureKeys: ["vapi-call-data:sync"],
-	});
-
-	if (!premiumAccess.allowed) {
-		return NextResponse.json(getPremiumRequiredErrorPayload(), { status: 402 });
-	}
+	// Premium check removed — all authenticated users have access
 
 	const url = new URL(request.url);
 	const queryLimit = parseSyncLimit(url.searchParams.get("limit"), 3);

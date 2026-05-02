@@ -3,10 +3,6 @@ import { callLogService } from "@/services/firebase/call-log.service";
 import { vapiCallDataService } from "@/services/vapi/call-data.service";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { checkRateLimit } from "@/lib/services/rate-limit.service";
-import {
-  checkPremiumAccessForFeature,
-  getPremiumRequiredErrorPayload,
-} from "@/lib/services/premium-access.service";
 
 function parseLimit(rawValue: string | null, fallback: number = 20): number {
   const parsed = Number(rawValue);
@@ -64,15 +60,7 @@ export async function GET(request: NextRequest) {
     const { allowed, response } = await checkRateLimit(request, user.id, "call-data");
     if (!allowed) return response!;
 
-    const premiumAccess = await checkPremiumAccessForFeature({
-      userId: user.id,
-      email: user.email,
-      featureKeys: ["vapi-call-data:list"],
-    });
-
-    if (!premiumAccess.allowed) {
-      return NextResponse.json(getPremiumRequiredErrorPayload(), { status: 402 });
-    }
+    // Premium check removed — all authenticated users have access
 
     // Fetch call logs from Firestore filtered by the current user
     const callLogs = await callLogService.getCallLogsByUser(user.id, limit);

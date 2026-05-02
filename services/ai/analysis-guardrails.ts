@@ -288,27 +288,38 @@ export function applyHarshFeedbackGuardrails<T extends HarshFeedbackScoreShape>(
   let adjustedOverall = overallScore;
 
   if (!evidence.hasTechnicalDepth) {
-    adjustedTechnical = Math.min(adjustedTechnical, 25);
+    adjustedTechnical = Math.min(adjustedTechnical, 15);
   }
 
   if (!evidence.hasProblemSolvingDepth) {
-    adjustedProblem = Math.min(adjustedProblem, 25);
+    adjustedProblem = Math.min(adjustedProblem, 15);
   }
 
   if (evidence.avgCandidateWords < 18 || evidence.candidateTurns < 4) {
-    adjustedCommunication = Math.min(adjustedCommunication, 42);
-    adjustedConfidence = Math.min(adjustedConfidence, 42);
+    adjustedCommunication = Math.min(adjustedCommunication, 25);
+    adjustedConfidence = Math.min(adjustedConfidence, 25);
+  }
+
+  // Silence-like responses penalty
+  if (
+    evidence.candidateTurns >= 2 &&
+    evidence.silenceLikeResponseTurns >= Math.ceil(evidence.candidateTurns * 0.6)
+  ) {
+    adjustedTechnical = Math.min(adjustedTechnical, 10);
+    adjustedProblem = Math.min(adjustedProblem, 10);
+    adjustedCommunication = Math.min(adjustedCommunication, 15);
+    adjustedConfidence = Math.min(adjustedConfidence, 10);
   }
 
   if (evidence.hasResumeDeflection && !evidence.hasTechnicalDepth) {
-    adjustedOverall = Math.min(adjustedOverall, 40);
-    adjustedConfidence = Math.min(adjustedConfidence, 35);
+    adjustedOverall = Math.min(adjustedOverall, 25);
+    adjustedConfidence = Math.min(adjustedConfidence, 20);
   }
 
   if (!evidence.hasTechnicalDepth && !evidence.hasProblemSolvingDepth) {
-    adjustedOverall = Math.min(adjustedOverall, 32);
+    adjustedOverall = Math.min(adjustedOverall, 20);
   } else if (!evidence.hasTechnicalDepth || !evidence.hasProblemSolvingDepth) {
-    adjustedOverall = Math.min(adjustedOverall, 45);
+    adjustedOverall = Math.min(adjustedOverall, 35);
   }
 
   const componentAverage = Math.round(
@@ -340,41 +351,51 @@ export function applyRecruiterScoreGuardrails<T extends RecruiterScoreShape>(
   let overallScore = clampScoreOptional(input.overallScore, 0, 100, 0);
 
   // GUARD 1: Nearly empty transcripts (candidate said almost nothing)
-  // Only apply for truly silent/minimal candidates
   if (evidence.candidateWordCount < 15 || evidence.candidateTurns < 1) {
-    technicalScore = Math.min(technicalScore, 8);
-    problemSolvingScore = Math.min(problemSolvingScore, 8);
-    communicationScore = Math.min(communicationScore, 10);
-    overallScore = Math.min(overallScore, 8);
+    technicalScore = Math.min(technicalScore, 5);
+    problemSolvingScore = Math.min(problemSolvingScore, 5);
+    communicationScore = Math.min(communicationScore, 5);
+    overallScore = Math.min(overallScore, 5);
   }
 
-  // GUARD 2: All responses are silence-like (one-word answers, "I don't know", etc.)
+  // GUARD 2: All responses are silence-like ("I don't know", one-word, etc.)
   if (
     evidence.candidateTurns >= 2 &&
     evidence.silenceLikeResponseTurns >= evidence.candidateTurns
   ) {
+    technicalScore = Math.min(technicalScore, 5);
+    problemSolvingScore = Math.min(problemSolvingScore, 5);
+    communicationScore = Math.min(communicationScore, 8);
+    overallScore = Math.min(overallScore, 5);
+  }
+
+  // GUARD 2b: Majority of responses are silence-like (>= 60% "I don't know"/empty)
+  if (
+    evidence.candidateTurns >= 3 &&
+    evidence.silenceLikeResponseTurns >= Math.ceil(evidence.candidateTurns * 0.6)
+  ) {
     technicalScore = Math.min(technicalScore, 10);
     problemSolvingScore = Math.min(problemSolvingScore, 10);
     communicationScore = Math.min(communicationScore, 15);
-    overallScore = Math.min(overallScore, 12);
+    overallScore = Math.min(overallScore, 10);
   }
 
   // GUARD 3: Interviewer asked many questions but candidate barely responded
   if (evidence.interviewerTurns >= 5 && evidence.candidateTurns <= 1) {
-    overallScore = Math.min(overallScore, 10);
+    overallScore = Math.min(overallScore, 5);
   }
 
   // GUARD 4: Candidate talked, but mostly non-technical/irrelevant content.
   if (evidence.candidateWordCount >= 25 && evidence.candidateRelevantWordCount < 3) {
-    technicalScore = Math.min(technicalScore, 28);
-    problemSolvingScore = Math.min(problemSolvingScore, 26);
-    overallScore = Math.min(overallScore, 36);
+    technicalScore = Math.min(technicalScore, 15);
+    problemSolvingScore = Math.min(problemSolvingScore, 12);
+    overallScore = Math.min(overallScore, 20);
   }
 
   if (evidence.candidateWordCount >= 40 && evidence.candidateRelevantWordCount < 5) {
-    technicalScore = Math.min(technicalScore, 34);
-    problemSolvingScore = Math.min(problemSolvingScore, 32);
-    overallScore = Math.min(overallScore, 45);
+    technicalScore = Math.min(technicalScore, 25);
+    problemSolvingScore = Math.min(problemSolvingScore, 22);
+    overallScore = Math.min(overallScore, 30);
   }
 
   // GUARD 5: Low answer coverage relative to interviewer prompts.
@@ -386,32 +407,41 @@ export function applyRecruiterScoreGuardrails<T extends RecruiterScoreShape>(
         : 0;
 
   if (evidence.interviewerTurns >= 4 && coverageRatio < 0.35) {
-    technicalScore = Math.min(technicalScore, 32);
-    problemSolvingScore = Math.min(problemSolvingScore, 30);
-    communicationScore = Math.min(communicationScore, 45);
-    overallScore = Math.min(overallScore, 42);
+    technicalScore = Math.min(technicalScore, 20);
+    problemSolvingScore = Math.min(problemSolvingScore, 18);
+    communicationScore = Math.min(communicationScore, 30);
+    overallScore = Math.min(overallScore, 25);
   }
 
   if (evidence.avgCandidateWords < 8 && evidence.candidateTurns >= 2) {
-    communicationScore = Math.min(communicationScore, 38);
-    overallScore = Math.min(overallScore, 36);
+    communicationScore = Math.min(communicationScore, 25);
+    overallScore = Math.min(overallScore, 22);
   }
 
-  // GUARD 6: Blend model overall with deterministic weighted overall.
-  // This keeps scores stable across reruns and prevents outlier swings.
+  // GUARD 6: No technical depth detected by keyword analysis
+  if (!evidence.hasTechnicalDepth) {
+    technicalScore = Math.min(technicalScore, 30);
+  }
+
+  if (!evidence.hasProblemSolvingDepth) {
+    problemSolvingScore = Math.min(problemSolvingScore, 28);
+  }
+
+  // GUARD 7: Blend model overall with deterministic weighted overall.
+  // Heavily favor the deterministic weighted score for consistency.
   const weightedOverall =
     technicalScore * 0.4 + problemSolvingScore * 0.3 + communicationScore * 0.3;
-  const blendedOverall = weightedOverall * 0.75 + overallScore * 0.25;
-  overallScore = Math.min(blendedOverall, weightedOverall + 6);
+  const blendedOverall = weightedOverall * 0.85 + overallScore * 0.15;
+  overallScore = Math.min(blendedOverall, weightedOverall + 4);
 
   // Avoid hard-zero when there is meaningful candidate participation.
-  if (evidence.candidateTurns >= 2 && evidence.candidateWordCount >= 20) {
-    overallScore = Math.max(overallScore, 8);
+  if (evidence.candidateTurns >= 3 && evidence.candidateWordCount >= 30) {
+    overallScore = Math.max(overallScore, 5);
   }
 
   const normalizedOverall = clampScore(overallScore, 0, 100);
 
-  // Derive recommendation from overall score using sensible bands
+  // Derive recommendation from overall score using strict bands
   let recommendation = String(input.recommendation || "").toLowerCase().trim();
   if (normalizedOverall >= 85) recommendation = "strong_hire";
   else if (normalizedOverall >= 65) recommendation = "hire";

@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: resume-parser-secrets
+type: Opaque
+stringData:
+  RESUME_PARSER_API_KEY: "change-this-in-prod"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: resume-parser
+  labels:
+    app: resume-parser
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: resume-parser
+  template:
+    metadata:
+      labels:
+        app: resume-parser
+    spec:
+      containers:
+        - name: resume-parser
+          image: your-registry/resume-parser:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: RESUME_PARSER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: resume-parser-secrets
+                  key: RESUME_PARSER_API_KEY
+            - name: RESUME_PARSER_MAX_FILE_SIZE_BYTES
+              value: "10485760"
+            - name: RESUME_PARSER_ALLOW_ONLY_PDF
+              value: "true"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: resume-parser
+  labels:
+    app: resume-parser
+spec:
+  selector:
+    app: resume-parser
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP

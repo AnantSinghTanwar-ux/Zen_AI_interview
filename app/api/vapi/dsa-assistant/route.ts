@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { checkRateLimit } from "@/lib/services/rate-limit.service";
-import {
-  checkPremiumAccessForFeature,
-  getPremiumRequiredErrorPayload,
-} from "@/lib/services/premium-access.service";
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,17 +13,7 @@ export async function POST(request: NextRequest) {
     const { allowed, response: rateLimitResponse } = await checkRateLimit(request, user.id, "vapi-dsa-assistant");
     if (!allowed) return rateLimitResponse!;
 
-    const premiumAccess = await checkPremiumAccessForFeature({
-      userId: user.id,
-      email: user.email,
-      featureKeys: [
-        `vapi-dsa-assistant:create:${Date.now()}`,
-      ],
-    });
-
-    if (!premiumAccess.allowed) {
-      return NextResponse.json(getPremiumRequiredErrorPayload(), { status: 402 });
-    }
+    // Premium check removed — all authenticated users have access
 
     const apiKey = process.env.VAPI_PRIVATE_API_KEY || "";
     if (!apiKey) {
@@ -151,15 +138,7 @@ export async function GET(request: NextRequest) {
     const { allowed, response: rateLimitResponse } = await checkRateLimit(request, user.id, "vapi-dsa-assistant");
     if (!allowed) return rateLimitResponse!;
 
-    const premiumAccess = await checkPremiumAccessForFeature({
-      userId: user.id,
-      email: user.email,
-      featureKeys: ["vapi-dsa-assistant:list"],
-    });
-
-    if (!premiumAccess.allowed) {
-      return NextResponse.json(getPremiumRequiredErrorPayload(), { status: 402 });
-    }
+    // Premium check removed — all authenticated users have access
 
     const apiKey = process.env.VAPI_PRIVATE_API_KEY || "";
     if (!apiKey) {

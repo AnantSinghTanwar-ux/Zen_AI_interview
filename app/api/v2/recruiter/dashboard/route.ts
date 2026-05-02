@@ -49,11 +49,14 @@ export async function GET(request: NextRequest) {
   try {
     const allApps = await getApplications();
 
-    // Fix missing scores so the dashboard + leaderboard populate.
-    await backfillScoresForCompletedApps(allApps);
-    await processPendingRecruiterScoreJobs(5).catch((queueError) => {
-      console.error("[RecruiterDashboard] Failed to process pending score jobs", queueError);
-    });
+    // Fire-and-forget: backfill + queue processing in background.
+    // This avoids blocking the dashboard response while AI scores generate.
+    Promise.resolve()
+      .then(() => backfillScoresForCompletedApps(allApps))
+      .then(() => processPendingRecruiterScoreJobs(3))
+      .catch((bgErr) => {
+        console.error("[RecruiterDashboard] Background scoring error (non-blocking):", bgErr);
+      });
 
     const filterOptions = await getDistinctValues();
     const topCandidates = await getLeaderboard();

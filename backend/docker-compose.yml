@@ -1,0 +1,73 @@
+services:
+  backend:
+    build: .
+    container_name: internship-backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    environment:
+      REQUIRE_DB: "true"
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      DB_NAME: hiring_platform
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_PORT: "5432"
+      REDIS_PORT: "6379"
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/hiring_platform
+      PYTHON_RESUME_PARSER_URL: http://resume-parser:8000/parse
+      PYTHON_RESUME_PARSER_TIMEOUT_MS: "8000"
+      PYTHON_RESUME_PARSER_API_KEY: ${PYTHON_RESUME_PARSER_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      resume-parser:
+        condition: service_started
+    restart: unless-stopped
+
+  resume-parser:
+    build:
+      context: ../AI-Resume-Analyzer-main/AI-Resume-Analyzer-main
+      dockerfile: Dockerfile
+    container_name: internship-resume-parser
+    environment:
+      RESUME_PARSER_API_KEY: ${PYTHON_RESUME_PARSER_API_KEY:-}
+      RESUME_PARSER_MAX_FILE_SIZE_BYTES: "10485760"
+      RESUME_PARSER_ALLOW_ONLY_PDF: "true"
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    container_name: internship-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: hiring_platform
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hiring_platform"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: internship-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

@@ -11,12 +11,7 @@ import {
   hasOpenRouterKey,
 } from "@/services/ai/openrouter-client";
 import { applyHarshFeedbackGuardrails } from "@/services/ai/analysis-guardrails";
-import {
-  checkAndConsumePremiumDailyLimit,
-  checkPremiumAccessForCall,
-  getPremiumDailyLimitErrorPayload,
-  getPremiumRequiredErrorPayload,
-} from "@/lib/services/premium-access.service";
+
 
 const FEEDBACK_MODEL_CANDIDATES = getOpenRouterModelCandidates(
   process.env.OPENROUTER_HARSH_ANALYSIS_MODEL,
@@ -250,34 +245,7 @@ export async function GET(request: NextRequest) {
       console.warn("Firestore ID resolution failed, using callId directly:", lookupError);
     }
 
-    const premiumAccess = await checkPremiumAccessForCall({
-      userId: user.id,
-      email: user.email,
-      callIds: [callId, vapiCallId],
-    });
-
-    if (!premiumAccess.allowed) {
-      return NextResponse.json(getPremiumRequiredErrorPayload(), { status: 402 });
-    }
-
-    const premiumDailyLimit = await checkAndConsumePremiumDailyLimit({
-      userId: user.id,
-      email: user.email,
-      kind: "feedback",
-      usageKey: `feedback:${callId}`,
-      consume: true,
-    });
-
-    if (!premiumDailyLimit.allowed) {
-      return NextResponse.json(
-        getPremiumDailyLimitErrorPayload({
-          kind: premiumDailyLimit.kind,
-          limit: premiumDailyLimit.limit,
-          date: premiumDailyLimit.date,
-        }),
-        { status: 429 }
-      );
-    }
+    // Premium check removed — all authenticated users have access
 
     // Check cache after access verification.
     const cacheKey = `feedback:v2:${callId}`;

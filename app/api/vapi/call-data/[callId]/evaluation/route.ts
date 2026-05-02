@@ -2,12 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { interviewEvaluationService } from '@/services/interview/interview-evaluation.service';
 import { getCurrentUser } from '@/lib/actions/auth.actions';
 import { checkRateLimit } from '@/lib/services/rate-limit.service';
-import {
-  checkAndConsumePremiumDailyLimit,
-  checkPremiumAccessForCall,
-  getPremiumDailyLimitErrorPayload,
-  getPremiumRequiredErrorPayload,
-} from '@/lib/services/premium-access.service';
+
 
 export async function POST(
   request: NextRequest,
@@ -39,34 +34,7 @@ export async function POST(
     const body = await request.json();
     const { messages, callDetails } = body;
 
-    const premiumAccess = await checkPremiumAccessForCall({
-      userId: user.id,
-      email: user.email,
-      callIds: [callId, callDetails?.vapiCallId, callDetails?.id],
-    });
-
-    if (!premiumAccess.allowed) {
-      return NextResponse.json(getPremiumRequiredErrorPayload(), { status: 402 });
-    }
-
-    const premiumDailyLimit = await checkAndConsumePremiumDailyLimit({
-      userId: user.id,
-      email: user.email,
-      kind: 'feedback',
-      usageKey: `feedback:${callId}`,
-      consume: true,
-    });
-
-    if (!premiumDailyLimit.allowed) {
-      return NextResponse.json(
-        getPremiumDailyLimitErrorPayload({
-          kind: premiumDailyLimit.kind,
-          limit: premiumDailyLimit.limit,
-          date: premiumDailyLimit.date,
-        }),
-        { status: 429 }
-      );
-    }
+    // Premium check removed — all authenticated users have access
 
     console.log('Received evaluation request:', {
       callId,
