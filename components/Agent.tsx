@@ -6,7 +6,7 @@
   import { cn } from "@/lib/utils";
   import { AgentProps } from "@/types";
   import { useRouter } from "next/navigation";
-  import { vapi } from "@/services/vapi/vapi.sdk";
+  import { getVapiInstance } from "@/services/vapi/vapi.sdk";
   import { Button } from "@/components/ui/button";
   import { Input } from "@/components/ui/input";
   import { Send, MessageSquare, Code, Activity, User, Mic } from "lucide-react";
@@ -112,6 +112,7 @@
     practiceContextJson,
   }: AgentProps & { jobContextJson?: string; practiceContextJson?: string }) {
     const router = useRouter();
+    const vapi = useMemo(() => getVapiInstance(type as any), [type]);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
     const [messages, setMessages] = useState<SavedMessage[]>([]);

@@ -3,6 +3,8 @@ import PageLayout from "@/components/PageLayout";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { redirect } from "next/navigation";
 import { getPracticeCompanyProfile, PracticeCompanyKey } from "@/constants/practice";
+import { generateInterviewContext, generateVapiPromptContext } from "@/constants/datasets/context-generator";
+import { getCompanyByKey } from "@/constants/datasets/index";
 
 const safeDecodeJobContext = (value: string | undefined) => {
   if (!value) {
@@ -64,20 +66,23 @@ async function InterviewPage({
 
   let jobPrepContextJson: string | undefined;
   if (sourceParam === "job-prep" && companyKey) {
-    const companyProfile = getPracticeCompanyProfile(companyKey);
-    jobPrepContextJson = JSON.stringify({
-      mode: "job-prep",
-      company: companyProfile.name,
-      companyKey: companyProfile.key,
-      role: roleParam || "Software Engineer",
-      experienceLevel: levelParam || "SDE-1",
-      interviewStyle: companyProfile.interviewStyle,
-      behavioralFocus: companyProfile.behavioralFocus,
-      technicalFocus: companyProfile.technicalFocus,
-      dsaPatterns: companyProfile.dsaPatterns,
-      selectedFocusAreas: focusParam ? focusParam.split(",") : ["Core CS Fundamentals"],
-      notes: "This session is from Job Prep. Tailor interview questions to the company profile, target role, and selected focus. Keep follow-ups aligned with the experience level.",
-    });
+    const companyProfile = getCompanyByKey(companyKey);
+    if (companyProfile) {
+      const contextConfig = generateInterviewContext(
+        companyProfile,
+        roleParam || "Software Engineer",
+        levelParam || "SDE-1",
+        "fullstack" // Default domain, could be parsed from focus
+      );
+      
+      jobPrepContextJson = JSON.stringify({
+        mode: "job-prep",
+        ...contextConfig,
+        vapiContext: generateVapiPromptContext(contextConfig),
+        selectedFocusAreas: focusParam ? focusParam.split(",") : ["Core CS Fundamentals"],
+        notes: "This session is from Job Prep. Tailor interview questions to the company profile, target role, and selected focus. Keep follow-ups aligned with the experience level.",
+      });
+    }
   }
 
   return (

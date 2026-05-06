@@ -1,11 +1,13 @@
+// Expanded to cover all 32+ companies in datasets
+import { DSA_QUESTIONS } from "./datasets";
+
 export type PracticeCompanyKey =
-  | "microsoft"
-  | "amazon"
-  | "google"
-  | "meta"
-  | "oracle"
-  | "adobe"
-  | "netflix"
+  | "microsoft" | "amazon" | "google" | "meta" | "oracle" | "adobe" | "netflix"
+  | "apple" | "uber" | "atlassian" | "airbnb" | "linkedin" | "salesforce"
+  | "nvidia" | "intel" | "qualcomm" | "samsung"
+  | "goldman-sachs" | "jpmorgan" | "deloitte" | "accenture" | "morgan-stanley"
+  | "flipkart" | "swiggy" | "zomato" | "razorpay" | "phonepe" | "cred" | "meesho"
+  | "tcs" | "infosys" | "wipro"
   | "generic";
 
 export interface PracticeCompanyProfile {
@@ -91,6 +93,33 @@ export const PRACTICE_COMPANY_PROFILES: PracticeCompanyProfile[] = [
     technicalFocus: ["System design", "Performance", "Failure handling"],
     dsaPatterns: ["graphs", "heap", "intervals", "dp"],
   },
+  // ─── New Companies (bridged from datasets/) ───────────
+  { key: "apple", name: "Apple", interviewStyle: "Deep technical depth. Craftsmanship and attention to detail.", behavioralFocus: ["Attention to detail", "Passion for craft", "Privacy-first thinking"], technicalFocus: ["Low-level systems", "Performance optimization", "UI/UX engineering"], dsaPatterns: ["arrays", "trees", "linked-list", "dp", "binary-search"] },
+  { key: "uber", name: "Uber", interviewStyle: "Systems-heavy, real-world problem solving. Distributed systems emphasis.", behavioralFocus: ["Ownership", "Bias for action", "Moving fast with quality"], technicalFocus: ["Distributed systems", "Real-time data", "Geo-spatial algorithms"], dsaPatterns: ["graphs", "heap", "sliding-window", "dp", "intervals"] },
+  { key: "atlassian", name: "Atlassian", interviewStyle: "Values-driven. Teamwork. Don't #@!% the customer.", behavioralFocus: ["Team player", "Customer focus", "Open culture"], technicalFocus: ["Clean architecture", "API design", "Testing"], dsaPatterns: ["arrays", "hashing", "trees", "graphs"] },
+  { key: "airbnb", name: "Airbnb", interviewStyle: "Culture fit is paramount. Cross-functional thinking.", behavioralFocus: ["Belonging anywhere", "Host mentality", "Simplify"], technicalFocus: ["Full-stack capability", "Search & recommendation", "Frontend craft"], dsaPatterns: ["graphs", "dp", "hashing", "trees"] },
+  { key: "linkedin", name: "LinkedIn", interviewStyle: "Microsoft-adjacent but with social network scale challenges.", behavioralFocus: ["Members first", "Act like an owner", "Be open"], technicalFocus: ["Distributed systems", "Graph databases", "Search infrastructure"], dsaPatterns: ["graphs", "hashing", "dp", "trees", "heap"] },
+  { key: "salesforce", name: "Salesforce", interviewStyle: "Ohana culture. CRM domain knowledge is a plus.", behavioralFocus: ["Trust", "Customer success", "Innovation"], technicalFocus: ["Multi-tenant architecture", "API platform design", "Database optimization"], dsaPatterns: ["arrays", "hashing", "trees", "dp"] },
+  { key: "nvidia", name: "Nvidia", interviewStyle: "Deep technical. GPU/parallel computing. Low-level systems.", behavioralFocus: ["Intellectual curiosity", "Innovation", "Technical depth"], technicalFocus: ["CUDA programming", "Parallel computing", "Memory optimization"], dsaPatterns: ["arrays", "dp", "binary-search", "graphs", "bit-manipulation"] },
+  { key: "intel", name: "Intel", interviewStyle: "Hardware-software intersection. Strong CS fundamentals.", behavioralFocus: ["Analytical thinking", "Teamwork", "Quality focus"], technicalFocus: ["Computer architecture", "Compiler optimization", "Performance tuning"], dsaPatterns: ["arrays", "binary-search", "dp", "bit-manipulation"] },
+  { key: "qualcomm", name: "Qualcomm", interviewStyle: "Embedded systems and wireless tech focus.", behavioralFocus: ["Innovation", "Teamwork", "Technical curiosity"], technicalFocus: ["Embedded C/C++", "Real-time systems", "OS internals"], dsaPatterns: ["arrays", "linked-list", "trees", "bit-manipulation"] },
+  { key: "samsung", name: "Samsung", interviewStyle: "Strong coding test (Samsung SWC). Implementation-heavy.", behavioralFocus: ["Discipline", "Hard work", "Team collaboration"], technicalFocus: ["Implementation accuracy", "BFS/DFS", "Simulation problems"], dsaPatterns: ["bfs", "dfs", "simulation", "dp", "graphs", "backtracking"] },
+  { key: "goldman-sachs", name: "Goldman Sachs", interviewStyle: "Heavy OA filter. System design for senior. Math/quant overlap.", behavioralFocus: ["Integrity", "Client focus", "Risk management"], technicalFocus: ["Concurrency", "Low-latency systems", "Financial modeling"], dsaPatterns: ["dp", "arrays", "hashing", "graphs", "math"] },
+  { key: "jpmorgan", name: "JP Morgan Chase", interviewStyle: "Code for Good for campus. Standard SDE loop for experienced.", behavioralFocus: ["Teamwork", "Integrity", "Client-first"], technicalFocus: ["Core Java", "Spring Boot", "Database design"], dsaPatterns: ["arrays", "hashing", "trees", "dp"] },
+  { key: "deloitte", name: "Deloitte", interviewStyle: "Consulting + tech hybrid. Case study rounds.", behavioralFocus: ["Client relationship", "Consulting mindset", "Communication"], technicalFocus: ["Cloud architecture", "Data analytics", "Enterprise solutions"], dsaPatterns: ["arrays", "hashing", "trees"] },
+  { key: "accenture", name: "Accenture", interviewStyle: "Communication-focused. Mix of technical and behavioral.", behavioralFocus: ["Client delivery", "Teamwork", "Adaptability"], technicalFocus: ["Web development", "Cloud basics", "Agile methodology"], dsaPatterns: ["arrays", "strings", "hashing"] },
+  { key: "morgan-stanley", name: "Morgan Stanley", interviewStyle: "Strong technical foundation. Java-heavy.", behavioralFocus: ["Integrity", "Excellence", "Diversity of thought"], technicalFocus: ["Core Java", "Multithreading", "Database design"], dsaPatterns: ["arrays", "dp", "hashing", "trees"] },
+  { key: "flipkart", name: "Flipkart", interviewStyle: "Strong DSA focus. Machine coding round is unique.", behavioralFocus: ["Ownership", "Customer focus", "Scale thinking"], technicalFocus: ["Low-level design", "Machine coding", "Scalable architecture"], dsaPatterns: ["dp", "graphs", "trees", "arrays", "hashing", "greedy"] },
+  { key: "swiggy", name: "Swiggy", interviewStyle: "Fast-paced startup. Real-world problem solving.", behavioralFocus: ["Speed", "Ownership", "Consumer thinking"], technicalFocus: ["Microservices", "Real-time tracking", "Geo-services"], dsaPatterns: ["graphs", "dp", "arrays", "hashing", "heap"] },
+  { key: "zomato", name: "Zomato", interviewStyle: "Strong on DSA. Growing emphasis on system design.", behavioralFocus: ["Customer obsession", "Bias for action", "Ownership"], technicalFocus: ["Backend scalability", "Search systems", "Payment integration"], dsaPatterns: ["arrays", "dp", "graphs", "hashing"] },
+  { key: "razorpay", name: "Razorpay", interviewStyle: "Fintech focus. Correctness and edge cases. System design important.", behavioralFocus: ["Reliability", "Ownership", "Customer trust"], technicalFocus: ["Payment systems", "Idempotency", "Transaction safety"], dsaPatterns: ["arrays", "hashing", "dp", "trees"] },
+  { key: "phonepe", name: "PhonePe", interviewStyle: "UPI/fintech domain. Strong backend. Machine coding for SDE-1.", behavioralFocus: ["Speed", "Trust", "Innovation"], technicalFocus: ["UPI systems", "Real-time payments", "Scalable backends"], dsaPatterns: ["arrays", "dp", "hashing", "trees"] },
+  { key: "cred", name: "CRED", interviewStyle: "Design-conscious. Premium product culture. Code quality focus.", behavioralFocus: ["Craftsmanship", "Design taste", "Product thinking"], technicalFocus: ["Frontend excellence", "Clean architecture", "Performance"], dsaPatterns: ["arrays", "dp", "trees", "hashing"] },
+  { key: "meesho", name: "Meesho", interviewStyle: "Scale-focused. Social commerce. Strong DSA initial rounds.", behavioralFocus: ["Scale thinking", "User empathy", "Frugal innovation"], technicalFocus: ["High-throughput systems", "Search & discovery", "Mobile-first"], dsaPatterns: ["dp", "graphs", "arrays", "hashing", "greedy"] },
+  { key: "tcs", name: "TCS", interviewStyle: "Aptitude-heavy for freshers. NQT is the main filter.", behavioralFocus: ["Adaptability", "Willingness to learn", "Team spirit"], technicalFocus: ["Programming basics", "DBMS", "OS", "Networking"], dsaPatterns: ["arrays", "strings", "hashing", "sorting"] },
+  { key: "infosys", name: "Infosys", interviewStyle: "InfyTQ platform. Aptitude + basic programming.", behavioralFocus: ["Learnability", "Ethics", "Teamwork"], technicalFocus: ["Programming fundamentals", "DBMS", "OS", "Web basics"], dsaPatterns: ["arrays", "strings", "sorting", "hashing"] },
+  { key: "wipro", name: "Wipro", interviewStyle: "NLTH program. Aptitude + technical basics.", behavioralFocus: ["Spirit of Wipro", "Integrity", "Respect"], technicalFocus: ["Programming basics", "DBMS", "Networking"], dsaPatterns: ["arrays", "strings", "sorting"] },
+  // ─── Generic fallback ─────────────────────────────────
   {
     key: "generic",
     name: "General Tech",
@@ -101,279 +130,7 @@ export const PRACTICE_COMPANY_PROFILES: PracticeCompanyProfile[] = [
   },
 ];
 
-export const POPULAR_DSA_QUESTIONS: PopularDSAQuestion[] = [
-  {
-    id: "two-sum",
-    title: "Two Sum",
-    difficulty: "Easy",
-    topic: "Arrays",
-    companies: ["microsoft", "amazon", "google", "meta", "oracle", "generic"],
-    prompt:
-      "Given an array of integers and a target sum, return indices of the two numbers such that they add up to the target.",
-  },
-  {
-    id: "merge-intervals",
-    title: "Merge Intervals",
-    difficulty: "Medium",
-    topic: "Intervals",
-    companies: ["microsoft", "google", "amazon", "generic"],
-    prompt:
-      "Given a collection of intervals, merge all overlapping intervals and return the resulting non-overlapping intervals.",
-  },
-  {
-    id: "lru-cache",
-    title: "LRU Cache",
-    difficulty: "Medium",
-    topic: "Design",
-    companies: ["microsoft", "amazon", "google", "meta", "netflix"],
-    prompt:
-      "Design and implement an LRU cache with O(1) average time complexity for get and put operations.",
-  },
-  {
-    id: "word-ladder",
-    title: "Word Ladder",
-    difficulty: "Hard",
-    topic: "Graphs",
-    companies: ["google", "microsoft", "meta", "generic"],
-    prompt:
-      "Given beginWord, endWord, and a dictionary, return the shortest transformation sequence length where each step changes exactly one letter.",
-  },
-  {
-    id: "binary-tree-level-order",
-    title: "Binary Tree Level Order Traversal",
-    difficulty: "Medium",
-    topic: "Trees",
-    companies: ["microsoft", "oracle", "adobe", "generic"],
-    prompt:
-      "Given the root of a binary tree, return level order traversal of its nodes' values.",
-  },
-  {
-    id: "longest-substring",
-    title: "Longest Substring Without Repeating Characters",
-    difficulty: "Medium",
-    topic: "Sliding Window",
-    companies: ["amazon", "microsoft", "meta", "adobe", "generic"],
-    prompt:
-      "Given a string, find the length of the longest substring without repeating characters.",
-  },
-  {
-    id: "top-k-frequent",
-    title: "Top K Frequent Elements",
-    difficulty: "Medium",
-    topic: "Heap",
-    companies: ["amazon", "google", "netflix", "generic"],
-    prompt:
-      "Given an integer array and an integer k, return the k most frequent elements.",
-  },
-  {
-    id: "number-of-islands",
-    title: "Number of Islands",
-    difficulty: "Medium",
-    topic: "Graphs",
-    companies: ["microsoft", "amazon", "google", "meta", "generic"],
-    prompt:
-      "Given a 2D grid map of '1's (land) and '0's (water), return the number of islands.",
-  },
-  {
-    id: "kth-smallest-bst",
-    title: "Kth Smallest Element in a BST",
-    difficulty: "Medium",
-    topic: "Trees",
-    companies: ["microsoft", "oracle", "adobe", "generic"],
-    prompt:
-      "Given a BST and an integer k, return the kth smallest value.",
-  },
-  {
-    id: "median-two-sorted-arrays",
-    title: "Median of Two Sorted Arrays",
-    difficulty: "Hard",
-    topic: "Binary Search",
-    companies: ["microsoft", "google", "adobe", "generic"],
-    prompt:
-      "Given two sorted arrays, return the median in O(log(m+n)).",
-  },
-  // --- Additional popular questions ---
-  {
-    id: "reverse-linked-list",
-    title: "Reverse Linked List",
-    difficulty: "Easy",
-    topic: "Linked List",
-    companies: ["microsoft", "amazon", "google", "meta", "oracle", "generic"],
-    prompt:
-      "Given the head of a singly linked list, reverse the list and return the reversed list.",
-  },
-  {
-    id: "valid-parentheses",
-    title: "Valid Parentheses",
-    difficulty: "Easy",
-    topic: "Stack",
-    companies: ["amazon", "google", "meta", "adobe", "generic"],
-    prompt:
-      "Given a string containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.",
-  },
-  {
-    id: "best-time-buy-sell-stock",
-    title: "Best Time to Buy and Sell Stock",
-    difficulty: "Easy",
-    topic: "Arrays",
-    companies: ["amazon", "microsoft", "meta", "oracle", "generic"],
-    prompt:
-      "Given an array prices where prices[i] is the price of a stock on day i, maximize profit by choosing a single day to buy and a single day to sell.",
-  },
-  {
-    id: "product-except-self",
-    title: "Product of Array Except Self",
-    difficulty: "Medium",
-    topic: "Arrays",
-    companies: ["amazon", "microsoft", "google", "meta", "generic"],
-    prompt:
-      "Given an integer array nums, return an array where each element is the product of all elements except itself, without using division.",
-  },
-  {
-    id: "coin-change",
-    title: "Coin Change",
-    difficulty: "Medium",
-    topic: "Dynamic Programming",
-    companies: ["amazon", "google", "microsoft", "oracle", "generic"],
-    prompt:
-      "Given coins of different denominations and a target amount, return the fewest number of coins needed to make up that amount.",
-  },
-  {
-    id: "max-subarray",
-    title: "Maximum Subarray",
-    difficulty: "Medium",
-    topic: "Dynamic Programming",
-    companies: ["amazon", "microsoft", "google", "adobe", "generic"],
-    prompt:
-      "Given an integer array nums, find the subarray with the largest sum and return its sum.",
-  },
-  {
-    id: "group-anagrams",
-    title: "Group Anagrams",
-    difficulty: "Medium",
-    topic: "Hashing",
-    companies: ["amazon", "microsoft", "meta", "adobe", "generic"],
-    prompt:
-      "Given an array of strings, group the anagrams together. You can return the answer in any order.",
-  },
-  {
-    id: "binary-search",
-    title: "Binary Search",
-    difficulty: "Easy",
-    topic: "Binary Search",
-    companies: ["microsoft", "oracle", "adobe", "generic"],
-    prompt:
-      "Given a sorted array of integers and a target value, return the index if the target is found. If not, return -1.",
-  },
-  {
-    id: "course-schedule",
-    title: "Course Schedule",
-    difficulty: "Medium",
-    topic: "Graphs",
-    companies: ["amazon", "google", "microsoft", "netflix", "generic"],
-    prompt:
-      "Given numCourses and an array of prerequisites, determine if you can finish all courses (detect cycles in directed graph).",
-  },
-  {
-    id: "word-break",
-    title: "Word Break",
-    difficulty: "Medium",
-    topic: "Dynamic Programming",
-    companies: ["amazon", "google", "meta", "adobe", "generic"],
-    prompt:
-      "Given a string s and a dictionary of strings wordDict, return true if s can be segmented into space-separated dictionary words.",
-  },
-  {
-    id: "three-sum",
-    title: "3Sum",
-    difficulty: "Medium",
-    topic: "Two Pointers",
-    companies: ["amazon", "google", "meta", "microsoft", "generic"],
-    prompt:
-      "Given an integer array nums, return all the triplets that sum to zero with no duplicate triplets.",
-  },
-  {
-    id: "rotate-image",
-    title: "Rotate Image",
-    difficulty: "Medium",
-    topic: "Matrix",
-    companies: ["microsoft", "amazon", "google", "adobe", "generic"],
-    prompt:
-      "Given an n x n 2D matrix, rotate the image by 90 degrees clockwise in-place.",
-  },
-  {
-    id: "trapping-rain-water",
-    title: "Trapping Rain Water",
-    difficulty: "Hard",
-    topic: "Two Pointers",
-    companies: ["amazon", "google", "microsoft", "meta", "generic"],
-    prompt:
-      "Given n non-negative integers representing an elevation map, compute how much water it can trap after raining.",
-  },
-  {
-    id: "longest-palindromic-substring",
-    title: "Longest Palindromic Substring",
-    difficulty: "Medium",
-    topic: "Strings",
-    companies: ["amazon", "microsoft", "adobe", "oracle", "generic"],
-    prompt:
-      "Given a string s, return the longest palindromic substring in s.",
-  },
-  {
-    id: "min-window-substring",
-    title: "Minimum Window Substring",
-    difficulty: "Hard",
-    topic: "Sliding Window",
-    companies: ["meta", "google", "amazon", "netflix", "generic"],
-    prompt:
-      "Given strings s and t, return the minimum window substring of s such that every character in t is included.",
-  },
-  {
-    id: "serialize-deserialize-bt",
-    title: "Serialize and Deserialize Binary Tree",
-    difficulty: "Hard",
-    topic: "Trees",
-    companies: ["google", "amazon", "meta", "microsoft", "generic"],
-    prompt:
-      "Design an algorithm to serialize and deserialize a binary tree. Implement both encode and decode functions.",
-  },
-  {
-    id: "longest-increasing-subsequence",
-    title: "Longest Increasing Subsequence",
-    difficulty: "Medium",
-    topic: "Dynamic Programming",
-    companies: ["microsoft", "google", "amazon", "oracle", "generic"],
-    prompt:
-      "Given an integer array nums, return the length of the longest strictly increasing subsequence.",
-  },
-  {
-    id: "validate-bst",
-    title: "Validate Binary Search Tree",
-    difficulty: "Medium",
-    topic: "Trees",
-    companies: ["microsoft", "amazon", "oracle", "adobe", "generic"],
-    prompt:
-      "Given the root of a binary tree, determine if it is a valid binary search tree.",
-  },
-  {
-    id: "meeting-rooms-ii",
-    title: "Meeting Rooms II",
-    difficulty: "Medium",
-    topic: "Intervals",
-    companies: ["google", "amazon", "meta", "netflix", "generic"],
-    prompt:
-      "Given an array of meeting time intervals, find the minimum number of conference rooms required.",
-  },
-  {
-    id: "design-twitter",
-    title: "Design Twitter",
-    difficulty: "Medium",
-    topic: "Design",
-    companies: ["meta", "amazon", "netflix", "generic"],
-    prompt:
-      "Design a simplified version of Twitter where users can post tweets, follow/unfollow, and see a news feed of the 10 most recent tweets.",
-  },
-];
+export const POPULAR_DSA_QUESTIONS: PopularDSAQuestion[] = DSA_QUESTIONS as unknown as PopularDSAQuestion[];
 
 export const getPracticeCompanyProfile = (companyKey: PracticeCompanyKey) =>
   PRACTICE_COMPANY_PROFILES.find((profile) => profile.key === companyKey) ||
