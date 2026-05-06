@@ -1,9 +1,0 @@
-node_modules/
-dist/
-.env
-.env.development
-.env.production
-uploads/
-*.log
-
-/src/generated/prisma

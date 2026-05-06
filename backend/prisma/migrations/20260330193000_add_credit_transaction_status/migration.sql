@@ -1,2 +1,0 @@
-ALTER TABLE credit_transactions
-ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'success';
