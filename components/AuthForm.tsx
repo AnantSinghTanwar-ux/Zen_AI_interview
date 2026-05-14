@@ -23,7 +23,9 @@ import {
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { getClientAuth } from "@/services/firebase/client";
-import { signIn, signUp } from "@/lib/actions/auth.actions";
+import { signIn, signUp, verifyCaptcha } from "@/lib/actions/auth.actions";
+import ReCAPTCHA from "react-google-recaptcha";
+import { useState, useRef } from "react";
 
 type FormType = "sign-in" | "sign-up";
 
@@ -42,6 +44,9 @@ function AuthForm({ type }: { type: FormType }) {
     resolver: zodResolver(formSchema),
     defaultValues: { name: "", email: "", password: "" },
   });
+
+  const [captchaValue, setCaptchaValue] = useState<string | null>(null);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   const isSignIn = type == "sign-in";
 
@@ -82,6 +87,19 @@ function AuthForm({ type }: { type: FormType }) {
   // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
+      if (!captchaValue) {
+        toast.error("Please complete the captcha verification");
+        return;
+      }
+
+      const captchaRes = await verifyCaptcha(captchaValue);
+      if (!captchaRes.success) {
+        toast.error("Captcha verification failed. Please try again.");
+        recaptchaRef.current?.reset();
+        setCaptchaValue(null);
+        return;
+      }
+
       const auth = getClientAuth();
 
       if (isSignIn) {
@@ -227,6 +245,15 @@ function AuthForm({ type }: { type: FormType }) {
                     </FormItem>
                 )}
                 />
+
+                <div className="flex justify-center pt-2 pb-2">
+                    <ReCAPTCHA
+                      ref={recaptchaRef}
+                      sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ""}
+                      onChange={(val) => setCaptchaValue(val)}
+                      theme="light"
+                    />
+                </div>
 
                 <div className="flex justify-center pt-4">
                     <Button className="btn btn-primary text-lg py-6 px-12" type="submit">

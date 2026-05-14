@@ -12,6 +12,15 @@ export const PRODUCTS = {
     credits: 1,
     timeLimitMinutes: 30,
   },
+  LIMITED_OFFER_INTERVIEW: {
+    id: "limited_offer_interview",
+    name: "Limited Offer Interview Session",
+    description: "30-minute AI-powered voice interview with detailed feedback (First 10 Users)",
+    priceInPaise: 19900, // ₹199
+    creditType: "interviews" as const,
+    credits: 1,
+    timeLimitMinutes: 30,
+  },
   DSA_STARTER: {
     id: "dsa_starter",
     name: "DSA Starter",
@@ -58,6 +67,22 @@ export type CreditType = "interviews" | "dsaSessions";
 
 export function getProductById(productId: string) {
   return Object.values(PRODUCTS).find((p) => p.id === productId) || null;
+}
+
+// ─── Limited Offer Tracking ─────────────────────────────────────────────────
+export async function getLimitedOfferCount(): Promise<number> {
+  const docRef = db.collection("system").doc("pricing");
+  const snap = await docRef.get();
+  return snap.data()?.limitedOfferCount || 0;
+}
+
+export async function incrementLimitedOfferCount(): Promise<void> {
+  const docRef = db.collection("system").doc("pricing");
+  await db.runTransaction(async (transaction) => {
+    const snap = await transaction.get(docRef);
+    const count = snap.data()?.limitedOfferCount || 0;
+    transaction.set(docRef, { limitedOfferCount: count + 1 }, { merge: true });
+  });
 }
 
 // ─── Razorpay Order Creation ────────────────────────────────────────────────

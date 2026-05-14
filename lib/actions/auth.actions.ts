@@ -232,3 +232,16 @@ export async function logout() {
     return { success: true, message: "Logged out successfully" };
   }
 }
+export const verifyCaptcha = async (token: string) => {
+  try {
+    const res = await fetch(
+      `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}`,
+      { method: "POST" }
+    );
+    const data = await res.json();
+    return { success: data.success, score: data.score };
+  } catch (error) {
+    console.error("Captcha verification error:", error);
+    return { success: false };
+  }
+};

@@ -79,8 +79,16 @@ const PricingCalculator = () => {
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Individual pricing
-  const PRICE_PER_INTERVIEW = 399;
+  const BASE_INTERVIEW_PRICE = 399;
+  const [interviewPriceInfo, setInterviewPriceInfo] = useState<{ price: number, productId: string, remaining: number }>({ price: 399, productId: 'single_interview', remaining: 0 });
   const [dsaTier, setDsaTier] = useState<'starter'|'pack'|'pro'>('pack');
+
+  useEffect(() => {
+    fetch('/api/premium/interview-price')
+      .then(res => res.json())
+      .then(data => setInterviewPriceInfo(data))
+      .catch(console.error);
+  }, []);
 
   // College calculator
   const [students, setStudents] = useState(50);
@@ -88,7 +96,7 @@ const PricingCalculator = () => {
   const [collegeEmail, setCollegeEmail] = useState("");
 
   const totalInterviews = students * interviewsPerStudent;
-  const totalCost = totalInterviews * PRICE_PER_INTERVIEW;
+  const totalCost = totalInterviews * BASE_INTERVIEW_PRICE;
 
   // Bulk discount calculation
   const getDiscount = (total: number) => {
@@ -139,7 +147,7 @@ const PricingCalculator = () => {
     });
 
   const handleBuyInterview = () => {
-    initiateInterviewPayment("single_interview");
+    initiateInterviewPayment(interviewPriceInfo.productId);
   };
 
   const handleBuyDSA = () => {
@@ -269,7 +277,7 @@ const PricingCalculator = () => {
                 {/* Price */}
                 <div className="flex items-baseline gap-2 mb-8">
                   <span className="text-5xl md:text-6xl font-bold text-foreground">
-                    ₹{PRICE_PER_INTERVIEW}
+                    ₹{interviewPriceInfo.price}
                   </span>
                   <div className="text-muted-foreground text-sm">
                     <div>per session</div>
@@ -280,7 +288,13 @@ const PricingCalculator = () => {
                   </div>
                 </div>
 
-              {/* Features */}
+                {interviewPriceInfo.remaining > 0 && (
+                  <div className="mb-4 text-xs font-semibold text-primary px-3 py-1 bg-primary/10 rounded-full w-fit">
+                    Limited Offer: Only {interviewPriceInfo.remaining} spots left at ₹199!
+                  </div>
+                )}
+
+                {/* Features */}
               <ul className="space-y-4 mb-8 flex-1">
                 {interviewFeatures.map((feature, i) => (
                   <li

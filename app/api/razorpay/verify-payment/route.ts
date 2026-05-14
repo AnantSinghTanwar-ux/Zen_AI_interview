@@ -6,6 +6,7 @@ import {
   getProductById,
   grantCredits,
   isPaymentAlreadyProcessed,
+  incrementLimitedOfferCount,
 } from "@/lib/services/payment.service";
 
 export async function POST(request: NextRequest) {
@@ -97,6 +98,13 @@ export async function POST(request: NextRequest) {
     console.log(
       `Payment verified: ${razorpay_payment_id} → granted ${product.credits} ${product.creditType} to ${user.id}`
     );
+
+    // If it was a limited offer interview, increment the global counter
+    if (product.id === "limited_offer_interview") {
+      await incrementLimitedOfferCount().catch((err) =>
+        console.error("Failed to increment limited offer count:", err)
+      );
+    }
 
     // 7. Return success with updated credits
     return NextResponse.json({
