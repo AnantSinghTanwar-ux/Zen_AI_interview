@@ -12,7 +12,7 @@ const StarryBackground = ({ className = "" }: { className?: string }) => {
   const [stars, setStars] = useState<{id: number, top: string, left: string, size: number, delay: number, duration: number}[]>([]);
 
   useEffect(() => {
-    setStars(Array.from({ length: 80 }).map((_, i) => ({
+    setStars(Array.from({ length: 150 }).map((_, i) => ({
       id: i,
       top: `${Math.random() * 100}%`,
       left: `${Math.random() * 100}%`,
