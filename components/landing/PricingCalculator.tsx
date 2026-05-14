@@ -86,7 +86,11 @@ const PricingCalculator = () => {
   };
 
   const discount = getDiscount(totalInterviews);
-  const discountedCost = Math.round(totalCost * (1 - discount / 100));
+  // Apply discount then ensure the total ends in 99 (e.g. 4400 → 4399)
+  const rawDiscountedCost = Math.round(totalCost * (1 - discount / 100));
+  const discountedCost = rawDiscountedCost <= 99
+    ? 99
+    : Math.floor(rawDiscountedCost / 100) * 100 - 1;
 
   const { initiatePayment: initiateInterviewPayment, isProcessing: isProcessingInterview } =
     useRazorpayCheckout({

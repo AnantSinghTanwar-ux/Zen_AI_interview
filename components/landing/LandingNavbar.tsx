@@ -158,7 +158,7 @@ const LandingNavbar = () => {
               <div className="h-10 w-28 rounded-full border border-white/10 bg-white/5 animate-pulse" />
             ) : isAuthenticated ? (
               <>
-                <Link href="/interview">
+                <Link href="/dashboard">
                   <Button className="bg-primary hover:bg-primary/90 text-black rounded-full px-6 font-semibold shadow-[0_0_20px_rgba(250,204,21,0.25)] hover:shadow-[0_0_30px_rgba(250,204,21,0.4)] transition-all hover:scale-105 flex items-center gap-2">
                     <Sparkles className="w-4 h-4" />
                     Dashboard
@@ -223,7 +223,7 @@ const LandingNavbar = () => {
                   ) : isAuthenticated ? (
                     <>
                       <Link
-                        href="/interview"
+                        href="/dashboard"
                         onClick={() => setIsMobileMenuOpen(false)}
                         className="w-full"
                       >
