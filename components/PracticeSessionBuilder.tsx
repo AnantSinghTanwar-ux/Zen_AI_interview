@@ -114,6 +114,11 @@ export default function PracticeSessionBuilder({
 
       const data = await res.json().catch(() => ({}));
 
+      if (res.status === 401) {
+        window.location.href = "/sign-in";
+        return;
+      }
+
       if (res.status === 402 || data.allowed === false) {
         setShowPaymentPopup(true);
         return;

@@ -79,6 +79,11 @@ export function useRazorpayCheckout({
           body: JSON.stringify({ productId }),
         });
 
+        if (orderRes.status === 401) {
+          window.location.href = "/sign-in";
+          return;
+        }
+
         if (!orderRes.ok) {
           const errorData = await orderRes.json().catch(() => ({}));
           throw new Error(
