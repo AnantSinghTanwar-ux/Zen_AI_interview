@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import Agent from "@/components/Agent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import PremiumAccessPopup from "@/components/PremiumAccessPopup";
 import {
   PRACTICE_COMPANY_PROFILES,
   PracticeCompanyKey,
@@ -57,6 +58,8 @@ export default function PracticeSessionBuilder({
   const [experienceLevel, setExperienceLevel] = useState("SDE-1 / Early Career");
   const [selectedFocus, setSelectedFocus] = useState<string[]>(["Core CS Fundamentals", "Problem Solving"]);
   const [started, setStarted] = useState((autoStart === true && !!initialPracticeContextJson) || !!jobContextJson);
+  const [showPaymentPopup, setShowPaymentPopup] = useState(false);
+  const [isCheckingAccess, setIsCheckingAccess] = useState(false);
 
   const profile = useMemo(() => getPracticeCompanyProfile(selectedCompany), [selectedCompany]);
 
@@ -96,6 +99,39 @@ export default function PracticeSessionBuilder({
     if (experienceLevel) score += 15;
     return Math.min(100, score);
   }, [selectedFocus, role, experienceLevel]);
+
+  const checkAndStartSession = async () => {
+    setIsCheckingAccess(true);
+    try {
+      const res = await fetch("/api/premium/vapi-access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          feature: "interview",
+          quotaKind: "interview",
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.status === 402 || data.allowed === false) {
+        setShowPaymentPopup(true);
+        return;
+      }
+
+      if (!res.ok) {
+        console.error("Access check failed:", data);
+        return;
+      }
+
+      // Access granted — start the session
+      setStarted(true);
+    } catch (error) {
+      console.error("Failed to check access:", error);
+    } finally {
+      setIsCheckingAccess(false);
+    }
+  };
 
   if (started) {
     return (
@@ -256,12 +292,29 @@ export default function PracticeSessionBuilder({
 
                <div className="flex justify-between pt-6 border-t border-white/10">
                  <Button variant="ghost" onClick={() => setStep(2)} className="text-[#888] hover:text-white">Modify Parameters</Button>
-                 <Button onClick={() => setStarted(true)} className="btn-get-started h-14">Initialize Session</Button>
+                 <Button
+                   onClick={checkAndStartSession}
+                   disabled={isCheckingAccess}
+                   className="btn-get-started h-14"
+                 >
+                   {isCheckingAccess ? "Verifying access..." : "Initialize Session"}
+                 </Button>
                </div>
             </div>
           )}
         </div>
       </div>
+
+      <PremiumAccessPopup
+        open={showPaymentPopup}
+        message="Purchase an interview session to start your AI-powered mock interview."
+        suggestedProduct="single_interview"
+        onClose={() => setShowPaymentPopup(false)}
+        onActivated={() => {
+          setShowPaymentPopup(false);
+          setStarted(true);
+        }}
+      />
     </div>
   );
 }

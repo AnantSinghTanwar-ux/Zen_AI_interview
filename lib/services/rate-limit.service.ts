@@ -260,6 +260,14 @@ const RATE_LIMITS: Record<string, RateLimitConfig> = {
     limit: Number(process.env.RATE_LIMIT_FEEDBACK_PER_HOUR ?? 5),
     windowMs: 3_600_000,
   },
+  "razorpay-create-order": {
+    limit: Number(process.env.RATE_LIMIT_RAZORPAY_ORDER_PER_HOUR ?? 10),
+    windowMs: 3_600_000,
+  },
+  "razorpay-verify-payment": {
+    limit: Number(process.env.RATE_LIMIT_RAZORPAY_VERIFY_PER_HOUR ?? 15),
+    windowMs: 3_600_000,
+  },
 };
 
 const IP_GLOBAL: RateLimitConfig = {

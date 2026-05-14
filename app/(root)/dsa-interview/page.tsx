@@ -41,6 +41,9 @@ export default function DSAInterviewPage() {
   const [streamingMessage, setStreamingMessage] = useState("");
   const [showPremiumPopup, setShowPremiumPopup] = useState(false);
   const [premiumMessage, setPremiumMessage] = useState<string | undefined>(undefined);
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  const SESSION_TIME_LIMIT = 30 * 60; // 30 minutes in seconds
 
   const [selectedCompany, setSelectedCompany] = useState<PracticeCompanyKey>("microsoft");
   const [selectedDifficulty, setSelectedDifficulty] = useState<(typeof difficultyOptions)[number]>("Any");
@@ -89,7 +92,15 @@ export default function DSAInterviewPage() {
   useEffect(() => {
     if (timerActive) {
       timerRef.current = setInterval(() => {
-        setTimeElapsed((prev) => prev + 1);
+        setTimeElapsed((prev) => {
+          const next = prev + 1;
+          // Enforce 30-minute hard limit
+          if (next >= SESSION_TIME_LIMIT) {
+            setTimerActive(false);
+            setSessionExpired(true);
+          }
+          return next;
+        });
       }, 1000);
     } else if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -432,16 +443,23 @@ export default function DSAInterviewPage() {
             </div>
 
             <div className="border-t border-white/10 bg-background/70 p-4">
+              {sessionExpired && (
+                <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-300 text-center">
+                  ⏱ Session time limit reached (30 min). Purchase another session to continue.
+                </div>
+              )}
               <div className="flex gap-3">
                 <Input
                   value={currentInput}
                   onChange={(e) => setCurrentInput(e.target.value)}
                   placeholder={
-                    interviewStage === "greeting"
-                      ? "Start the interview..."
-                      : interviewStage === "question"
-                        ? "Share your approach or paste your solution..."
-                        : "Ask for feedback or discuss optimizations..."
+                    sessionExpired
+                      ? "Session expired — purchase another to continue"
+                      : interviewStage === "greeting"
+                        ? "Start the interview..."
+                        : interviewStage === "question"
+                          ? "Share your approach or paste your solution..."
+                          : "Ask for feedback or discuss optimizations..."
                   }
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
@@ -449,12 +467,12 @@ export default function DSAInterviewPage() {
                       sendMessage(currentInput);
                     }
                   }}
-                  disabled={isStreaming}
+                  disabled={isStreaming || sessionExpired}
                   className="flex-1"
                 />
                 <Button
                   onClick={() => sendMessage(currentInput)}
-                  disabled={isStreaming || !currentInput.trim()}
+                  disabled={isStreaming || !currentInput.trim() || sessionExpired}
                 >
                   <Send className="w-4 h-4" />
                 </Button>
@@ -483,6 +501,7 @@ export default function DSAInterviewPage() {
       <PremiumAccessPopup
         open={showPremiumPopup}
         message={premiumMessage}
+        suggestedProduct="dsa_practice"
         onClose={() => setShowPremiumPopup(false)}
         onActivated={() => {
           setShowPremiumPopup(false);

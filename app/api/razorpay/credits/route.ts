@@ -2,13 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { getUserCredits } from "@/lib/services/payment.service";
 
-/**
- * POST /api/premium/activate
- *
- * Returns the user's current credit status.
- * No longer auto-grants free access.
- */
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
@@ -16,20 +10,15 @@ export async function POST(request: NextRequest) {
     }
 
     const credits = await getUserCredits(user.id);
-    const hasCredits = credits.interviews > 0 || credits.dsaSessions > 0;
 
     return NextResponse.json({
-      success: true,
-      isPremium: hasCredits,
       credits,
-      message: hasCredits
-        ? "You have active session credits"
-        : "Purchase sessions to get started",
+      userId: user.id,
     });
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error fetching credits:", error);
     return NextResponse.json(
-      { error: "Failed to check credits" },
+      { error: "Failed to fetch credits" },
       { status: 500 }
     );
   }
