@@ -80,7 +80,7 @@ const PricingCalculator = () => {
 
   // Individual pricing
   const PRICE_PER_INTERVIEW = 400;
-  const PRICE_PER_DSA = 99;
+  const [dsaTier, setDsaTier] = useState<'starter'|'pack'|'pro'>('pack');
 
   // College calculator
   const [students, setStudents] = useState(50);
@@ -126,15 +126,10 @@ const PricingCalculator = () => {
 
   const { initiatePayment: initiateDSAPayment, isProcessing: isProcessingDSA } =
     useRazorpayCheckout({
-      onSuccess: (result) => {
+      onSuccess: () => {
         setPaymentError(null);
-        setPaymentSuccess(
-          `Payment successful! Redirecting to DSA practice...`
-        );
-        // Redirect to DSA interview page after short delay
-        setTimeout(() => {
-          window.location.href = "/dsa-interview";
-        }, 1500);
+        setPaymentSuccess(`Payment successful! Redirecting to DSA practice...`);
+        setTimeout(() => { window.location.href = "/dsa-interview"; }, 1500);
       },
       onError: (error) => {
         setPaymentSuccess(null);
@@ -148,7 +143,8 @@ const PricingCalculator = () => {
   };
 
   const handleBuyDSA = () => {
-    initiateDSAPayment("dsa_practice");
+    const productMap = { starter: 'dsa_starter', pack: 'dsa_practice', pro: 'dsa_pro' } as const;
+    initiateDSAPayment(productMap[dsaTier]);
   };
 
   const handleCollegeSubmit = () => {
@@ -179,12 +175,19 @@ const PricingCalculator = () => {
     "Personalized improvement plan",
   ];
 
+  const dsaTiers = {
+    starter: { label: '1 Session', price: 29, sessions: 1, perSession: 29 },
+    pack: { label: '5 Sessions', price: 99, sessions: 5, perSession: 19 },
+    pro: { label: '12 Sessions', price: 199, sessions: 12, perSession: 16 },
+  };
+  const activeDsa = dsaTiers[dsaTier];
+
   const dsaFeatures = [
-    "30-minute DSA practice session",
-    "Company-specific problem bank",
-    "AI interviewer with real-time hints",
-    "Complexity analysis & optimization tips",
-    "Multiple difficulty levels",
+    `${activeDsa.sessions} AI-guided DSA session${activeDsa.sessions > 1 ? 's' : ''}`,
+    "Company-specific curated problem bank",
+    "AI tutor teaches you patterns & tricks",
+    "Code review with complexity analysis",
+    "60 messages per session — no exploitation",
   ];
 
   return (
@@ -334,9 +337,9 @@ const PricingCalculator = () => {
             <div className="absolute -inset-px bg-gradient-to-b from-[#10B981]/20 to-transparent rounded-[1.1rem] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative bg-[#111118] border border-[#1F1F2B] rounded-2xl p-8 md:p-10 h-full flex flex-col transition-all duration-300 hover:border-[#2A2A3A]">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#10B981]/10 border border-[#10B981]/20 text-[#10B981] text-xs font-semibold mb-6 w-fit">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold mb-6 w-fit animate-pulse">
                 <Code className="w-3 h-3" />
-                DSA PREP
+                🔥 NEW — DSA PREP
               </div>
 
               <h3 className="text-2xl font-bold text-[#EAEAF0] mb-2">
@@ -346,16 +349,28 @@ const PricingCalculator = () => {
                 Text-based coding interview prep with AI guidance.
               </p>
 
+              {/* Tier Selector */}
+              <div className="flex gap-2 mb-6">
+                {(['starter','pack','pro'] as const).map(t => (
+                  <button key={t} onClick={() => setDsaTier(t)}
+                    className={`flex-1 text-xs py-2 px-2 rounded-lg border transition-all font-medium ${
+                      dsaTier === t ? 'bg-primary/20 border-primary text-primary' : 'bg-transparent border-[#1F1F2B] text-[#9CA3AF] hover:border-[#3A3A4A]'
+                    }`}>
+                    {dsaTiers[t].label}
+                  </button>
+                ))}
+              </div>
+
               {/* Price */}
               <div className="flex items-baseline gap-2 mb-8">
                 <span className="text-5xl md:text-6xl font-bold text-[#EAEAF0]">
-                  ₹99
+                  ₹{activeDsa.price}
                 </span>
                 <div className="text-[#9CA3AF] text-sm">
-                  <div>per session</div>
+                  <div>₹{activeDsa.perSession}/session</div>
                   <div className="flex items-center gap-1 text-xs mt-0.5">
                     <Clock className="w-3 h-3" />
-                    30 minutes
+                    30 min · 60 msgs each
                   </div>
                 </div>
               </div>
@@ -380,14 +395,14 @@ const PricingCalculator = () => {
                 id="pricing-buy-dsa"
                 onClick={handleBuyDSA}
                 disabled={isProcessingDSA}
-                className="w-full bg-[#10B981] hover:bg-[#059669] text-white rounded-full h-14 text-lg font-semibold shadow-[0_0_25px_rgba(16,185,129,0.2)] hover:shadow-[0_0_40px_rgba(16,185,129,0.35)] transition-all group disabled:opacity-60"
+                className="w-full bg-primary hover:bg-primary/90 text-black rounded-full h-14 text-lg font-semibold shadow-[0_0_25px_rgba(212,175,55,0.2)] hover:shadow-[0_0_40px_rgba(212,175,55,0.35)] transition-all group disabled:opacity-60"
               >
                 {isProcessingDSA ? (
                   "Processing..."
                 ) : (
                   <>
                     <Code className="w-5 h-5 mr-2" />
-                    Buy Now — ₹99
+                    Buy Now — ₹{activeDsa.price}
                     <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}

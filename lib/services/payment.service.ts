@@ -12,14 +12,35 @@ export const PRODUCTS = {
     credits: 1,
     timeLimitMinutes: 30,
   },
-  DSA_PRACTICE: {
-    id: "dsa_practice",
-    name: "DSA Practice Session",
-    description: "30-minute text-based DSA interview with AI interviewer",
-    priceInPaise: 9900, // ₹99
+  DSA_STARTER: {
+    id: "dsa_starter",
+    name: "DSA Starter",
+    description: "1 AI-guided DSA practice session — try it out",
+    priceInPaise: 2900, // ₹29
     creditType: "dsaSessions" as const,
     credits: 1,
     timeLimitMinutes: 30,
+    messageLimit: 60,
+  },
+  DSA_PRACTICE: {
+    id: "dsa_practice",
+    name: "DSA Practice Pack",
+    description: "5 AI-guided DSA practice sessions — best for students",
+    priceInPaise: 9900, // ₹99
+    creditType: "dsaSessions" as const,
+    credits: 5,
+    timeLimitMinutes: 30,
+    messageLimit: 60,
+  },
+  DSA_PRO: {
+    id: "dsa_pro",
+    name: "DSA Pro Pack",
+    description: "12 AI-guided DSA practice sessions — maximum value",
+    priceInPaise: 19900, // ₹199
+    creditType: "dsaSessions" as const,
+    credits: 12,
+    timeLimitMinutes: 30,
+    messageLimit: 60,
   },
   INTERVIEW_PACK_5: {
     id: "interview_pack_5",
@@ -28,15 +49,6 @@ export const PRODUCTS = {
     priceInPaise: 149900, // ₹1,499
     creditType: "interviews" as const,
     credits: 5,
-    timeLimitMinutes: 30,
-  },
-  DSA_PACK_10: {
-    id: "dsa_pack_10",
-    name: "DSA Practice Pack (10 Sessions)",
-    description: "10 DSA practice sessions — save 29%",
-    priceInPaise: 69900, // ₹699
-    creditType: "dsaSessions" as const,
-    credits: 10,
     timeLimitMinutes: 30,
   },
 } as const;

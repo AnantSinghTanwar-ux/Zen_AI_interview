@@ -111,7 +111,7 @@ const RainbowButton = ({ children, onClick, className = "" }: { children: React.
       onClick={onClick}
       className={`group relative inline-flex h-14 items-center justify-center overflow-hidden rounded-full p-[2px] font-medium transition-all duration-300 hover:scale-105 ${className}`}
     >
-      <span className="absolute inset-0 animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#D4AF37_0%,#111118_50%,#D4AF37_100%)]"></span>
+      <span className="absolute inset-0 bg-[conic-gradient(from_0deg_at_50%_50%,#DAA520_0%,#FFD89B_25%,#111118_40%,#111118_60%,#DAA520_75%,#FFD89B_100%)] animate-[spin_2.5s_linear_infinite]"></span>
       <div className="relative flex h-full w-full items-center justify-center gap-2 rounded-full bg-background px-8 text-sm text-foreground transition-all duration-300 group-hover:bg-background/80">
         {children}
       </div>
@@ -260,9 +260,9 @@ const HeroBanner = () => {
           <Button
             variant="outline"
             onClick={() => scrollToSection("college")}
-            className="btn-secondary w-full sm:w-auto text-base tracking-wide rounded-full px-8 py-6 h-auto group border-border hover:border-primary/40 bg-card hover:bg-secondary"
+            className="btn-secondary w-full sm:w-auto text-base tracking-wide rounded-full px-8 py-6 h-auto group border-[#DAA520]/50 hover:border-[#DAA520] bg-[#DAA520]/5 hover:bg-[#DAA520]/15 text-[#F5F5F5] hover:text-white transition-all"
           >
-            <GraduationCap className="w-5 h-5 mr-2 text-muted-foreground group-hover:text-primary transition-colors" />
+            <GraduationCap className="w-5 h-5 mr-2 text-[#DAA520] group-hover:text-[#FFD89B] transition-colors" />
             Institutional Access
           </Button>
         </motion.div>

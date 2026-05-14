@@ -5,25 +5,51 @@ import { checkRateLimit } from "@/lib/services/rate-limit.service";
 /**
  * DSA Practice Chat Stream — powered by OpenRouter (cost-optimized)
  * Uses google/gemini-2.0-flash via OpenRouter for ~$0.10/M tokens
- * instead of Vapi which costs significantly more for text-only chat.
+ * Message limit: 60 per session (prevents exploitation)
  */
 
-const DSA_SYSTEM_PROMPT = `You are an expert Data Structures & Algorithms interviewer at a top tech company. Your role:
+const DSA_SYSTEM_PROMPT = `You are ZenAI's DSA Coach — a world-class Data Structures & Algorithms tutor and interview coach.
 
-1. Present DSA problems clearly with constraints and examples
-2. Ask clarifying questions when the candidate shares their approach
-3. Evaluate their solution's correctness, time/space complexity
-4. Provide hints if they're stuck (but don't give away the answer)
-5. Discuss trade-offs between different approaches
-6. Give constructive feedback on code quality and optimization
+## YOUR TEACHING PHILOSOPHY
+- You TEACH, not just evaluate. Your goal is to make the student genuinely better.
+- Use the Socratic method: ask guiding questions instead of giving direct answers.
+- When a student is stuck, give a small hint first. Only give larger hints if they're still stuck after trying.
+- Always explain the "WHY" behind every concept — not just the "WHAT".
 
-When reviewing code the candidate pastes:
-- Check for correctness, edge cases, and bugs
-- Analyze time and space complexity
-- Suggest optimizations
-- Point out any code style issues
+## WHEN PRESENTING A PROBLEM
+1. State the problem clearly with 2-3 examples (input/output).
+2. Mention constraints (array size, value ranges, etc.).
+3. Ask: "What's the first approach that comes to mind? Don't worry if it's brute force — let's start there."
 
-Keep responses concise and focused. Act like a real interviewer — professional but helpful.`;
+## WHEN REVIEWING THEIR APPROACH
+1. Acknowledge what's correct first (positive reinforcement).
+2. If the approach works but is suboptimal, say: "This works! But can we do better? Think about [specific data structure/pattern]."
+3. Point out edge cases they might have missed.
+4. Always state the time/space complexity and ask if they can identify it themselves.
+
+## WHEN REVIEWING CODE
+1. Check correctness first — does it handle all cases?
+2. Point out specific bugs with line references.
+3. Suggest idiomatic improvements (variable names, structure).
+4. Compare their complexity with the optimal solution.
+5. If the code is good, praise them and discuss follow-up variations.
+
+## INTERVIEW TIPS (sprinkle naturally)
+- "In a real interview, the interviewer wants to see your thought process, so thinking aloud is great."
+- "Pro tip: Always ask about constraints before coding."
+- "This is a classic [pattern name] pattern — recognizing these patterns will speed you up."
+
+## RESPONSE STYLE
+- Keep responses concise (150-300 words max unless reviewing code).
+- Use bullet points and code snippets for clarity.
+- Use markdown formatting for code blocks.
+- Be encouraging but honest — don't inflate performance.
+- End each response with a clear next step or question to keep the session moving.
+
+## TOKEN EFFICIENCY
+- Don't repeat the entire problem statement in every response.
+- Reference previous discussion by summary, not by copying.
+- Give focused, actionable feedback rather than long explanations.`;
 
 interface ChatHistory {
   role: "system" | "user" | "assistant";
@@ -32,6 +58,10 @@ interface ChatHistory {
 
 // In-memory chat history store (per-session, cleared on restart)
 const chatSessions = new Map<string, ChatHistory[]>();
+// Track message count per session
+const sessionMessageCounts = new Map<string, number>();
+
+const MAX_MESSAGES_PER_SESSION = 60;
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,6 +82,21 @@ export async function POST(request: NextRequest) {
 
     // Build or retrieve chat history
     const sessionId = chatId || `dsa-${user.id}-${Date.now()}`;
+
+    // Check message limit
+    const currentCount = sessionMessageCounts.get(sessionId) || 0;
+    if (currentCount >= MAX_MESSAGES_PER_SESSION) {
+      return new Response(
+        JSON.stringify({
+          error: "MESSAGE_LIMIT_REACHED",
+          message: `You've used all ${MAX_MESSAGES_PER_SESSION} messages for this session. Start a new session to continue practicing.`,
+          messagesUsed: currentCount,
+          messageLimit: MAX_MESSAGES_PER_SESSION,
+        }),
+        { status: 429, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     let history = chatSessions.get(sessionId) || [
       { role: "system" as const, content: DSA_SYSTEM_PROMPT },
     ];
@@ -70,6 +115,7 @@ export async function POST(request: NextRequest) {
     }
 
     chatSessions.set(sessionId, history);
+    sessionMessageCounts.set(sessionId, currentCount + 1);
 
     // Call OpenRouter with streaming
     const orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -84,8 +130,8 @@ export async function POST(request: NextRequest) {
         model: "google/gemini-2.0-flash-001",
         messages: history,
         stream: true,
-        max_tokens: 2048,
-        temperature: 0.7,
+        max_tokens: 1500,
+        temperature: 0.65,
       }),
     });
 
@@ -109,9 +155,13 @@ export async function POST(request: NextRequest) {
         let fullResponse = "";
         let buffer = "";
 
-        // Send the session ID first
+        // Send the session ID + message count
         controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ id: sessionId })}\n\n`)
+          encoder.encode(`data: ${JSON.stringify({
+            id: sessionId,
+            messagesUsed: currentCount + 1,
+            messageLimit: MAX_MESSAGES_PER_SESSION,
+          })}\n\n`)
         );
 
         try {

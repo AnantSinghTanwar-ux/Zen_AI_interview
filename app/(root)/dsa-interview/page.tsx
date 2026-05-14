@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Clock, Code, Send, Shuffle, ChevronDown, ChevronUp, Play } from "lucide-react";
+import { ArrowLeft, Clock, Code, Send, Shuffle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PageLayout from "@/components/PageLayout";
 import PremiumAccessPopup from "@/components/PremiumAccessPopup";
@@ -140,8 +140,11 @@ export default function DSAInterviewPage() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [codeContent, setCodeContent] = useState("");
   const [showCodeEditor, setShowCodeEditor] = useState(true);
+  const [messagesUsed, setMessagesUsed] = useState(0);
+  const [messageLimit, setMessageLimit] = useState(60);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-  const SESSION_TIME_LIMIT = 30 * 60; // 30 minutes in seconds
+  const SESSION_TIME_LIMIT = 30 * 60;
 
   const [selectedCompany, setSelectedCompany] = useState<PracticeCompanyKey>("microsoft");
   const [selectedDifficulty, setSelectedDifficulty] = useState<(typeof difficultyOptions)[number]>("Any");
@@ -247,6 +250,7 @@ export default function DSAInterviewPage() {
         },
       ]);
       setStreamingMessage("");
+      setMessagesUsed((prev) => prev + 1);
 
       if (newChatId) setChatId(newChatId);
 
@@ -286,16 +290,24 @@ export default function DSAInterviewPage() {
     await sendStreamingMessage(message, chatId || undefined, interviewStage, codeContent || undefined);
   };
 
+  // Show confirmation dialog if user already used a session
+  const handleStartClick = () => {
+    if (messages.length > 0) {
+      setShowConfirmDialog(true);
+    } else {
+      startInterview();
+    }
+  };
+
   const startInterview = async () => {
+    setShowConfirmDialog(false);
     try {
       const interviewUsageKey = `dsa-practice:${Date.now()}`;
       premiumUsageKeyRef.current = interviewUsageKey;
 
       const premiumCheck = await fetch("/api/premium/vapi-access", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           feature: "dsa-practice",
           usageKey: interviewUsageKey,
@@ -315,7 +327,7 @@ export default function DSAInterviewPage() {
       if (requiresPremiumUpgrade) {
         setPremiumMessage(
           premiumPayload?.message ||
-            "Premium is required to continue using this Vapi AI feature."
+            "Purchase a DSA Practice session to continue."
         );
         setShowPremiumPopup(true);
         return;
@@ -325,6 +337,7 @@ export default function DSAInterviewPage() {
         throw new Error("Failed to validate premium access");
       }
 
+      // Reset session state
       const picked = pickQuestion();
       setCurrentQuestion({
         title: picked.title,
@@ -336,14 +349,17 @@ export default function DSAInterviewPage() {
       setTimerActive(true);
       setTimeElapsed(0);
       setCodeContent("");
+      setMessages([]);
+      setMessagesUsed(0);
+      setChatId(null);
+      setSessionExpired(false);
 
       const kickoff = [
-        `Start a ${companyName}-style DSA round.`,
-        `Use this selected popular question as the main problem: ${picked.title}.`,
-        `Difficulty: ${picked.difficulty}. Topic: ${picked.topic}.`,
-        `Problem statement: ${picked.prompt}`,
-        "Act like a real interviewer: ask clarifying questions, evaluate approach, then discuss optimal solution and trade-offs.",
-        "Keep answers concise and practical.",
+        `Present this ${companyName}-style DSA problem to me as my coach:`,
+        `Problem: ${picked.title} (${picked.difficulty}, Topic: ${picked.topic}).`,
+        `Statement: ${picked.prompt}`,
+        `Start by clearly presenting the problem with 2 examples.`,
+        `Then ask me what approach I'd try first. Guide me with the Socratic method.`,
       ].join(" ");
 
       await sendMessage(kickoff);
@@ -386,6 +402,11 @@ export default function DSAInterviewPage() {
                 <Code className="w-3.5 h-3.5" />
                 {showCodeEditor ? "Hide" : "Show"} Editor
               </Button>
+              {chatId && (
+                <div className={`flex items-center gap-2 text-xs font-medium px-2 py-1 rounded-md ${messagesUsed >= messageLimit * 0.9 ? 'bg-red-500/20 text-red-400' : 'bg-primary/10 text-primary'}`}>
+                  Messages: {messagesUsed} / {messageLimit}
+                </div>
+              )}
               {timerActive && (
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground/90">
                   <Clock className="w-4 h-4" />
@@ -437,8 +458,8 @@ export default function DSAInterviewPage() {
               </select>
 
               <div className="flex gap-2">
-                <Button onClick={startInterview} disabled={isStreaming} className="flex-1">
-                  Start
+                <Button onClick={handleStartClick} disabled={isStreaming} className="flex-1 bg-primary hover:bg-primary/90 text-black">
+                  Start Practice
                 </Button>
                 <Button
                   variant="outline"
@@ -597,13 +618,38 @@ export default function DSAInterviewPage() {
 
       <PremiumAccessPopup
         open={showPremiumPopup}
-        message={premiumMessage}
-        suggestedProduct="dsa_practice"
         onClose={() => setShowPremiumPopup(false)}
-        onActivated={() => {
-          setShowPremiumPopup(false);
-        }}
+        message={premiumMessage || "Purchase a DSA Practice session to continue."}
+        suggestedProduct="dsa_practice"
       />
+
+      {/* Confirmation Dialog */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[#111118] border border-white/10 rounded-2xl p-6 max-w-md w-full shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-primary" />
+            <div className="flex items-start gap-4 mb-4">
+              <div className="p-3 bg-primary/10 rounded-full shrink-0">
+                <AlertTriangle className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-foreground mb-1">Start New Session?</h3>
+                <p className="text-sm text-muted-foreground">
+                  You already have an active session. Starting a new one will consume <strong className="text-foreground">1 DSA Practice Token</strong> and reset your current progress.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end mt-6">
+              <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={startInterview} className="bg-primary hover:bg-primary/90 text-black">
+                Yes, Start New Session
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageLayout>
   );
 }
