@@ -93,9 +93,12 @@ const PricingCalculator = () => {
       onSuccess: (result) => {
         setPaymentError(null);
         setPaymentSuccess(
-          `Payment successful! ${result.product?.creditsGranted || 1} interview session(s) added to your account.`
+          `Payment successful! Redirecting to your interview...`
         );
-        setTimeout(() => setPaymentSuccess(null), 5000);
+        // Redirect to interview page after short delay
+        setTimeout(() => {
+          window.location.href = "/interview";
+        }, 1500);
       },
       onError: (error) => {
         setPaymentSuccess(null);
@@ -109,9 +112,12 @@ const PricingCalculator = () => {
       onSuccess: (result) => {
         setPaymentError(null);
         setPaymentSuccess(
-          `Payment successful! ${result.product?.creditsGranted || 1} DSA practice session(s) added to your account.`
+          `Payment successful! Redirecting to DSA practice...`
         );
-        setTimeout(() => setPaymentSuccess(null), 5000);
+        // Redirect to DSA interview page after short delay
+        setTimeout(() => {
+          window.location.href = "/dsa-interview";
+        }, 1500);
       },
       onError: (error) => {
         setPaymentSuccess(null);

@@ -2,9 +2,10 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Sparkles, GraduationCap, ArrowRight } from "lucide-react";
+import { Sparkles, GraduationCap, ArrowRight, Briefcase, Brain, Target, TrendingUp, Users, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DotField from "@/components/ui/DotField";
+import Link from "next/link";
 
 const HeroBanner = () => {
   const scrollToSection = (id: string) => {
@@ -129,31 +130,43 @@ const HeroBanner = () => {
             <GraduationCap className="w-5 h-5 mr-2 group-hover:text-primary transition-colors" />
             College Plans
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => scrollToSection("recruiters")}
+            className="btn-secondary w-full sm:w-auto text-lg tracking-wide rounded-full px-10 py-5 h-auto group border-[#FACC15]/20 hover:border-[#FACC15]/40"
+          >
+            <Briefcase className="w-5 h-5 mr-2 group-hover:text-[#FACC15] transition-colors" />
+            Recruiters
+          </Button>
         </motion.div>
 
-        {/* Stats Row */}
+        {/* Why ZenAI - Stats Row */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.7 }}
-          className="mt-20 grid grid-cols-3 gap-8 md:gap-16 py-8 border-t border-[#1F1F2B] w-full max-w-2xl"
+          className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10 py-8 border-t border-[#1F1F2B] w-full max-w-3xl"
         >
           {[
-            { value: "10K+", label: "Interviews Taken" },
-            { value: "95%", label: "Satisfaction Rate" },
-            { value: "₹400", label: "Per Interview" },
+            { icon: <Brain className="w-5 h-5 text-[#FACC15]" />, value: "AI-Powered", label: "Real-Time Interviews" },
+            { icon: <Target className="w-5 h-5 text-[#10B981]" />, value: "95%", label: "Accuracy Rate" },
+            { icon: <TrendingUp className="w-5 h-5 text-[#8B5CF6]" />, value: "3x", label: "Faster Prep" },
+            { icon: <Shield className="w-5 h-5 text-[#3B82F6]" />, value: "100%", label: "Secure & Private" },
           ].map((stat, i) => (
             <motion.div
               key={stat.label}
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.8 + i * 0.1 }}
-              className="text-center"
+              className="text-center flex flex-col items-center gap-2"
             >
-              <div className="text-2xl md:text-3xl font-bold text-[#EAEAF0] tracking-tight">
+              <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+                {stat.icon}
+              </div>
+              <div className="text-xl md:text-2xl font-bold text-[#EAEAF0] tracking-tight">
                 {stat.value}
               </div>
-              <div className="text-xs md:text-sm text-[#9CA3AF] mt-1 font-medium">
+              <div className="text-xs text-[#9CA3AF] font-medium">
                 {stat.label}
               </div>
             </motion.div>

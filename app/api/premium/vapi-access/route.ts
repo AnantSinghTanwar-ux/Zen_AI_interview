@@ -6,15 +6,21 @@ import {
   CreditType,
 } from "@/lib/services/payment.service";
 import { isSeedPremiumEmail } from "@/lib/services/premium-access.service";
+import {
+  getCollegePlanForUser,
+  consumeCollegeInterview,
+} from "@/lib/services/college.service";
 import { db } from "@/services/firebase/admin";
 
 /**
  * POST /api/premium/vapi-access
  *
  * Gate access to paid features (interviews & DSA practice).
- * If the user has paid credits → consume one and allow.
- * If the user is a seeded premium email → allow (no credit deduction).
- * Otherwise → return 402 requiring payment.
+ * Priority:
+ *   1. Seed premium emails → always allowed (no deduction)
+ *   2. Individual paid credits → consume one credit
+ *   3. College plan (matching email domain) → consume from college pool (interviews only)
+ *   4. No access → 402 requiring payment
  */
 export async function POST(request: NextRequest) {
   try {
@@ -33,12 +39,13 @@ export async function POST(request: NextRequest) {
         ? "dsaSessions"
         : "interviews";
 
-    // Check if the user is a seeded premium email (founder/admin bypass)
+    // Get user email from Firestore
     const userRef = db.collection("users").doc(user.id);
     const userSnap = await userRef.get();
     const userData = userSnap.data() || {};
     const userEmail = userData.email || user.email || "";
 
+    // ─── Priority 1: Seed premium bypass ────────────────────────────
     if (isSeedPremiumEmail(userEmail)) {
       return NextResponse.json({
         allowed: true,
@@ -50,56 +57,83 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Check user credits
+    // ─── Priority 2: Individual paid credits ────────────────────────
     const credits = await getUserCredits(user.id);
     const available = credits[creditType];
 
-    if (available <= 0) {
-      return NextResponse.json(
-        {
-          allowed: false,
-          code: "PAYMENT_REQUIRED",
-          error: "No credits remaining",
-          message:
-            creditType === "dsaSessions"
-              ? "You need to purchase a DSA Practice session to continue. Each session costs ₹99 for 30 minutes."
-              : "You need to purchase an Interview session to continue. Each session costs ₹399 for 30 minutes.",
-          credits,
-          requiredProduct:
-            creditType === "dsaSessions" ? "dsa_practice" : "single_interview",
-        },
-        { status: 402 }
-      );
+    if (available > 0) {
+      const result = await consumeCredit({
+        userId: user.id,
+        creditType,
+      });
+
+      if (result.allowed) {
+        return NextResponse.json({
+          allowed: true,
+          isPremium: true,
+          reason: "paid-credits",
+          trialConsumed: false,
+          usageKey: `credit-${creditType}-${Date.now()}`,
+          remaining: result.remaining,
+          dailyLimit: null,
+        });
+      }
     }
 
-    // Consume one credit
-    const result = await consumeCredit({
-      userId: user.id,
-      creditType,
-    });
+    // ─── Priority 3: College plan (interviews only) ─────────────────
+    if (creditType === "interviews" && userEmail) {
+      const collegePlan = await getCollegePlanForUser(userEmail);
 
-    if (!result.allowed) {
-      return NextResponse.json(
-        {
-          allowed: false,
-          code: "PAYMENT_REQUIRED",
-          error: "No credits remaining",
-          message: "Purchase more credits to continue.",
-          credits: await getUserCredits(user.id),
-        },
-        { status: 402 }
-      );
+      if (collegePlan) {
+        const collegeResult = await consumeCollegeInterview({
+          userEmail,
+          userId: user.id,
+        });
+
+        if (collegeResult.allowed) {
+          return NextResponse.json({
+            allowed: true,
+            isPremium: true,
+            reason: "college-plan",
+            collegeName: collegeResult.collegeName,
+            trialConsumed: false,
+            usageKey: `college-${collegePlan.emailDomain}-${Date.now()}`,
+            remaining: collegeResult.remaining,
+            dailyLimit: null,
+          });
+        }
+
+        // College plan exists but exhausted
+        return NextResponse.json(
+          {
+            allowed: false,
+            code: "COLLEGE_QUOTA_EXHAUSTED",
+            error: "College interview quota exhausted",
+            message: `Your college (${collegeResult.collegeName}) has used all purchased interview sessions. Contact your placement cell for more or purchase individually.`,
+            credits,
+            requiredProduct: "single_interview",
+          },
+          { status: 402 }
+        );
+      }
     }
 
-    return NextResponse.json({
-      allowed: true,
-      isPremium: true,
-      reason: "paid-credits",
-      trialConsumed: false,
-      usageKey: `credit-${creditType}-${Date.now()}`,
-      remaining: result.remaining,
-      dailyLimit: null,
-    });
+    // ─── No access available ────────────────────────────────────────
+    return NextResponse.json(
+      {
+        allowed: false,
+        code: "PAYMENT_REQUIRED",
+        error: "No credits remaining",
+        message:
+          creditType === "dsaSessions"
+            ? "You need to purchase a DSA Practice session to continue. Each session costs ₹99 for 30 minutes."
+            : "You need to purchase an Interview session to continue. Each session costs ₹399 for 30 minutes.",
+        credits,
+        requiredProduct:
+          creditType === "dsaSessions" ? "dsa_practice" : "single_interview",
+      },
+      { status: 402 }
+    );
   } catch (error) {
     console.error("Error checking Vapi access:", error);
     return NextResponse.json(
