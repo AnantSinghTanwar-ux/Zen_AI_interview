@@ -124,49 +124,47 @@ const TestimonialsSection = () => {
           ))}
         </motion.div>
 
-        {/* Testimonials Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {testimonials.map((t, i) => (
+        {/* Infinite Moving Cards Testimonials */}
+        <div className="relative flex flex-col items-center justify-center overflow-hidden py-10 w-full">
+          <div className="w-full relative flex overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_20%,black_80%,transparent)]">
             <motion.div
-              key={t.name}
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: 0.4 + i * 0.08 }}
-              className="group relative p-6 rounded-2xl bg-[#111118]/80 border border-[#1F1F2B] hover:border-white/10 transition-all duration-300"
+              className="flex min-w-full shrink-0 gap-5 py-4 w-max"
+              animate={{ x: ["0%", "-50%"] }}
+              transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
             >
-              {/* Quote icon */}
-              <Quote className="w-8 h-8 text-white/5 absolute top-4 right-4" />
-
-              {/* Stars */}
-              <div className="flex gap-1 mb-4">
-                {Array.from({ length: t.rating }).map((_, j) => (
-                  <Star
-                    key={j}
-                    className="w-4 h-4 text-[#FACC15] fill-[#FACC15]"
-                  />
-                ))}
-              </div>
-
-              {/* Testimonial text */}
-              <p className="text-[#D1D5DB] text-sm leading-relaxed mb-5">
-                &ldquo;{t.text}&rdquo;
-              </p>
-
-              {/* Author */}
-              <div className="flex items-center gap-3">
+              {[...testimonials, ...testimonials].map((t, i) => (
                 <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-black"
-                  style={{ backgroundColor: t.color }}
+                  key={`${t.name}-${i}`}
+                  className="w-[350px] md:w-[450px] shrink-0 group relative p-6 rounded-2xl bg-card border border-border hover:border-primary/40 transition-all duration-300"
                 >
-                  {t.avatar}
+                  <Quote className="w-8 h-8 text-white/5 absolute top-4 right-4" />
+                  
+                  <div className="flex gap-1 mb-4">
+                    {Array.from({ length: t.rating }).map((_, j) => (
+                      <Star key={j} className="w-4 h-4 text-primary fill-primary" />
+                    ))}
+                  </div>
+                  
+                  <p className="text-muted-foreground text-sm leading-relaxed mb-5">
+                    &ldquo;{t.text}&rdquo;
+                  </p>
+                  
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-black"
+                      style={{ backgroundColor: t.color }}
+                    >
+                      {t.avatar}
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-foreground">{t.name}</div>
+                      <div className="text-xs text-muted-foreground">{t.role}</div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-sm font-semibold text-[#EAEAF0]">{t.name}</div>
-                  <div className="text-xs text-[#9CA3AF]">{t.role}</div>
-                </div>
-              </div>
+              ))}
             </motion.div>
-          ))}
+          </div>
         </div>
       </div>
     </section>

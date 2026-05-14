@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { motion, useAnimate, stagger } from "framer-motion";
-import { Sparkles, GraduationCap, ArrowRight, Briefcase, Brain, Target, TrendingUp, Shield } from "lucide-react";
+import { Sparkles, GraduationCap, ArrowRight, Briefcase, Brain, Target, TrendingUp, Shield, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -95,6 +95,29 @@ const RainbowButton = ({ children, onClick, className = "" }: { children: React.
   );
 };
 
+const NumberTicker = ({ value, duration = 2 }: { value: number, duration?: number }) => {
+  const [count, setCount] = useState(0);
+  
+  useEffect(() => {
+    let start = 0;
+    const end = value;
+    if (end === 0) return;
+    const incrementTime = (duration * 1000) / end;
+    const timer = setInterval(() => {
+      start += Math.ceil(end / 40);
+      if (start >= end) {
+        setCount(end);
+        clearInterval(timer);
+      } else {
+        setCount(start);
+      }
+    }, incrementTime);
+    return () => clearInterval(timer);
+  }, [value, duration]);
+
+  return <span>{count.toLocaleString()}</span>;
+};
+
 // --- Main Hero Component ---
 
 const HeroBanner = () => {
@@ -130,7 +153,7 @@ const HeroBanner = () => {
 
         {/* Headline using TextGenerateEffect */}
         <div className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight text-foreground leading-[1.05] text-center max-w-5xl">
-          <TextGenerateEffect words="The Future of AI" />
+          <TextGenerateEffect words="Better ways to prepare." />
           <div className="relative inline-block mt-2">
             <motion.span
               initial={{ opacity: 0, y: 20 }}
@@ -138,7 +161,7 @@ const HeroBanner = () => {
               transition={{ duration: 0.8, delay: 0.8 }}
               className="text-primary relative z-10"
             >
-              Interviews is Here.
+              Smarter ways to get hired.
             </motion.span>
             <motion.span
               initial={{ scaleX: 0 }}
@@ -190,39 +213,88 @@ const HeroBanner = () => {
           </Button>
         </motion.div>
 
-        {/* Why ZenAI - Stats Row */}
+        {/* Why ZenAI - Stats Row with Number Tickers */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 2.0 }}
           className="mt-24 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10 py-8 border-t border-border w-full max-w-4xl"
         >
-          {[
-            { icon: <Brain className="w-5 h-5 text-primary" />, value: "Cognitive", label: "Real-Time AI Processing" },
-            { icon: <Target className="w-5 h-5 text-primary" />, value: "98.5%", label: "Scoring Precision" },
-            { icon: <TrendingUp className="w-5 h-5 text-primary" />, value: "3x", label: "Placement Velocity" },
-            { icon: <Shield className="w-5 h-5 text-primary" />, value: "Zero", label: "Algorithmic Bias" },
-          ].map((stat, i) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 2.2 + i * 0.1 }}
-              className="text-center flex flex-col items-center gap-3 group"
-            >
-              <div className="p-3 rounded-xl bg-card border border-border group-hover:border-primary/40 transition-colors shadow-sm">
-                {stat.icon}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 2.2 }}
+            className="text-center flex flex-col items-center gap-3 group"
+          >
+            <div className="p-3 rounded-xl bg-card border border-border group-hover:border-primary/40 transition-colors shadow-sm">
+              <Users className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-foreground tracking-tight flex items-center justify-center gap-1">
+                <NumberTicker value={10000} duration={1.5} />+
               </div>
-              <div>
-                <div className="text-2xl font-bold text-foreground tracking-tight">
-                  {stat.value}
-                </div>
-                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
-                  {stat.label}
-                </div>
+              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
+                Interviews Taken
               </div>
-            </motion.div>
-          ))}
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 2.3 }}
+            className="text-center flex flex-col items-center gap-3 group"
+          >
+            <div className="p-3 rounded-xl bg-card border border-border group-hover:border-primary/40 transition-colors shadow-sm">
+              <Target className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-foreground tracking-tight flex items-center justify-center gap-1">
+                <NumberTicker value={95} duration={2} />%
+              </div>
+              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
+                Satisfaction Rate
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 2.4 }}
+            className="text-center flex flex-col items-center gap-3 group"
+          >
+            <div className="p-3 rounded-xl bg-card border border-border group-hover:border-primary/40 transition-colors shadow-sm">
+              <TrendingUp className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-foreground tracking-tight flex items-center justify-center gap-1">
+                <NumberTicker value={3} duration={1.5} />x
+              </div>
+              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
+                Placement Velocity
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 2.5 }}
+            className="text-center flex flex-col items-center gap-3 group"
+          >
+            <div className="p-3 rounded-xl bg-card border border-border group-hover:border-primary/40 transition-colors shadow-sm">
+              <Shield className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-foreground tracking-tight flex items-center justify-center gap-1">
+                <NumberTicker value={0} duration={1} />
+              </div>
+              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
+                Algorithmic Bias
+              </div>
+            </div>
+          </motion.div>
         </motion.div>
       </div>
     </section>

@@ -57,6 +57,19 @@ function AnimatedNumber({ value, prefix = "", suffix = "" }: { value: number; pr
   );
 }
 
+// BorderBeam Component
+const BorderBeam = ({ className = "" }: { className?: string }) => {
+  return (
+    <div className={`absolute inset-0 rounded-[inherit] border border-transparent [mask-clip:padding-box,border-box] [mask-composite:intersect] [mask-image:linear-gradient(transparent,transparent),linear-gradient(#000,#000)] ${className}`}>
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+        className="absolute inset-[-100%] aspect-square bg-[conic-gradient(from_0deg,transparent_0_340deg,rgba(212,175,55,1)_360deg)]"
+      />
+    </div>
+  );
+};
+
 const PricingCalculator = () => {
   const containerRef = useRef(null);
   const isInView = useInView(containerRef, { once: true, margin: "-80px" });
@@ -66,7 +79,7 @@ const PricingCalculator = () => {
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Individual pricing
-  const PRICE_PER_INTERVIEW = 399;
+  const PRICE_PER_INTERVIEW = 400;
   const PRICE_PER_DSA = 99;
 
   // College calculator
@@ -179,7 +192,7 @@ const PricingCalculator = () => {
       {/* Background */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#1F1F2B] to-transparent" />
-        <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-[#FACC15]/3 rounded-full blur-[200px]" />
+        <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[200px]" />
       </div>
 
       <div
@@ -193,14 +206,14 @@ const PricingCalculator = () => {
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="text-center mb-20"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#111118] border border-[#1F1F2B] text-[#9CA3AF] text-xs font-medium mb-6">
-            <IndianRupee className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-card border border-border text-muted-foreground text-xs font-medium mb-6">
+            <IndianRupee className="w-3.5 h-3.5 text-primary" />
             PRICING
           </div>
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#EAEAF0] tracking-tight mb-5">
-            Simple, <span className="text-[#FACC15]">Transparent</span> Pricing
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground tracking-tight mb-5">
+            Simple, <span className="text-primary">Transparent</span> Pricing
           </h2>
-          <p className="text-lg text-[#9CA3AF] max-w-xl mx-auto font-normal leading-relaxed">
+          <p className="text-lg text-muted-foreground max-w-xl mx-auto font-normal leading-relaxed">
             Pay per session — no subscriptions, no hidden fees. Start
             practicing today.
           </p>
@@ -233,34 +246,36 @@ const PricingCalculator = () => {
             }}
             className="relative group"
           >
-            <div className="absolute -inset-px bg-gradient-to-b from-[#FACC15]/20 to-transparent rounded-[1.1rem] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="relative bg-[#111118] border border-[#1F1F2B] rounded-2xl p-8 md:p-10 h-full flex flex-col transition-all duration-300 hover:border-[#2A2A3A]">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FACC15]/10 border border-[#FACC15]/20 text-[#FACC15] text-xs font-semibold mb-6 w-fit">
-                <Zap className="w-3 h-3" />
-                MOST POPULAR
-              </div>
+            <div className="absolute -inset-px bg-gradient-to-b from-primary/20 to-transparent rounded-[1.1rem] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="relative bg-card border-none rounded-2xl p-8 md:p-10 h-full flex flex-col transition-all duration-300 overflow-hidden shadow-2xl">
+              <BorderBeam />
+              <div className="relative z-10 flex flex-col h-full">
+                {/* Badge */}
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold mb-6 w-fit">
+                  <Zap className="w-3 h-3" />
+                  MOST POPULAR
+                </div>
 
-              <h3 className="text-2xl font-bold text-[#EAEAF0] mb-2">
-                AI Interview
-              </h3>
-              <p className="text-[#9CA3AF] text-sm mb-8">
-                Voice-powered mock interview with real-time AI feedback.
-              </p>
+                <h3 className="text-2xl font-bold text-foreground mb-2">
+                  AI Interview
+                </h3>
+                <p className="text-muted-foreground text-sm mb-8">
+                  Voice-powered mock interview with real-time AI feedback.
+                </p>
 
-              {/* Price */}
-              <div className="flex items-baseline gap-2 mb-8">
-                <span className="text-5xl md:text-6xl font-bold text-[#EAEAF0]">
-                  ₹399
-                </span>
-                <div className="text-[#9CA3AF] text-sm">
-                  <div>per session</div>
-                  <div className="flex items-center gap-1 text-xs mt-0.5">
-                    <Clock className="w-3 h-3" />
-                    30 minutes
+                {/* Price */}
+                <div className="flex items-baseline gap-2 mb-8">
+                  <span className="text-5xl md:text-6xl font-bold text-foreground">
+                    ₹400
+                  </span>
+                  <div className="text-muted-foreground text-sm">
+                    <div>per session</div>
+                    <div className="flex items-center gap-1 text-xs mt-0.5">
+                      <Clock className="w-3 h-3" />
+                      30 minutes
+                    </div>
                   </div>
                 </div>
-              </div>
 
               {/* Features */}
               <ul className="space-y-4 mb-8 flex-1">
@@ -289,7 +304,7 @@ const PricingCalculator = () => {
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5 mr-2" />
-                    Buy Now — ₹399
+                    Buy Now — ₹400
                     <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
@@ -298,6 +313,7 @@ const PricingCalculator = () => {
               <div className="flex items-center justify-center gap-1.5 text-xs text-[#9CA3AF] mt-3">
                 <Shield className="w-3 h-3 text-green-400" />
                 Secured by Razorpay
+              </div>
               </div>
             </div>
           </motion.div>
