@@ -1,11 +1,101 @@
 "use client";
 
-import React from "react";
-import { motion } from "framer-motion";
-import { Sparkles, GraduationCap, ArrowRight, Briefcase, Brain, Target, TrendingUp, Users, Shield } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { motion, useAnimate, stagger } from "framer-motion";
+import { Sparkles, GraduationCap, ArrowRight, Briefcase, Brain, Target, TrendingUp, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import DotField from "@/components/ui/DotField";
 import Link from "next/link";
+
+// --- Custom Components based on Aceternity/Magic UI concepts ---
+
+const Spotlight = ({ className = "" }: { className?: string }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, transform: "translate(-72%, -62%) scale(0.5)" }}
+      animate={{ opacity: 1, transform: "translate(-50%, -40%) scale(1)" }}
+      transition={{ duration: 2, ease: "easeOut", delay: 0.75 }}
+      className={`absolute z-0 pointer-events-none w-[100vw] h-[100vh] bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.15)_0%,transparent_60%)] ${className}`}
+      style={{ left: "50%", top: "40%" }}
+    />
+  );
+};
+
+const BackgroundBeams = () => {
+  return (
+    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
+      
+      {/* Animated Beams */}
+      <motion.div
+        animate={{
+          backgroundPosition: ["0% 0%", "100% 100%"],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          repeatType: "reverse",
+          ease: "linear",
+        }}
+        className="absolute inset-0 opacity-30"
+        style={{
+          background: "radial-gradient(circle at center, transparent 0%, var(--background) 100%), conic-gradient(from 0deg at 50% 50%, transparent 0deg, var(--primary) 90deg, transparent 180deg)",
+          backgroundSize: "200% 200%"
+        }}
+      />
+    </div>
+  );
+};
+
+const TextGenerateEffect = ({ words, className }: { words: string, className?: string }) => {
+  const [scope, animate] = useAnimate();
+  let wordsArray = words.split(" ");
+  
+  useEffect(() => {
+    animate(
+      "span",
+      {
+        opacity: 1,
+        filter: "blur(0px)",
+      },
+      {
+        duration: 0.8,
+        delay: stagger(0.15),
+      }
+    );
+  }, [animate]);
+
+  return (
+    <motion.div ref={scope as any} className={className}>
+      {wordsArray.map((word, idx) => {
+        return (
+          <motion.span
+            key={word + idx}
+            className="opacity-0 blur-sm inline-block mr-3"
+            initial={{ opacity: 0, filter: "blur(10px)" }}
+          >
+            {word}
+          </motion.span>
+        );
+      })}
+    </motion.div>
+  );
+};
+
+const RainbowButton = ({ children, onClick, className = "" }: { children: React.ReactNode, onClick: () => void, className?: string }) => {
+  return (
+    <button
+      onClick={onClick}
+      className={`group relative inline-flex h-14 items-center justify-center overflow-hidden rounded-full p-[2px] font-medium transition-all duration-300 hover:scale-105 ${className}`}
+    >
+      <span className="absolute inset-0 animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#D4AF37_0%,#111118_50%,#D4AF37_100%)]"></span>
+      <div className="relative flex h-full w-full items-center justify-center gap-2 rounded-full bg-background px-8 text-sm text-foreground transition-all duration-300 group-hover:bg-background/80">
+        {children}
+      </div>
+    </button>
+  );
+};
+
+// --- Main Hero Component ---
 
 const HeroBanner = () => {
   const scrollToSection = (id: string) => {
@@ -16,31 +106,10 @@ const HeroBanner = () => {
   return (
     <section
       id="hero"
-      className="relative min-h-[100vh] flex flex-col items-center justify-center pt-28 pb-16 overflow-hidden bg-[#0B0B0F]"
+      className="relative min-h-[100vh] flex flex-col items-center justify-center pt-28 pb-16 overflow-hidden bg-background"
     >
-      {/* Animated Background */}
-      <div className="absolute inset-0 z-0 pointer-events-auto select-none opacity-50 mix-blend-screen">
-        <DotField
-          dotRadius={1.5}
-          dotSpacing={16}
-          bulgeStrength={40}
-          glowRadius={120}
-          sparkle={false}
-          waveAmplitude={0}
-          cursorRadius={400}
-          cursorForce={0.1}
-          bulgeOnly={true}
-          gradientFrom="#1A1A24"
-          gradientTo="#A855F7"
-          glowColor="#111118"
-        />
-      </div>
-
-      {/* Radial gradient overlay */}
-      <div className="absolute inset-0 z-[1] pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#A855F7]/5 rounded-full blur-[150px]" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[300px] bg-gradient-to-t from-[#0B0B0F] to-transparent" />
-      </div>
+      <Spotlight />
+      <BackgroundBeams />
 
       <div className="relative z-10 mx-auto text-center flex flex-col items-center gap-7 px-6 max-w-5xl w-full">
         {/* Animated Badge */}
@@ -48,44 +117,37 @@ const HeroBanner = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-[#111118]/80 border border-[#1F1F2B] backdrop-blur-md shadow-sm hover:bg-[#1A1A24] transition-all cursor-default"
+          className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-card/80 border border-border backdrop-blur-md shadow-[0_0_15px_rgba(212,175,55,0.1)] hover:bg-card transition-all cursor-default"
         >
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FACC15] opacity-50" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FACC15]" />
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-50" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
           </span>
-          <span className="text-[13px] font-medium text-[#EAEAF0]">
-            🚀 AI-Powered Interview Platform — Now Live
+          <span className="text-[13px] font-medium text-foreground">
+            The Gold Standard in AI Recruitment
           </span>
         </motion.div>
 
-        {/* Headline */}
-        <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            duration: 0.7,
-            delay: 0.15,
-            ease: [0.16, 1, 0.3, 1],
-          }}
-          className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight text-[#EAEAF0] leading-[1.05] text-center max-w-5xl"
-        >
-          AI Interview{" "}
-          <span className="relative inline-block">
-            <span className="relative z-10 text-[#FACC15]">Practice</span>
+        {/* Headline using TextGenerateEffect */}
+        <div className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight text-foreground leading-[1.05] text-center max-w-5xl">
+          <TextGenerateEffect words="The Future of AI" />
+          <div className="relative inline-block mt-2">
+            <motion.span
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.8 }}
+              className="text-primary relative z-10"
+            >
+              Interviews is Here.
+            </motion.span>
             <motion.span
               initial={{ scaleX: 0 }}
               animate={{ scaleX: 1 }}
-              transition={{ duration: 0.8, delay: 0.7, ease: "easeOut" }}
-              className="absolute bottom-1 left-0 right-0 h-3 bg-[#FACC15]/15 rounded-full origin-left -z-0"
+              transition={{ duration: 0.8, delay: 1.2, ease: "easeOut" }}
+              className="absolute bottom-1 left-0 right-0 h-3 bg-primary/20 rounded-full origin-left -z-0"
             />
-          </span>
-          <br className="hidden md:block" />
-          <span className="text-[#9CA3AF] text-4xl md:text-6xl lg:text-7xl">
-            That Gets You{" "}
-            <span className="text-[#EAEAF0]">Hired</span>
-          </span>
-        </motion.h1>
+          </div>
+        </div>
 
         {/* Subtitle */}
         <motion.p
@@ -93,14 +155,12 @@ const HeroBanner = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{
             duration: 0.6,
-            delay: 0.3,
+            delay: 1.5,
             ease: [0.16, 1, 0.3, 1],
           }}
-          className="text-lg md:text-xl text-[#9CA3AF] max-w-2xl font-normal leading-relaxed"
+          className="text-lg md:text-xl text-muted-foreground max-w-2xl font-normal leading-relaxed mt-4"
         >
-          Describe your target role, take a realistic AI-powered mock interview
-          with voice interaction, and receive instant, detailed feedback to ace
-          your next opportunity.
+          Experience high-fidelity mock interviews that feel indistinguishable from human recruiters. Master your pitch, perfect your code, and land your dream role.
         </motion.p>
 
         {/* CTAs */}
@@ -109,34 +169,24 @@ const HeroBanner = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{
             duration: 0.6,
-            delay: 0.45,
+            delay: 1.7,
             ease: [0.16, 1, 0.3, 1],
           }}
-          className="flex flex-col sm:flex-row items-center gap-4 mt-4 w-full sm:w-auto"
+          className="flex flex-col sm:flex-row items-center gap-6 mt-6 w-full sm:w-auto"
         >
-          <Button
-            onClick={() => scrollToSection("pricing")}
-            className="btn-primary w-full sm:w-auto text-lg tracking-wide rounded-full px-10 py-5 h-auto shadow-[0_0_30px_rgba(250,204,21,0.2)] hover:shadow-[0_0_50px_rgba(250,204,21,0.35)] transition-all"
-          >
-            <Sparkles className="w-5 h-5 mr-2" />
-            Start Interview
-            <ArrowRight className="w-5 h-5 ml-2" />
-          </Button>
+          <RainbowButton onClick={() => scrollToSection("pricing")} className="w-full sm:w-auto shadow-[0_0_30px_rgba(212,175,55,0.15)]">
+            <Sparkles className="w-5 h-5 text-primary" />
+            <span className="text-base">Start Interviewing Now</span>
+            <ArrowRight className="w-5 h-5 text-primary" />
+          </RainbowButton>
+          
           <Button
             variant="outline"
             onClick={() => scrollToSection("college")}
-            className="btn-secondary w-full sm:w-auto text-lg tracking-wide rounded-full px-10 py-5 h-auto group"
+            className="btn-secondary w-full sm:w-auto text-base tracking-wide rounded-full px-8 py-6 h-auto group border-border hover:border-primary/40 bg-card hover:bg-secondary"
           >
-            <GraduationCap className="w-5 h-5 mr-2 group-hover:text-primary transition-colors" />
-            College Plans
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => scrollToSection("recruiters")}
-            className="btn-secondary w-full sm:w-auto text-lg tracking-wide rounded-full px-10 py-5 h-auto group border-[#FACC15]/20 hover:border-[#FACC15]/40"
-          >
-            <Briefcase className="w-5 h-5 mr-2 group-hover:text-[#FACC15] transition-colors" />
-            Recruiters
+            <GraduationCap className="w-5 h-5 mr-2 text-muted-foreground group-hover:text-primary transition-colors" />
+            Institutional Access
           </Button>
         </motion.div>
 
@@ -144,30 +194,32 @@ const HeroBanner = () => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.7 }}
-          className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10 py-8 border-t border-[#1F1F2B] w-full max-w-3xl"
+          transition={{ duration: 0.8, delay: 2.0 }}
+          className="mt-24 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10 py-8 border-t border-border w-full max-w-4xl"
         >
           {[
-            { icon: <Brain className="w-5 h-5 text-[#FACC15]" />, value: "AI-Powered", label: "Real-Time Interviews" },
-            { icon: <Target className="w-5 h-5 text-[#10B981]" />, value: "95%", label: "Accuracy Rate" },
-            { icon: <TrendingUp className="w-5 h-5 text-[#8B5CF6]" />, value: "3x", label: "Faster Prep" },
-            { icon: <Shield className="w-5 h-5 text-[#3B82F6]" />, value: "100%", label: "Secure & Private" },
+            { icon: <Brain className="w-5 h-5 text-primary" />, value: "Cognitive", label: "Real-Time AI Processing" },
+            { icon: <Target className="w-5 h-5 text-primary" />, value: "98.5%", label: "Scoring Precision" },
+            { icon: <TrendingUp className="w-5 h-5 text-primary" />, value: "3x", label: "Placement Velocity" },
+            { icon: <Shield className="w-5 h-5 text-primary" />, value: "Zero", label: "Algorithmic Bias" },
           ].map((stat, i) => (
             <motion.div
               key={stat.label}
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.8 + i * 0.1 }}
-              className="text-center flex flex-col items-center gap-2"
+              transition={{ duration: 0.5, delay: 2.2 + i * 0.1 }}
+              className="text-center flex flex-col items-center gap-3 group"
             >
-              <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+              <div className="p-3 rounded-xl bg-card border border-border group-hover:border-primary/40 transition-colors shadow-sm">
                 {stat.icon}
               </div>
-              <div className="text-xl md:text-2xl font-bold text-[#EAEAF0] tracking-tight">
-                {stat.value}
-              </div>
-              <div className="text-xs text-[#9CA3AF] font-medium">
-                {stat.label}
+              <div>
+                <div className="text-2xl font-bold text-foreground tracking-tight">
+                  {stat.value}
+                </div>
+                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
+                  {stat.label}
+                </div>
               </div>
             </motion.div>
           ))}

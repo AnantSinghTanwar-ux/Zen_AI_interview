@@ -3,39 +3,39 @@
 :root {
   --radius: 1rem;
   
-  /* Near-Black Foundation */
-  --background: #0B0B0F;
-  --foreground: #EAEAF0;
+  /* Near-Black Foundation (Obsidian) */
+  --background: oklch(0.12 0 0);
+  --foreground: oklch(0.95 0 0);
   
   /* Dark Cards / Secondary Surfaces */
-  --card: #111118;
-  --card-foreground: #EAEAF0;
-  --popover: #111118;
-  --popover-foreground: #EAEAF0;
+  --card: oklch(0.14 0 0);
+  --card-foreground: oklch(0.95 0 0);
+  --popover: oklch(0.14 0 0);
+  --popover-foreground: oklch(0.95 0 0);
   
-  /* Primary Accent: Soft Yellow */
-  --primary: #FACC15;
-  --primary-foreground: #000000;
+  /* Primary Accent: Gold */
+  --primary: oklch(0.75 0.15 85);
+  --primary-foreground: oklch(0.12 0 0);
   
   /* Secondary Surfaces */
-  --secondary: #111118;
-  --secondary-foreground: #EAEAF0;
+  --secondary: oklch(0.16 0 0);
+  --secondary-foreground: oklch(0.95 0 0);
   
   /* Muted Elements */
-  --muted: #111118;
-  --muted-foreground: #9CA3AF;
+  --muted: oklch(0.25 0 0);
+  --muted-foreground: oklch(0.70 0 0);
   
-  /* Secondary Accent/Animation: Subtle Purple */
-  --accent: #A855F7;
-  --accent-foreground: #EAEAF0;
+  /* Secondary Accent/Animation: Gold accent variant */
+  --accent: oklch(0.75 0.15 85);
+  --accent-foreground: oklch(0.12 0 0);
   
-  --destructive: #EF4444;
-  --destructive-foreground: #FFFFFF;
+  --destructive: oklch(0.60 0.20 25);
+  --destructive-foreground: oklch(0.95 0 0);
   
   /* Soft Borders */
-  --border: #1F1F2B;
-  --input: #1F1F2B;
-  --ring: #FACC15;
+  --border: oklch(0.25 0 0);
+  --input: oklch(0.25 0 0);
+  --ring: oklch(0.75 0.15 85);
 
   /* Typography Stacks */
   --font-sans: "Inter", "Geist", system-ui, sans-serif;

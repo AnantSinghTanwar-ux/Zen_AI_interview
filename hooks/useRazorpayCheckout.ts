@@ -108,9 +108,9 @@ export function useRazorpayCheckout({
             description: orderData.productName,
             order_id: orderData.orderId,
             prefill: {},
-            theme: {
-              color: "#9D7DF9",
-              backdrop_color: "rgba(0, 0, 0, 0.85)",
+              theme: {
+              color: "#D4AF37",
+              backdrop_color: "rgba(18, 18, 24, 0.9)",
             },
             modal: {
               ondismiss: () => {
@@ -144,6 +144,20 @@ export function useRazorpayCheckout({
 
                 const result: PaymentResult = await verifyRes.json();
                 result.success = true;
+                
+                // Trigger confetti on successful payment
+                try {
+                  const confetti = (await import("canvas-confetti")).default;
+                  confetti({
+                    particleCount: 150,
+                    spread: 80,
+                    origin: { y: 0.6 },
+                    colors: ["#D4AF37", "#FACC15", "#FFFFFF"]
+                  });
+                } catch (e) {
+                  // Ignore confetti error
+                }
+
                 onSuccess?.(result);
                 resolve(result);
               } catch (verifyError) {
