@@ -317,6 +317,7 @@ export async function GET(request: NextRequest) {
           { status: 400 }
         );
       }
+    }
 
     if (!callData) {
       return NextResponse.json(
