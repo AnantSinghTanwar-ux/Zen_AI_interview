@@ -12,7 +12,7 @@ const StarryBackground = ({ className = "" }: { className?: string }) => {
   const [stars, setStars] = useState<{id: number, top: string, left: string, size: number, delay: number, duration: number}[]>([]);
 
   useEffect(() => {
-    setStars(Array.from({ length: 30 }).map((_, i) => ({
+    setStars(Array.from({ length: 80 }).map((_, i) => ({
       id: i,
       top: `${Math.random() * 100}%`,
       left: `${Math.random() * 100}%`,
@@ -66,24 +66,6 @@ const BackgroundBeams = () => {
   return (
     <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
-      
-      {/* Animated Beams */}
-      <motion.div
-        animate={{
-          backgroundPosition: ["0% 0%", "100% 100%"],
-        }}
-        transition={{
-          duration: 20,
-          repeat: Infinity,
-          repeatType: "reverse",
-          ease: "linear",
-        }}
-        className="absolute inset-0 opacity-30"
-        style={{
-          background: "radial-gradient(circle at center, transparent 0%, var(--background) 100%), conic-gradient(from 0deg at 50% 50%, transparent 0deg, var(--primary) 90deg, transparent 180deg)",
-          backgroundSize: "200% 200%"
-        }}
-      />
     </div>
   );
 };
