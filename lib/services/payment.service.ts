@@ -16,7 +16,7 @@ export const PRODUCTS = {
     id: "limited_offer_interview",
     name: "Limited Offer Interview Session",
     description: "30-minute AI-powered voice interview with detailed feedback (First 10 Users)",
-    priceInPaise: 19900, // ₹199
+    priceInPaise: 14900, // ₹149
     creditType: "interviews" as const,
     credits: 1,
     timeLimitMinutes: 30,

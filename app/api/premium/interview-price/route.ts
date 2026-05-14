@@ -7,7 +7,7 @@ export async function GET() {
     
     if (count < 10) {
       return NextResponse.json({ 
-        price: 199, 
+        price: 149, 
         productId: "limited_offer_interview", 
         remaining: 10 - count 
       });

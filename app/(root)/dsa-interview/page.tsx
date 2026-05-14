@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Clock, Code, Send, Shuffle, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Clock, Code, Send, Shuffle, AlertTriangle, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PageLayout from "@/components/PageLayout";
 import PremiumAccessPopup from "@/components/PremiumAccessPopup";
@@ -126,9 +127,11 @@ const CodeEditor = ({
   );
 };
 
-export default function DSAInterviewPage() {
+export default function DSAPracticePage() {
+  const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentInput, setCurrentInput] = useState("");
+  const [isEnding, setIsEnding] = useState(false);
   const [chatId, setChatId] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<DSAQuestion | null>(null);
   const [interviewStage, setInterviewStage] = useState<"greeting" | "question" | "solution" | "feedback">("greeting");
@@ -368,6 +371,34 @@ export default function DSAInterviewPage() {
     }
   };
 
+  const endSession = async () => {
+    if (messages.length === 0 || !currentQuestion) return;
+    
+    setIsEnding(true);
+    try {
+      const res = await fetch("/api/dsa/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages,
+          code: codeContent,
+          question: currentQuestion,
+          duration: timeElapsed
+        })
+      });
+      
+      const data = await res.json();
+      if (res.ok && data.id) {
+        router.push(`/feedback?callId=${data.id}`);
+      } else {
+        throw new Error(data.error || "Failed to generate feedback");
+      }
+    } catch (error) {
+      console.error("Failed to end session:", error);
+      setIsEnding(false);
+    }
+  };
+
   const getDifficultyColor = (difficulty: "Easy" | "Medium" | "Hard") => {
     if (difficulty === "Easy") return "text-green-300 bg-green-500/20 border border-green-500/30";
     if (difficulty === "Medium") return "text-amber-300 bg-amber-500/20 border border-amber-500/30";
@@ -402,6 +433,22 @@ export default function DSAInterviewPage() {
                 <Code className="w-3.5 h-3.5" />
                 {showCodeEditor ? "Hide" : "Show"} Editor
               </Button>
+              {chatId && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={endSession}
+                  disabled={isEnding || messages.length < 2}
+                  className="text-xs gap-1.5 bg-red-600/80 hover:bg-red-600"
+                >
+                  {isEnding ? (
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Square className="w-3.5 h-3.5" />
+                  )}
+                  {isEnding ? "Analyzing..." : "End Session"}
+                </Button>
+              )}
               {chatId && (
                 <div className={`flex items-center gap-2 text-xs font-medium px-2 py-1 rounded-md ${messagesUsed >= messageLimit * 0.9 ? 'bg-red-500/20 text-red-400' : 'bg-primary/10 text-primary'}`}>
                   Messages: {messagesUsed} / {messageLimit}

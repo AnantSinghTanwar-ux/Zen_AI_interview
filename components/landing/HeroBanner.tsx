@@ -9,10 +9,10 @@ import Link from "next/link";
 // --- Custom Components based on Aceternity/Magic UI concepts ---
 
 const StarryBackground = ({ className = "" }: { className?: string }) => {
-  const [stars, setStars] = useState<{id: number, top: string, left: string, size: number, delay: number, duration: number}[]>([]);
+  const [stars, setStars] = useState<{ id: number, top: string, left: string, size: number, delay: number, duration: number }[]>([]);
 
   useEffect(() => {
-    setStars(Array.from({ length: 150 }).map((_, i) => ({
+    setStars(Array.from({ length: 200 }).map((_, i) => ({
       id: i,
       top: `${Math.random() * 100}%`,
       left: `${Math.random() * 100}%`,
@@ -44,7 +44,7 @@ const StarryBackground = ({ className = "" }: { className?: string }) => {
           }}
         />
       ))}
-      
+
       {/* Subtle Shooting Star */}
       <motion.div
         className="absolute top-0 left-[10%] w-[1px] h-32 bg-gradient-to-b from-transparent via-[#FFD89B] to-transparent shadow-[0_0_8px_#DAA520]"
@@ -73,7 +73,7 @@ const BackgroundBeams = () => {
 const TextGenerateEffect = ({ words, className }: { words: string, className?: string }) => {
   const [scope, animate] = useAnimate();
   let wordsArray = words.split(" ");
-  
+
   useEffect(() => {
     animate(
       "span",
@@ -121,7 +121,7 @@ const RainbowButton = ({ children, onClick, className = "" }: { children: React.
 
 const NumberTicker = ({ value, duration = 2 }: { value: number, duration?: number }) => {
   const [count, setCount] = useState(0);
-  
+
   useEffect(() => {
     let start = 0;
     const end = value;
@@ -146,25 +146,25 @@ const LShapedBorders = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="relative inline-block p-4 md:p-8">
       {/* Top Left */}
-      <motion.div 
+      <motion.div
         animate={{ opacity: [0.15, 0.5, 0.15] }}
         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         className="absolute top-0 left-0 w-4 h-4 md:w-8 md:h-8 border-t border-l border-[#DAA520]/60"
       />
       {/* Top Right */}
-      <motion.div 
+      <motion.div
         animate={{ opacity: [0.15, 0.5, 0.15] }}
         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
         className="absolute top-0 right-0 w-4 h-4 md:w-8 md:h-8 border-t border-r border-[#DAA520]/60"
       />
       {/* Bottom Left */}
-      <motion.div 
+      <motion.div
         animate={{ opacity: [0.15, 0.5, 0.15] }}
         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
         className="absolute bottom-0 left-0 w-4 h-4 md:w-8 md:h-8 border-b border-l border-[#DAA520]/60"
       />
       {/* Bottom Right */}
-      <motion.div 
+      <motion.div
         animate={{ opacity: [0.15, 0.5, 0.15] }}
         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 3 }}
         className="absolute bottom-0 right-0 w-4 h-4 md:w-8 md:h-8 border-b border-r border-[#DAA520]/60"
@@ -256,7 +256,7 @@ const HeroBanner = () => {
             <span className="text-base">Start Interviewing Now</span>
             <ArrowRight className="w-5 h-5 text-primary" />
           </RainbowButton>
-          
+
           <Button
             variant="outline"
             onClick={() => scrollToSection("college")}

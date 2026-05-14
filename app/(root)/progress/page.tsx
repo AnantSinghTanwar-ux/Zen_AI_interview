@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Star, Flame, Target, Award, Users } from 'lucide-react';
+import { callLogService } from '@/services/firebase/call-log.service';
 
 export default async function ProgressPage() {
   const user = await getCurrentUser();
@@ -11,6 +12,65 @@ export default async function ProgressPage() {
     redirect('/sign-in');
   }
   
+  const callLogs = await callLogService.getCallLogsByUser(user.id, 100);
+  const totalInterviews = callLogs.length;
+
+  // Time practiced
+  let timePracticedSeconds = 0;
+  callLogs.forEach(log => {
+      if (log.duration) {
+          timePracticedSeconds += log.duration;
+      } else if (log.startedAt && log.endedAt) {
+          timePracticedSeconds += Math.round((new Date(log.endedAt).getTime() - new Date(log.startedAt).getTime()) / 1000);
+      }
+  });
+  
+  const timePracticedHours = Math.floor(timePracticedSeconds / 3600);
+  const timePracticedStr = timePracticedHours > 0 
+     ? `${timePracticedHours}h ${Math.floor((timePracticedSeconds % 3600) / 60)}m`
+     : `${Math.floor(timePracticedSeconds / 60)}m`;
+
+  // Streak calculation
+  let streak = 0;
+  const sortedDates = callLogs
+     .map(l => new Date(l.startedAt).toISOString().split('T')[0])
+     .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+     
+  const uniqueDates = [...new Set(sortedDates)];
+  if (uniqueDates.length > 0) {
+      const today = new Date().toISOString().split('T')[0];
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      
+      let currentDateObj = new Date(uniqueDates[0]);
+      if (uniqueDates[0] === today || uniqueDates[0] === yesterday) {
+          streak = 1;
+          for (let i = 1; i < uniqueDates.length; i++) {
+              const prevDateObj = new Date(uniqueDates[i]);
+              const diffDays = Math.round((currentDateObj.getTime() - prevDateObj.getTime()) / 86400000);
+              if (diffDays === 1) {
+                  streak++;
+                  currentDateObj = prevDateObj;
+              } else {
+                  break;
+              }
+          }
+      }
+  }
+
+  const bestStreak = Math.max(streak, uniqueDates.length > 0 ? 1 : 0);
+
+  // Level & XP
+  const xpPerInterview = 100;
+  const totalXP = totalInterviews * xpPerInterview;
+  const level = Math.floor(totalXP / 1000) + 1;
+  const currentXP = totalXP % 1000;
+  const points = totalInterviews * 150 + streak * 20;
+
+  let badgesEarned = 0;
+  if (totalInterviews >= 1) badgesEarned++;
+  if (streak >= 7) badgesEarned++;
+  if (totalInterviews >= 5) badgesEarned++;
+
   return (
     <div className="container mx-auto px-4 py-8 pt-32">
       <div className="space-y-6">
@@ -26,8 +86,8 @@ export default async function ProgressPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-400">Level</p>
-                  <p className="text-3xl font-bold text-foreground">5</p>
-                  <p className="text-xs text-gray-500">850 / 1000 XP</p>
+                  <p className="text-3xl font-bold text-foreground">{level}</p>
+                  <p className="text-xs text-gray-500">{currentXP} / 1000 XP</p>
                 </div>
                 <Trophy className="h-8 w-8 text-yellow-400" />
               </div>
@@ -35,7 +95,7 @@ export default async function ProgressPage() {
                 <div className="w-full bg-gray-700 rounded-full h-2">
                   <div 
                     className="bg-gradient-to-r from-yellow-400 to-yellow-600 h-2 rounded-full"
-                    style={{ width: '85%' }}
+                    style={{ width: `${(currentXP / 1000) * 100}%` }}
                   ></div>
                 </div>
               </div>
@@ -47,8 +107,8 @@ export default async function ProgressPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-400">Current Streak</p>
-                  <p className="text-3xl font-bold text-foreground">7</p>
-                  <p className="text-xs text-gray-500">Best: 12 days</p>
+                  <p className="text-3xl font-bold text-foreground">{streak}</p>
+                  <p className="text-xs text-gray-500">Best: {bestStreak} days</p>
                 </div>
                 <Flame className="h-8 w-8 text-orange-400" />
               </div>
@@ -60,8 +120,8 @@ export default async function ProgressPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-400">Total Points</p>
-                  <p className="text-3xl font-bold text-foreground">2,450</p>
-                  <p className="text-xs text-gray-500">Rank #42</p>
+                  <p className="text-3xl font-bold text-foreground">{points.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500">Rank #---</p>
                 </div>
                 <Star className="h-8 w-8 text-primary-400" />
               </div>
@@ -77,19 +137,19 @@ export default async function ProgressPage() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <p className="text-2xl font-bold text-foreground">12</p>
+                <p className="text-2xl font-bold text-foreground">{totalInterviews}</p>
                 <p className="text-sm text-gray-400">Total Interviews</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-foreground">85%</p>
+                <p className="text-2xl font-bold text-foreground">--%</p>
                 <p className="text-sm text-gray-400">Average Score</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-foreground">24h</p>
+                <p className="text-2xl font-bold text-foreground">{timePracticedStr}</p>
                 <p className="text-sm text-gray-400">Time Practiced</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-foreground">3</p>
+                <p className="text-2xl font-bold text-foreground">{badgesEarned}</p>
                 <p className="text-sm text-gray-400">Badges Earned</p>
               </div>
             </div>
@@ -102,7 +162,7 @@ export default async function ProgressPage() {
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2">
                 <Award className="w-5 h-5" />
-                Earned Badges (3)
+                Earned Badges ({badgesEarned})
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -142,8 +202,8 @@ export default async function ProgressPage() {
                   { rank: 1, name: 'Alex Chen', level: 8, points: 4250 },
                   { rank: 2, name: 'Sarah Kim', level: 7, points: 3890 },
                   { rank: 3, name: 'Mike Johnson', level: 6, points: 3120 },
-                  { rank: 4, name: 'You', level: 5, points: 2450, isUser: true }
-                ].map((user) => (
+                  { rank: 4, name: 'You', level: level, points: points, isUser: true }
+                ].sort((a,b) => b.points - a.points).map((user, idx) => (
                   <div 
                     key={user.rank}
                     className={`flex items-center justify-between p-3 rounded-2xl ${
@@ -152,12 +212,12 @@ export default async function ProgressPage() {
                   >
                     <div className="flex items-center gap-3">
                       <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold ${
-                        user.rank === 1 ? 'bg-yellow-500 text-black' :
-                        user.rank === 2 ? 'bg-gray-400 text-black' :
-                        user.rank === 3 ? 'bg-orange-500 text-black' :
+                        idx + 1 === 1 ? 'bg-yellow-500 text-black' :
+                        idx + 1 === 2 ? 'bg-gray-400 text-black' :
+                        idx + 1 === 3 ? 'bg-orange-500 text-black' :
                         'bg-dark-200 text-gray-400'
                       }`}>
-                        {user.rank}
+                        {idx + 1}
                       </div>
                       <div>
                         <p className="text-foreground font-medium">{user.name}</p>

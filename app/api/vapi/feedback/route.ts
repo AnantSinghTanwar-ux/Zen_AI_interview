@@ -257,6 +257,16 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    if (firestoreLog?.analysis && typeof firestoreLog.analysis.overallScore === 'number') {
+      console.log(`Returning feedback from Firestore for call: ${callId}`);
+      // Re-cache it so subsequent requests hit memory cache
+      await cacheService.set(cacheKey, firestoreLog.analysis, 7200).catch(() => {});
+      return NextResponse.json(firestoreLog.analysis, {
+        status: 200,
+        headers: { "X-Cache": "FIRESTORE" },
+      });
+    }
+
     let callData: any = null;
     let transcript = "";
 
@@ -331,7 +341,26 @@ export async function GET(request: NextRequest) {
     // Cache the result for 2 hours
     await cacheService.set(cacheKey, responseData, 7200);
 
-    console.log(`Successfully generated feedback for call: ${callId}`);
+    // Persist to Firestore
+    if (firestoreLog && firestoreLog.id) {
+       await callLogService.updateCallLog(firestoreLog.id, {
+          analysis: responseData,
+       }).catch(err => console.error("Failed to update call log with analysis:", err));
+    } else {
+       // We only had Vapi UUID, let's try to find it
+       try {
+          const log = await callLogService.getCallLogByVapiId(vapiCallId);
+          if (log && log.id) {
+             await callLogService.updateCallLog(log.id, {
+                analysis: responseData,
+             });
+          }
+       } catch (err) {
+          console.error("Failed to update fallback call log with analysis:", err);
+       }
+    }
+
+    console.log(`Successfully generated and persisted feedback for call: ${callId}`);
 
     return NextResponse.json(responseData, {
       status: 200,
