@@ -290,7 +290,7 @@ const PricingCalculator = () => {
 
                 {interviewPriceInfo.remaining > 0 && (
                   <div className="mb-4 text-xs font-semibold text-primary px-3 py-1 bg-primary/10 rounded-full w-fit">
-                    Limited Offer: Only {interviewPriceInfo.remaining} spots left at ₹199!
+                    Limited Offer: Only {interviewPriceInfo.remaining} spots left at ₹{interviewPriceInfo.price}!
                   </div>
                 )}
 

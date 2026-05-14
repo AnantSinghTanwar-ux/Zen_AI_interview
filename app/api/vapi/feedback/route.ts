@@ -301,9 +301,22 @@ export async function GET(request: NextRequest) {
       };
 
       if (!transcript || transcript.trim().length === 0) {
-        throw vapiError;
+        const errorMsg = vapiError instanceof Error ? vapiError.message : String(vapiError);
+        console.log(`No transcript found in Firestore fallback and Vapi failed: ${errorMsg}`);
+        
+        // If Vapi told us why it failed (e.g. 14 days limit), return that nicely
+        if (errorMsg.includes("retention window") || errorMsg.includes("14 days")) {
+           return NextResponse.json(
+             { error: "This interview exceeds the 14-day retention window. Feedback can no longer be generated." },
+             { status: 400 }
+           );
+        }
+        
+        return NextResponse.json(
+          { error: "No conversation transcript available. Ensure the interview was completed and has enough dialogue." },
+          { status: 400 }
+        );
       }
-    }
 
     if (!callData) {
       return NextResponse.json(
