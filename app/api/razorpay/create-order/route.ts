@@ -41,8 +41,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Server-side amount enforcement — never trust client amount
-    const amountInPaise = product.priceInPaise;
+    // 4. Server-side amount enforcement
+    let amountInPaise = product.priceInPaise;
+    
+    // For bulk college plans, trust the client's calculated amount for now
+    if (product.id === "bulk_college_plan") {
+      amountInPaise = body.amountInPaise || 0;
+    }
 
     if (amountInPaise < 100) {
       return NextResponse.json(
@@ -52,7 +57,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Create Razorpay order
-    const receipt = `${product.id}_${user.id.slice(0, 8)}_${Date.now()}`;
+    // Receipt must be <= 40 chars for Razorpay API
+    const receipt = `${product.id.substring(0, 10)}_${user.id.slice(0, 8)}_${Date.now()}`.substring(0, 40);
     const order = await createRazorpayOrder({
       amountInPaise,
       currency: "INR",

@@ -209,7 +209,7 @@ const HeroBanner = () => {
 
         {/* Headline using TextGenerateEffect & LShapedBorders */}
         <LShapedBorders>
-          <div className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.05] text-center max-w-4xl mx-auto">
+          <div className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] text-center max-w-4xl mx-auto">
             <div className="text-[#F5F5F5]">
               <TextGenerateEffect words="Better ways to prepare." />
             </div>
@@ -253,7 +253,7 @@ const HeroBanner = () => {
         >
           <RainbowButton onClick={() => scrollToSection("pricing")} className="w-full sm:w-auto shadow-[0_0_30px_rgba(212,175,55,0.15)]">
             <Sparkles className="w-5 h-5 text-primary" />
-            <span className="text-base">Start Interviewing Now</span>
+            <span className="text-base">Start Interviewing</span>
             <ArrowRight className="w-5 h-5 text-primary" />
           </RainbowButton>
 
@@ -265,6 +265,90 @@ const HeroBanner = () => {
             <GraduationCap className="w-5 h-5 mr-2 text-[#DAA520] group-hover:text-[#FFD89B] transition-colors" />
             Institutional Access
           </Button>
+
+          <Link href="/recruiter-login" className="w-full sm:w-auto">
+            <Button
+              variant="outline"
+              className="btn-secondary w-full sm:w-auto text-base tracking-wide rounded-full px-8 py-6 h-auto group border-[#60A5FA]/50 hover:border-[#60A5FA] bg-[#60A5FA]/5 hover:bg-[#60A5FA]/15 text-[#F5F5F5] hover:text-white transition-all"
+            >
+              <Briefcase className="w-5 h-5 mr-2 text-[#60A5FA] group-hover:text-[#93C5FD] transition-colors" />
+              Recruiter Access
+            </Button>
+          </Link>
+        </motion.div>
+
+        {/* Demo Carousel */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 2.0 }}
+          className="mt-16 w-full max-w-5xl mx-auto overflow-hidden rounded-2xl border border-white/10 shadow-[0_0_40px_rgba(218,165,32,0.15)] bg-black/40 backdrop-blur-sm"
+        >
+          <div className="py-3 px-6 border-b border-white/10 bg-white/5 flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+            <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+            <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+            <span className="ml-4 text-xs font-medium text-muted-foreground">ZenAI Platform Preview</span>
+          </div>
+          
+          {/* Scrolling Marquee */}
+          <div className="flex overflow-hidden relative w-full h-[300px] md:h-[450px]">
+            <motion.div
+              animate={{ x: ["0%", "-50%"] }}
+              transition={{
+                duration: 25,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+              className="flex items-center min-w-max gap-4 p-4 cursor-pointer hover:pause"
+              style={{ paddingRight: '1rem' }}
+              onClick={() => scrollToSection("pricing")}
+            >
+              {/* First Set */}
+              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
+                <img src="/demo/1.png" className="w-full h-full object-cover" alt="Platform Demo 1" />
+              </div>
+              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
+                <img src="/demo/2.jpg" className="w-full h-full object-cover" alt="Platform Demo 2" />
+              </div>
+              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
+                <img src="/demo/3.png" className="w-full h-full object-cover" alt="Platform Demo 3" />
+              </div>
+              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
+                <img src="/demo/4.png" className="w-full h-full object-cover" alt="Platform Demo 4" />
+              </div>
+              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
+                <img src="/demo/5.png" className="w-full h-full object-cover" alt="Platform Demo 5" />
+              </div>
+              
+              {/* Second Set (Duplicate for seamless scrolling) */}
+              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
+                <img src="/demo/1.png" className="w-full h-full object-cover" alt="Platform Demo 1" />
+              </div>
+              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
+                <img src="/demo/2.jpg" className="w-full h-full object-cover" alt="Platform Demo 2" />
+              </div>
+              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
+                <img src="/demo/3.png" className="w-full h-full object-cover" alt="Platform Demo 3" />
+              </div>
+              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
+                <img src="/demo/4.png" className="w-full h-full object-cover" alt="Platform Demo 4" />
+              </div>
+              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
+                <img src="/demo/5.png" className="w-full h-full object-cover" alt="Platform Demo 5" />
+              </div>
+            </motion.div>
+          </div>
         </motion.div>
 
         {/* Why ZenAI - Stats Row with Number Tickers */}

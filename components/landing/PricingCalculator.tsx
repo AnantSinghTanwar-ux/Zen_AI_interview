@@ -146,6 +146,19 @@ const PricingCalculator = () => {
       },
     });
 
+  const { initiatePayment: initiateCollegePayment, isProcessing: isProcessingCollege } =
+    useRazorpayCheckout({
+      onSuccess: () => {
+        setPaymentError(null);
+        setPaymentSuccess(`Payment successful! Your college plan is active.`);
+      },
+      onError: (error) => {
+        setPaymentSuccess(null);
+        setPaymentError(error);
+        setTimeout(() => setPaymentError(null), 5000);
+      },
+    });
+
   const handleBuyInterview = () => {
     initiateInterviewPayment(interviewPriceInfo.productId);
   };
@@ -162,17 +175,7 @@ const PricingCalculator = () => {
       return;
     }
 
-    // College purchases are handled via contact form for now
-    const subject = encodeURIComponent("ZenAI College Plan Inquiry");
-    const body = encodeURIComponent(
-      `College Plan Request\n\nEmail: ${collegeEmail}\nStudents: ${students}\nInterviews/Student: ${interviewsPerStudent}\nTotal Interviews: ${totalInterviews}\nEstimated Cost: ₹${discountedCost.toLocaleString("en-IN")}${
-        discount > 0 ? ` (${discount}% bulk discount)` : ""
-      }`
-    );
-    window.open(
-      `mailto:anantsa@gmail.com?subject=${subject}&body=${body}`,
-      "_blank"
-    );
+    initiateCollegePayment("bulk_college_plan", { amountInPaise: discountedCost * 100 });
   };
 
   const interviewFeatures = [
@@ -572,11 +575,18 @@ const PricingCalculator = () => {
               <Button
                 id="pricing-college-submit"
                 onClick={handleCollegeSubmit}
+                disabled={isProcessingCollege}
                 className="w-full bg-[#A855F7] hover:bg-[#9333EA] text-white rounded-full h-14 text-lg font-semibold shadow-[0_0_25px_rgba(168,85,247,0.2)] hover:shadow-[0_0_40px_rgba(168,85,247,0.35)] transition-all group"
               >
-                <GraduationCap className="w-5 h-5 mr-2" />
-                Contact for Bulk Purchase
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                {isProcessingCollege ? (
+                  "Processing..."
+                ) : (
+                  <>
+                    <GraduationCap className="w-5 h-5 mr-2" />
+                    Buy Bulk Plan
+                    <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
               </Button>
             </div>
           </motion.div>

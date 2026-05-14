@@ -60,6 +60,15 @@ export const PRODUCTS = {
     credits: 5,
     timeLimitMinutes: 30,
   },
+  BULK_COLLEGE_PLAN: {
+    id: "bulk_college_plan",
+    name: "College Bulk Plan",
+    description: "Custom bulk interviews for students",
+    priceInPaise: 0, // Dynamic
+    creditType: "interviews" as const,
+    credits: 0, // Dynamic
+    timeLimitMinutes: 30,
+  },
 } as const;
 
 export type ProductId = keyof typeof PRODUCTS;

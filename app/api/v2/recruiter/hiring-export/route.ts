@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { recruiterGuard } from "@/app/api/v2/recruiter/_guard";
 import { getLeaderboard } from "@/services/recruiter/application-score.service";
 import { checkRateLimit } from "@/lib/services/rate-limit.service";
-import XLSX from "xlsx";
+import * as XLSX from "xlsx";
 
 /**
  * POST /api/v2/recruiter/hiring-export
