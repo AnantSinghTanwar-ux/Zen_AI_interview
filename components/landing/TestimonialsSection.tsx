@@ -70,11 +70,11 @@ const TestimonialsSection = () => {
     <section
       id="testimonials"
       ref={containerRef}
-      className="relative py-24 px-6 bg-[#0B0B0F] overflow-hidden"
+      className="relative py-24 px-6 bg-background overflow-hidden"
     >
       {/* Background gradient */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] bg-[#8B5CF6]/3 rounded-full blur-[200px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] bg-primary/5 rounded-full blur-[200px]" />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto">
@@ -85,14 +85,14 @@ const TestimonialsSection = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#111118] border border-[#1F1F2B] mb-6">
-            <Star className="w-4 h-4 text-[#FACC15] fill-[#FACC15]" />
-            <span className="text-sm font-medium text-white/80">Loved by Students</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border mb-6">
+            <Star className="w-4 h-4 text-primary fill-primary" />
+            <span className="text-sm font-medium text-foreground/80">Loved by Students</span>
           </div>
-          <h2 className="text-3xl md:text-5xl font-bold text-[#EAEAF0] mb-4">
+          <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
             What Our Users Say
           </h2>
-          <p className="text-lg text-[#9CA3AF] max-w-2xl mx-auto">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Thousands of students have cracked their dream interviews with ZenAI. Here&apos;s what they have to say.
           </p>
         </motion.div>
@@ -110,16 +110,15 @@ const TestimonialsSection = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={isInView ? { opacity: 1, scale: 1 } : {}}
               transition={{ duration: 0.4, delay: 0.3 + i * 0.1 }}
-              className="relative p-5 rounded-2xl bg-[#111118]/80 border border-[#1F1F2B] text-center group hover:border-white/10 transition-all"
+              className="relative p-5 rounded-2xl bg-card border border-border text-center group hover:border-primary/20 transition-all"
             >
               <div
-                className="inline-flex items-center justify-center w-10 h-10 rounded-xl mb-3"
-                style={{ backgroundColor: `${stat.color}15`, color: stat.color }}
+                className="inline-flex items-center justify-center w-10 h-10 rounded-xl mb-3 border border-border bg-background shadow-sm"
               >
-                {stat.icon}
+                {React.cloneElement(stat.icon as React.ReactElement, { className: "w-5 h-5 text-primary" })}
               </div>
-              <div className="text-2xl font-bold text-[#EAEAF0]">{stat.value}</div>
-              <div className="text-xs text-[#9CA3AF] mt-1">{stat.label}</div>
+              <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+              <div className="text-xs text-muted-foreground mt-1">{stat.label}</div>
             </motion.div>
           ))}
         </motion.div>

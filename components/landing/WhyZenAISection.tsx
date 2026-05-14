@@ -63,12 +63,11 @@ const WhyZenAISection = () => {
     <section
       id="why-zenai"
       ref={containerRef}
-      className="relative py-24 px-6 bg-[#0B0B0F] overflow-hidden"
+      className="relative py-24 px-6 bg-background overflow-hidden"
     >
       {/* Background */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[400px] bg-[#FACC15]/3 rounded-full blur-[200px]" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[400px] bg-[#8B5CF6]/3 rounded-full blur-[200px]" />
+        <div className="absolute top-0 left-1/4 w-[600px] h-[400px] bg-primary/5 rounded-full blur-[200px]" />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto">
@@ -79,15 +78,15 @@ const WhyZenAISection = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#111118] border border-[#1F1F2B] mb-6">
-            <Brain className="w-4 h-4 text-[#8B5CF6]" />
-            <span className="text-sm font-medium text-white/80">Why Choose ZenAI</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border mb-6">
+            <Brain className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium text-foreground/80">Why Choose ZenAI</span>
           </div>
-          <h2 className="text-3xl md:text-5xl font-bold text-[#EAEAF0] mb-4">
+          <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
             Everything You Need to{" "}
-            <span className="text-[#FACC15]">Crack Interviews</span>
+            <span className="text-primary">Crack Interviews</span>
           </h2>
-          <p className="text-lg text-[#9CA3AF] max-w-2xl mx-auto">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Built by engineers who&apos;ve been through the grind. ZenAI gives you the closest thing to a real interview — without the rejection anxiety.
           </p>
         </motion.div>
@@ -100,16 +99,15 @@ const WhyZenAISection = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: 0.2 + i * 0.06 }}
-              className="group relative p-6 rounded-2xl bg-[#111118]/80 border border-[#1F1F2B] hover:border-white/10 transition-all duration-300 hover:translate-y-[-2px]"
+              className="group relative p-6 rounded-2xl bg-card border border-border hover:border-primary/20 transition-all duration-300 hover:translate-y-[-2px] shadow-sm"
             >
               <div
-                className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4"
-                style={{ backgroundColor: `${feature.color}15`, color: feature.color }}
+                className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4 border border-border bg-background shadow-sm"
               >
-                {feature.icon}
+                {React.cloneElement(feature.icon as React.ReactElement, { className: "w-6 h-6 text-primary" })}
               </div>
-              <h3 className="text-base font-semibold text-[#EAEAF0] mb-2">{feature.title}</h3>
-              <p className="text-sm text-[#9CA3AF] leading-relaxed">{feature.description}</p>
+              <h3 className="text-base font-semibold text-foreground mb-2">{feature.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}
         </div>
