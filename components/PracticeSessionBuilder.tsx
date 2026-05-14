@@ -57,7 +57,7 @@ export default function PracticeSessionBuilder({
   const [role, setRole] = useState("Software Engineer");
   const [experienceLevel, setExperienceLevel] = useState("SDE-1 / Early Career");
   const [selectedFocus, setSelectedFocus] = useState<string[]>(["Core CS Fundamentals", "Problem Solving"]);
-  const [started, setStarted] = useState((autoStart === true && !!initialPracticeContextJson) || !!jobContextJson);
+  const [started, setStarted] = useState(false);
   const [showPaymentPopup, setShowPaymentPopup] = useState(false);
   const [isCheckingAccess, setIsCheckingAccess] = useState(false);
 
@@ -109,6 +109,7 @@ export default function PracticeSessionBuilder({
         body: JSON.stringify({
           feature: "interview",
           quotaKind: "interview",
+          action: "check",
         }),
       });
 
@@ -137,6 +138,13 @@ export default function PracticeSessionBuilder({
       setIsCheckingAccess(false);
     }
   };
+
+  // Add auto-start effect
+  useEffect(() => {
+    if ((autoStart === true && !!initialPracticeContextJson) || !!jobContextJson) {
+      checkAndStartSession();
+    }
+  }, []);
 
   if (started) {
     return (

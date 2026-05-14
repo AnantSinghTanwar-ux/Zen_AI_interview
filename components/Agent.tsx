@@ -805,7 +805,36 @@
       setCallStatus(CallStatus.CONNECTING);
 
       try {
-        // Premium check removed — all authenticated users have full access
+        // Check premium access
+        const premiumCheck = await fetch("/api/premium/vapi-access", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            feature: "interview",
+            quotaKind: "interview",
+          }),
+        });
+
+        const premiumPayload = await premiumCheck.json().catch(() => ({}));
+
+        const requiresPremiumUpgrade =
+          premiumCheck.status === 402 ||
+          premiumCheck.status === 429 ||
+          premiumPayload?.allowed === false;
+
+        if (requiresPremiumUpgrade) {
+          isStartingCallRef.current = false;
+          setCallStatus(CallStatus.INACTIVE);
+          openPremiumPopup(
+            premiumPayload?.message ||
+              "Purchase an interview session to continue."
+          );
+          return;
+        }
+
+        if (!premiumCheck.ok) {
+          throw new Error("Failed to validate access. Please try again.");
+        }
 
         const callData = await vapi.start(ASSISTANT, {
           variableValues: {

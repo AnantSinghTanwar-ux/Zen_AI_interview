@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const feature = body.feature || "interview";
     const quotaKind = body.quotaKind || "interview";
+    const action = body.action || "consume"; // "check" | "consume"
 
     // Map feature to credit type
     const creditType: CreditType =
@@ -62,6 +63,17 @@ export async function POST(request: NextRequest) {
     const available = credits[creditType];
 
     if (available > 0) {
+      if (action === "check") {
+        return NextResponse.json({
+          allowed: true,
+          isPremium: true,
+          reason: "paid-credits",
+          trialConsumed: false,
+          remaining: available,
+          dailyLimit: null,
+        });
+      }
+
       const result = await consumeCredit({
         userId: user.id,
         creditType,
@@ -85,6 +97,18 @@ export async function POST(request: NextRequest) {
       const collegePlan = await getCollegePlanForUser(userEmail);
 
       if (collegePlan) {
+        if (action === "check") {
+          return NextResponse.json({
+            allowed: true,
+            isPremium: true,
+            reason: "college-plan",
+            collegeName: collegePlan.collegeName,
+            trialConsumed: false,
+            remaining: collegePlan.maxInterviews - collegePlan.usedInterviews,
+            dailyLimit: null,
+          });
+        }
+
         const collegeResult = await consumeCollegeInterview({
           userEmail,
           userId: user.id,
