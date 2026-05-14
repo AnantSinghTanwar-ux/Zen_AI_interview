@@ -122,39 +122,31 @@ const NumberTicker = ({ value, duration = 2 }: { value: number, duration?: numbe
 
 const LShapedBorders = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div className="relative inline-block p-6 md:p-10">
+    <div className="relative inline-block p-4 md:p-8">
       {/* Top Left */}
       <motion.div 
-        animate={{ opacity: [0.3, 1, 0.3], boxShadow: ["0 0 0px #DAA520", "0 0 15px #DAA520", "0 0 0px #DAA520"] }}
-        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-        className="absolute top-0 left-0 w-8 h-8 md:w-16 md:h-16 border-t-2 border-l-2 border-transparent"
-        style={{ borderImage: "linear-gradient(to bottom right, #FFD89B, #DAA520) 1" }}
+        animate={{ opacity: [0.15, 0.5, 0.15] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-0 left-0 w-4 h-4 md:w-8 md:h-8 border-t border-l border-[#DAA520]/60"
       />
       {/* Top Right */}
       <motion.div 
-        animate={{ opacity: [0.3, 1, 0.3], boxShadow: ["0 0 0px #DAA520", "0 0 15px #DAA520", "0 0 0px #DAA520"] }}
-        transition={{ duration: 3, repeat: Infinity, ease: "linear", delay: 1 }}
-        className="absolute top-0 right-0 w-8 h-8 md:w-16 md:h-16 border-t-2 border-r-2 border-transparent"
-        style={{ borderImage: "linear-gradient(to bottom left, #FFD89B, #DAA520) 1" }}
+        animate={{ opacity: [0.15, 0.5, 0.15] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        className="absolute top-0 right-0 w-4 h-4 md:w-8 md:h-8 border-t border-r border-[#DAA520]/60"
       />
       {/* Bottom Left */}
       <motion.div 
-        animate={{ opacity: [0.3, 1, 0.3], boxShadow: ["0 0 0px #DAA520", "0 0 15px #DAA520", "0 0 0px #DAA520"] }}
-        transition={{ duration: 3, repeat: Infinity, ease: "linear", delay: 2 }}
-        className="absolute bottom-0 left-0 w-8 h-8 md:w-16 md:h-16 border-b-2 border-l-2 border-transparent"
-        style={{ borderImage: "linear-gradient(to top right, #FFD89B, #DAA520) 1" }}
+        animate={{ opacity: [0.15, 0.5, 0.15] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+        className="absolute bottom-0 left-0 w-4 h-4 md:w-8 md:h-8 border-b border-l border-[#DAA520]/60"
       />
       {/* Bottom Right */}
       <motion.div 
-        animate={{ opacity: [0.3, 1, 0.3], boxShadow: ["0 0 0px #DAA520", "0 0 15px #DAA520", "0 0 0px #DAA520"] }}
-        transition={{ duration: 3, repeat: Infinity, ease: "linear", delay: 0.5 }}
-        className="absolute bottom-0 right-0 w-8 h-8 md:w-16 md:h-16 border-b-2 border-r-2 border-transparent"
-        style={{ borderImage: "linear-gradient(to top left, #FFD89B, #DAA520) 1" }}
+        animate={{ opacity: [0.15, 0.5, 0.15] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 3 }}
+        className="absolute bottom-0 right-0 w-4 h-4 md:w-8 md:h-8 border-b border-r border-[#DAA520]/60"
       />
-      
-      {/* Glow effect */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-[#DAA520]/5 to-[#FFD89B]/5 blur-3xl -z-10" />
-
       {children}
     </div>
   );

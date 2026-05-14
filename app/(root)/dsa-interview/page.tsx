@@ -2,9 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Clock, Code, Send, Shuffle } from "lucide-react";
+import { ArrowLeft, Clock, Code, Send, Shuffle, ChevronDown, ChevronUp, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import PageLayout from "@/components/PageLayout";
 import PremiumAccessPopup from "@/components/PremiumAccessPopup";
 import { cn } from "@/lib/utils";
@@ -30,6 +29,103 @@ interface DSAQuestion {
 
 const difficultyOptions = ["Any", "Easy", "Medium", "Hard"] as const;
 
+// --- Minimal Code Editor Component ---
+const CodeEditor = ({
+  value,
+  onChange,
+  language = "javascript",
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  language?: string;
+}) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lineCountRef = useRef<HTMLDivElement>(null);
+  const lines = value.split("\n");
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const start = e.currentTarget.selectionStart;
+      const end = e.currentTarget.selectionEnd;
+      const newValue = value.substring(0, start) + "  " + value.substring(end);
+      onChange(newValue);
+      // Set cursor position after the tab
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + 2;
+        }
+      });
+    }
+  };
+
+  const handleScroll = () => {
+    if (textareaRef.current && lineCountRef.current) {
+      lineCountRef.current.scrollTop = textareaRef.current.scrollTop;
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full rounded-xl border border-white/10 bg-[#0a0a0f] overflow-hidden">
+      {/* Editor Header */}
+      <div className="flex items-center justify-between px-4 py-2 bg-[#111118] border-b border-white/10">
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-red-500/60" />
+            <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
+            <div className="w-3 h-3 rounded-full bg-green-500/60" />
+          </div>
+          <span className="text-xs text-muted-foreground ml-2 font-mono">solution.{language === "python" ? "py" : language === "java" ? "java" : "js"}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            className="text-xs bg-transparent border border-white/10 rounded px-2 py-0.5 text-muted-foreground"
+            defaultValue={language}
+          >
+            <option value="javascript">JavaScript</option>
+            <option value="python">Python</option>
+            <option value="java">Java</option>
+            <option value="cpp">C++</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Editor Body */}
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Line Numbers */}
+        <div
+          ref={lineCountRef}
+          className="flex flex-col items-end py-3 px-3 bg-[#0d0d12] text-muted-foreground/40 font-mono text-xs select-none overflow-hidden border-r border-white/5 min-w-[3rem]"
+        >
+          {lines.map((_, i) => (
+            <div key={i} className="leading-[1.6rem] h-[1.6rem]">
+              {i + 1}
+            </div>
+          ))}
+        </div>
+
+        {/* Textarea */}
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onScroll={handleScroll}
+          spellCheck={false}
+          className="flex-1 bg-transparent text-[#e8e8ed] font-mono text-sm p-3 resize-none outline-none leading-[1.6rem] overflow-auto placeholder:text-muted-foreground/30"
+          placeholder={`// Write or paste your solution here...\n// The AI will review your code alongside your chat messages.\n\nfunction solution(input) {\n  // Your approach here\n}`}
+        />
+      </div>
+
+      {/* Status Bar */}
+      <div className="flex items-center justify-between px-4 py-1.5 bg-[#111118] border-t border-white/10 text-xs text-muted-foreground/50 font-mono">
+        <span>Ln {lines.length}, Col {(value.split("\n").pop() || "").length + 1}</span>
+        <span>{value.length} chars</span>
+      </div>
+    </div>
+  );
+};
+
 export default function DSAInterviewPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentInput, setCurrentInput] = useState("");
@@ -42,6 +138,8 @@ export default function DSAInterviewPage() {
   const [showPremiumPopup, setShowPremiumPopup] = useState(false);
   const [premiumMessage, setPremiumMessage] = useState<string | undefined>(undefined);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [codeContent, setCodeContent] = useState("");
+  const [showCodeEditor, setShowCodeEditor] = useState(true);
 
   const SESSION_TIME_LIMIT = 30 * 60; // 30 minutes in seconds
 
@@ -49,6 +147,7 @@ export default function DSAInterviewPage() {
   const [selectedDifficulty, setSelectedDifficulty] = useState<(typeof difficultyOptions)[number]>("Any");
   const [selectedTopic, setSelectedTopic] = useState("Any");
 
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const premiumUsageKeyRef = useRef(`dsa-practice:${Date.now()}`);
@@ -81,8 +180,11 @@ export default function DSAInterviewPage() {
     return pool[Math.floor(Math.random() * pool.length)];
   };
 
+  // FIX: Scroll only the chat container, not the whole page
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   };
 
   useEffect(() => {
@@ -123,41 +225,10 @@ export default function DSAInterviewPage() {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const parseQuestionFromResponse = (response: string): DSAQuestion | null => {
-    try {
-      const lines = response.split("\n");
-      let title = "";
-      let difficulty: "Easy" | "Medium" | "Hard" = "Medium";
-      let problem = "";
-      let currentSection = "";
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed.includes("**Problem:**") || trimmed.includes("Problem:")) {
-          currentSection = "problem";
-          title = trimmed.replace(/\*\*Problem:\*\*|Problem:/, "").trim();
-        } else if (trimmed.includes("**Difficulty:**") || trimmed.includes("Difficulty:")) {
-          const diffMatch = trimmed.match(/(Easy|Medium|Hard)/i);
-          if (diffMatch) difficulty = diffMatch[1] as "Easy" | "Medium" | "Hard";
-        } else if (currentSection === "problem" && trimmed) {
-          problem += `${trimmed}\n`;
-        }
-      }
-
-      if (!title || !problem.trim()) return null;
-      return {
-        title,
-        difficulty,
-        problem: problem.trim(),
-      };
-    } catch (error) {
-      console.error("Error parsing question:", error);
-      return null;
-    }
-  };
-
+  // Using OpenRouter endpoint instead of Vapi for cost optimization
   const { sendStreamingMessage, isStreaming } = useStreamingChat({
     premiumUsageKey: premiumUsageKeyRef.current,
+    endpoint: "/api/dsa/chat-stream",
     onMessage: (delta) => setStreamingMessage((prev) => prev + delta),
     onPremiumRequired: (message) => {
       setPremiumMessage(
@@ -179,12 +250,7 @@ export default function DSAInterviewPage() {
 
       if (newChatId) setChatId(newChatId);
 
-      const parsed = parseQuestionFromResponse(fullMessage);
-      if (parsed) {
-        setCurrentQuestion(parsed);
-        setInterviewStage("question");
-        setTimerActive(true);
-      } else if (/feedback|analysis/i.test(fullMessage)) {
+      if (/feedback|analysis|score/i.test(fullMessage)) {
         setInterviewStage("feedback");
         setTimerActive(false);
       }
@@ -216,7 +282,8 @@ export default function DSAInterviewPage() {
     ]);
     setCurrentInput("");
 
-    await sendStreamingMessage(message, chatId || undefined, interviewStage);
+    // Pass code content so the AI can review both chat + code
+    await sendStreamingMessage(message, chatId || undefined, interviewStage, codeContent || undefined);
   };
 
   const startInterview = async () => {
@@ -268,6 +335,7 @@ export default function DSAInterviewPage() {
       setInterviewStage("question");
       setTimerActive(true);
       setTimeElapsed(0);
+      setCodeContent("");
 
       const kickoff = [
         `Start a ${companyName}-style DSA round.`,
@@ -292,9 +360,10 @@ export default function DSAInterviewPage() {
 
   return (
     <PageLayout>
-      <div className="min-h-screen bg-background text-foreground flex flex-col pt-24">
-        <div className="border-b border-white/10 px-4 py-3 bg-background/95 backdrop-blur-md">
-          <div className="flex items-center justify-between max-w-6xl mx-auto gap-3">
+      <div className="h-screen bg-background text-foreground flex flex-col pt-24 overflow-hidden">
+        {/* Top Bar */}
+        <div className="border-b border-white/10 px-4 py-3 bg-background/95 backdrop-blur-md shrink-0">
+          <div className="flex items-center justify-between max-w-[1600px] mx-auto gap-3">
             <div className="flex items-center gap-4 flex-wrap">
               <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
                 <ArrowLeft className="w-5 h-5" />
@@ -307,16 +376,28 @@ export default function DSAInterviewPage() {
               </div>
             </div>
 
-            {timerActive && (
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-                <Clock className="w-4 h-4" />
-                {formatTime(timeElapsed)}
-              </div>
-            )}
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCodeEditor(!showCodeEditor)}
+                className="text-xs gap-1.5"
+              >
+                <Code className="w-3.5 h-3.5" />
+                {showCodeEditor ? "Hide" : "Show"} Editor
+              </Button>
+              {timerActive && (
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground/90">
+                  <Clock className="w-4 h-4" />
+                  {formatTime(timeElapsed)}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="max-w-6xl mx-auto w-full px-4 pt-4">
+        {/* Filters */}
+        <div className="max-w-[1600px] mx-auto w-full px-4 pt-4 shrink-0">
           <div className="glass-card p-4 rounded-2xl border border-white/10">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <select
@@ -382,9 +463,15 @@ export default function DSAInterviewPage() {
           </div>
         </div>
 
-        <div className="flex-1 flex max-w-6xl mx-auto w-full px-4 pb-6 pt-4 gap-4">
-          <div className="flex-1 flex flex-col glass-card rounded-2xl border border-white/10 overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Main Content: Chat + Code Editor */}
+        <div className="flex-1 flex max-w-[1600px] mx-auto w-full px-4 pb-4 pt-4 gap-4 min-h-0 overflow-hidden">
+          {/* Chat Panel */}
+          <div className="flex-1 flex flex-col glass-card rounded-2xl border border-white/10 overflow-hidden min-w-0">
+            {/* Chat Messages — scrolls only within this container */}
+            <div
+              ref={chatContainerRef}
+              className="flex-1 overflow-y-auto p-4 space-y-4"
+            >
               {messages.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 bg-primary/15 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/25">
@@ -392,7 +479,7 @@ export default function DSAInterviewPage() {
                   </div>
                   <h2 className="text-xl font-semibold text-foreground mb-2">Ready for targeted DSA prep?</h2>
                   <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                    Select your company and filters, then start. The interview will use popular questions asked in that company style.
+                    Select your company and filters, then start. Write your solution in the code editor and discuss your approach in the chat.
                   </p>
                 </div>
               ) : (
@@ -442,24 +529,21 @@ export default function DSAInterviewPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="border-t border-white/10 bg-background/70 p-4">
+            {/* Chat Input */}
+            <div className="border-t border-white/10 bg-background/70 p-4 shrink-0">
               {sessionExpired && (
                 <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-300 text-center">
                   ⏱ Session time limit reached (30 min). Purchase another session to continue.
                 </div>
               )}
               <div className="flex gap-3">
-                <Input
+                <textarea
                   value={currentInput}
                   onChange={(e) => setCurrentInput(e.target.value)}
                   placeholder={
                     sessionExpired
                       ? "Session expired — purchase another to continue"
-                      : interviewStage === "greeting"
-                        ? "Start the interview..."
-                        : interviewStage === "question"
-                          ? "Share your approach or paste your solution..."
-                          : "Ask for feedback or discuss optimizations..."
+                      : "Share your approach or paste your solution..."
                   }
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
@@ -468,11 +552,13 @@ export default function DSAInterviewPage() {
                     }
                   }}
                   disabled={isStreaming || sessionExpired}
-                  className="flex-1"
+                  rows={2}
+                  className="flex-1 bg-background border border-input rounded-xl px-4 py-3 text-sm text-foreground resize-none outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all placeholder:text-muted-foreground"
                 />
                 <Button
                   onClick={() => sendMessage(currentInput)}
                   disabled={isStreaming || !currentInput.trim() || sessionExpired}
+                  className="self-end"
                 >
                   <Send className="w-4 h-4" />
                 </Button>
@@ -480,19 +566,30 @@ export default function DSAInterviewPage() {
             </div>
           </div>
 
-          {currentQuestion && (
-            <div className="w-[340px] glass-card rounded-2xl border border-white/10 p-4 overflow-y-auto hidden lg:block">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="font-semibold text-foreground">Current Problem</h3>
-                <span className={cn("px-2 py-1 rounded text-xs font-medium", getDifficultyColor(currentQuestion.difficulty))}>
-                  {currentQuestion.difficulty}
-                </span>
+          {/* Code Editor Panel */}
+          {showCodeEditor && (
+            <div className="w-[500px] xl:w-[600px] flex flex-col gap-4 min-h-0 hidden lg:flex">
+              {/* Code Editor */}
+              <div className="flex-1 min-h-0">
+                <CodeEditor value={codeContent} onChange={setCodeContent} />
               </div>
-              <h4 className="text-lg font-bold text-foreground mb-2">{currentQuestion.title}</h4>
-              {currentQuestion.topic && (
-                <p className="text-xs text-muted-foreground mb-3 uppercase tracking-wider">Topic: {currentQuestion.topic}</p>
+
+              {/* Problem Sidebar */}
+              {currentQuestion && (
+                <div className="glass-card rounded-2xl border border-white/10 p-4 overflow-y-auto max-h-[250px] shrink-0">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="font-semibold text-foreground">Current Problem</h3>
+                    <span className={cn("px-2 py-1 rounded text-xs font-medium", getDifficultyColor(currentQuestion.difficulty))}>
+                      {currentQuestion.difficulty}
+                    </span>
+                  </div>
+                  <h4 className="text-lg font-bold text-foreground mb-2">{currentQuestion.title}</h4>
+                  {currentQuestion.topic && (
+                    <p className="text-xs text-muted-foreground mb-3 uppercase tracking-wider">Topic: {currentQuestion.topic}</p>
+                  )}
+                  <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">{currentQuestion.problem}</p>
+                </div>
               )}
-              <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">{currentQuestion.problem}</p>
             </div>
           )}
         </div>

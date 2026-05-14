@@ -14,6 +14,7 @@ interface UseStreamingChatProps {
   onError?: (error: string) => void;
   onPremiumRequired?: (message?: string) => void;
   premiumUsageKey?: string;
+  endpoint?: string;
 }
 
 export function useStreamingChat({
@@ -22,6 +23,7 @@ export function useStreamingChat({
   onError,
   onPremiumRequired,
   premiumUsageKey,
+  endpoint = "/api/vapi/chat-stream",
 }: UseStreamingChatProps = {}) {
   const [isStreaming, setIsStreaming] = useState(false);
 
@@ -29,7 +31,8 @@ export function useStreamingChat({
     async (
       message: string,
       previousChatId?: string,
-      stage?: string
+      stage?: string,
+      codeContent?: string
     ): Promise<string> => {
       if (isStreaming) return "";
 
@@ -38,7 +41,7 @@ export function useStreamingChat({
       let currentChatId = "";
 
       try {
-        const response = await fetch("/api/vapi/chat-stream", {
+        const response = await fetch(endpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -46,8 +49,10 @@ export function useStreamingChat({
           body: JSON.stringify({
             message,
             previousChatId,
+            chatId: previousChatId,
             stage,
             premiumUsageKey,
+            codeContent,
           }),
         });
 
@@ -108,7 +113,7 @@ export function useStreamingChat({
         setIsStreaming(false);
       }
     },
-    [isStreaming, onMessage, onComplete, onError, onPremiumRequired, premiumUsageKey]
+    [isStreaming, onMessage, onComplete, onError, onPremiumRequired, premiumUsageKey, endpoint]
   );
 
   return {
