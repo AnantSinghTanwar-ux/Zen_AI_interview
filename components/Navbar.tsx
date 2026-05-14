@@ -83,14 +83,14 @@ const Navbar = () => {
           <div className="hidden md:flex items-center gap-8">
             {showRecruiterOnlyNav ? (
               <Link href="/recruiter" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Recruiter</Link>
-            ) : (
+            ) : isAuthenticated ? (
               <>
                 <Link href="/job-prep" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1 flex items-center gap-1.5"><Target className="w-3.5 h-3.5" />Job Prep</Link>
                 <Link href="/interview" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Practice</Link>
                 <Link href="/feedback" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Feedback</Link>
                 <Link href="/call-data" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Interviews</Link>
               </>
-            )}
+            ) : null}
             {isAuthLoading ? (
               <div className="h-10 w-28 rounded-full border border-white/10 bg-white/5 animate-pulse" />
             ) : isAuthenticated ? (
@@ -125,7 +125,7 @@ const Navbar = () => {
                 >
                   Recruiter
                 </Link>
-              ) : (
+              ) : isAuthenticated ? (
                 <>
                   <Link 
                     href="/job-prep" 
@@ -157,7 +157,7 @@ const Navbar = () => {
                     Interviews
                   </Link>
                 </>
-              )}
+              ) : null}
               <div className="flex justify-center pt-4 mt-2 border-t border-white/10">
                 {isAuthLoading ? (
                   <div className="h-12 w-full rounded-full border border-white/10 bg-white/5 animate-pulse" />
