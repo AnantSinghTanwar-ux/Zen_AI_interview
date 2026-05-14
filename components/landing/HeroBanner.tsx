@@ -8,17 +8,57 @@ import Link from "next/link";
 
 // --- Custom Components based on Aceternity/Magic UI concepts ---
 
-const LampEffect = ({ className = "" }: { className?: string }) => {
+const StarryBackground = ({ className = "" }: { className?: string }) => {
+  const [stars, setStars] = useState<{id: number, top: string, left: string, size: number, delay: number, duration: number}[]>([]);
+
+  useEffect(() => {
+    setStars(Array.from({ length: 30 }).map((_, i) => ({
+      id: i,
+      top: `${Math.random() * 100}%`,
+      left: `${Math.random() * 100}%`,
+      size: Math.random() * 2 + 0.5,
+      delay: Math.random() * 5,
+      duration: Math.random() * 3 + 2,
+    })));
+  }, []);
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 2, ease: "easeOut", delay: 0.2 }}
-      className={`absolute top-0 z-0 pointer-events-none flex justify-center w-full h-[50vh] overflow-visible ${className}`}
-    >
-      <div className="absolute top-0 w-[40rem] h-[20rem] bg-[conic-gradient(from_90deg_at_50%_0%,rgba(218,165,32,0.1)_0deg,transparent_60deg,transparent_300deg,rgba(218,165,32,0.1)_360deg)] [mask-image:linear-gradient(to_bottom,black,transparent)]" />
-      <div className="absolute top-0 w-full h-px bg-gradient-to-r from-transparent via-[#DAA520] to-transparent opacity-50 shadow-[0_0_20px_#DAA520]" />
-    </motion.div>
+    <div className={`absolute inset-0 z-0 pointer-events-none overflow-hidden ${className}`}>
+      {stars.map((star) => (
+        <motion.div
+          key={star.id}
+          className="absolute rounded-full bg-[#DAA520]"
+          style={{
+            top: star.top,
+            left: star.left,
+            width: star.size,
+            height: star.size,
+            boxShadow: `0 0 ${star.size * 2}px #DAA520`,
+          }}
+          animate={{ opacity: [0.1, 0.7, 0.1] }}
+          transition={{
+            duration: star.duration,
+            repeat: Infinity,
+            delay: star.delay,
+            ease: "easeInOut",
+          }}
+        />
+      ))}
+      
+      {/* Subtle Shooting Star */}
+      <motion.div
+        className="absolute top-0 left-[10%] w-[1px] h-32 bg-gradient-to-b from-transparent via-[#FFD89B] to-transparent shadow-[0_0_8px_#DAA520]"
+        style={{ rotate: "-45deg", transformOrigin: "top left" }}
+        initial={{ y: -200, x: -200, opacity: 0 }}
+        animate={{ y: 1200, x: 1200, opacity: [0, 1, 0] }}
+        transition={{
+          duration: 2.5,
+          repeat: Infinity,
+          repeatDelay: 6,
+          ease: "linear",
+        }}
+      />
+    </div>
   );
 };
 
@@ -165,7 +205,7 @@ const HeroBanner = () => {
       id="hero"
       className="relative min-h-[100vh] flex flex-col items-center justify-center pt-28 pb-16 overflow-hidden bg-[#0D0D0D]"
     >
-      <LampEffect />
+      <StarryBackground />
       <BackgroundBeams />
 
       <div className="relative z-10 mx-auto text-center flex flex-col items-center gap-7 px-6 max-w-5xl w-full mt-10">
