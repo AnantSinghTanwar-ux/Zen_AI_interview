@@ -79,7 +79,7 @@ const PricingCalculator = () => {
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Individual pricing
-  const PRICE_PER_INTERVIEW = 400;
+  const PRICE_PER_INTERVIEW = 399;
   const [dsaTier, setDsaTier] = useState<'starter'|'pack'|'pro'>('pack');
 
   // College calculator
@@ -269,7 +269,7 @@ const PricingCalculator = () => {
                 {/* Price */}
                 <div className="flex items-baseline gap-2 mb-8">
                   <span className="text-5xl md:text-6xl font-bold text-foreground">
-                    ₹400
+                    ₹{PRICE_PER_INTERVIEW}
                   </span>
                   <div className="text-muted-foreground text-sm">
                     <div>per session</div>
@@ -307,7 +307,7 @@ const PricingCalculator = () => {
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5 mr-2" />
-                    Buy Now — ₹400
+                    Buy Now — ₹{PRICE_PER_INTERVIEW}
                     <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
