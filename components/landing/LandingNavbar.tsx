@@ -6,6 +6,9 @@ import { Menu, X, Swords, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { checkAuthStatus } from '@/lib/actions/check-auth';
+import LogoutButton from '../LogoutButton';
+
 const navLinks = [
   { label: "Home", href: "#hero" },
   { label: "How It Works", href: "#how-it-works" },
@@ -15,10 +18,25 @@ const navLinks = [
   { label: "Contact", href: "#contact" },
 ];
 
+type AuthState = 'unknown' | 'authenticated' | 'guest';
+
+function getClientAuthHint(): AuthState {
+  if (typeof window === 'undefined') return 'unknown';
+  const cachedState = window.sessionStorage.getItem('zenai-auth-state');
+  if (cachedState === 'authenticated' || cachedState === 'guest') {
+    return cachedState;
+  }
+  return document.cookie.includes('session=') ? 'authenticated' : 'guest';
+}
+
 const LandingNavbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("hero");
+  const [authState, setAuthState] = useState<AuthState>('unknown');
+
+  const isAuthenticated = authState === 'authenticated';
+  const isAuthLoading = authState === 'unknown';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -39,7 +57,35 @@ const LandingNavbar = () => {
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+
+    let isMounted = true;
+    const hintedState = getClientAuthHint();
+    setAuthState(hintedState);
+
+    const checkAuth = async () => {
+      try {
+        const result = await checkAuthStatus();
+        if (!isMounted) return;
+        const nextState: AuthState = result.isAuthenticated ? 'authenticated' : 'guest';
+        setAuthState(nextState);
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.setItem('zenai-auth-state', nextState);
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        setAuthState('guest');
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.setItem('zenai-auth-state', 'guest');
+        }
+      }
+    };
+
+    checkAuth();
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      isMounted = false;
+    };
   }, []);
 
   const scrollToSection = (href: string) => {
@@ -108,20 +154,36 @@ const LandingNavbar = () => {
 
           {/* Desktop CTA */}
           <div className="hidden lg:flex items-center gap-3">
-            <Link href="/sign-in">
-              <Button
-                variant="ghost"
-                className="text-white/70 hover:text-white hover:bg-white/5 rounded-full px-5 text-sm font-medium"
-              >
-                Log In
-              </Button>
-            </Link>
-            <Link href="/sign-up">
-              <Button className="bg-primary hover:bg-primary/90 text-black rounded-full px-6 font-semibold shadow-[0_0_20px_rgba(250,204,21,0.25)] hover:shadow-[0_0_30px_rgba(250,204,21,0.4)] transition-all hover:scale-105 flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
-                Get Started
-              </Button>
-            </Link>
+            {isAuthLoading ? (
+              <div className="h-10 w-28 rounded-full border border-white/10 bg-white/5 animate-pulse" />
+            ) : isAuthenticated ? (
+              <>
+                <Link href="/interview">
+                  <Button className="bg-primary hover:bg-primary/90 text-black rounded-full px-6 font-semibold shadow-[0_0_20px_rgba(250,204,21,0.25)] hover:shadow-[0_0_30px_rgba(250,204,21,0.4)] transition-all hover:scale-105 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    Dashboard
+                  </Button>
+                </Link>
+                <LogoutButton />
+              </>
+            ) : (
+              <>
+                <Link href="/sign-in">
+                  <Button
+                    variant="ghost"
+                    className="text-white/70 hover:text-white hover:bg-white/5 rounded-full px-5 text-sm font-medium"
+                  >
+                    Log In
+                  </Button>
+                </Link>
+                <Link href="/sign-up">
+                  <Button className="bg-primary hover:bg-primary/90 text-black rounded-full px-6 font-semibold shadow-[0_0_20px_rgba(250,204,21,0.25)] hover:shadow-[0_0_30px_rgba(250,204,21,0.4)] transition-all hover:scale-105 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    Get Started
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -156,28 +218,48 @@ const LandingNavbar = () => {
                   </button>
                 ))}
                 <div className="flex flex-col gap-3 pt-4 mt-2 border-t border-white/10">
-                  <Link
-                    href="/sign-in"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="w-full"
-                  >
-                    <Button
-                      variant="ghost"
-                      className="w-full text-white/70 hover:text-white hover:bg-white/5 rounded-full h-12"
-                    >
-                      Log In
-                    </Button>
-                  </Link>
-                  <Link
-                    href="/sign-up"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="w-full"
-                  >
-                    <Button className="w-full bg-primary hover:bg-primary/90 text-black rounded-full h-12 font-semibold shadow-[0_0_15px_rgba(250,204,21,0.3)]">
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Get Started
-                    </Button>
-                  </Link>
+                  {isAuthLoading ? (
+                    <div className="h-12 w-full rounded-full border border-white/10 bg-white/5 animate-pulse" />
+                  ) : isAuthenticated ? (
+                    <>
+                      <Link
+                        href="/interview"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="w-full"
+                      >
+                        <Button className="w-full bg-primary hover:bg-primary/90 text-black rounded-full h-12 font-semibold shadow-[0_0_15px_rgba(250,204,21,0.3)]">
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          Dashboard
+                        </Button>
+                      </Link>
+                      <LogoutButton />
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href="/sign-in"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="w-full"
+                      >
+                        <Button
+                          variant="ghost"
+                          className="w-full text-white/70 hover:text-white hover:bg-white/5 rounded-full h-12"
+                        >
+                          Log In
+                        </Button>
+                      </Link>
+                      <Link
+                        href="/sign-up"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="w-full"
+                      >
+                        <Button className="w-full bg-primary hover:bg-primary/90 text-black rounded-full h-12 font-semibold shadow-[0_0_15px_rgba(250,204,21,0.3)]">
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          Get Started
+                        </Button>
+                      </Link>
+                    </>
+                  )}
                 </div>
               </motion.div>
             )}
