@@ -8,15 +8,17 @@ import Link from "next/link";
 
 // --- Custom Components based on Aceternity/Magic UI concepts ---
 
-const Spotlight = ({ className = "" }: { className?: string }) => {
+const LampEffect = ({ className = "" }: { className?: string }) => {
   return (
     <motion.div
-      initial={{ opacity: 0, transform: "translate(-72%, -62%) scale(0.5)" }}
-      animate={{ opacity: 1, transform: "translate(-50%, -40%) scale(1)" }}
-      transition={{ duration: 2, ease: "easeOut", delay: 0.75 }}
-      className={`absolute z-0 pointer-events-none w-[100vw] h-[100vh] bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.15)_0%,transparent_60%)] ${className}`}
-      style={{ left: "50%", top: "40%" }}
-    />
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 2, ease: "easeOut", delay: 0.2 }}
+      className={`absolute top-0 z-0 pointer-events-none flex justify-center w-full h-[50vh] overflow-visible ${className}`}
+    >
+      <div className="absolute top-0 w-[40rem] h-[20rem] bg-[conic-gradient(from_90deg_at_50%_0%,rgba(218,165,32,0.1)_0deg,transparent_60deg,transparent_300deg,rgba(218,165,32,0.1)_360deg)] [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+      <div className="absolute top-0 w-full h-px bg-gradient-to-r from-transparent via-[#DAA520] to-transparent opacity-50 shadow-[0_0_20px_#DAA520]" />
+    </motion.div>
   );
 };
 
@@ -118,6 +120,46 @@ const NumberTicker = ({ value, duration = 2 }: { value: number, duration?: numbe
   return <span>{count.toLocaleString()}</span>;
 };
 
+const LShapedBorders = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <div className="relative inline-block p-6 md:p-10">
+      {/* Top Left */}
+      <motion.div 
+        animate={{ opacity: [0.3, 1, 0.3], boxShadow: ["0 0 0px #DAA520", "0 0 15px #DAA520", "0 0 0px #DAA520"] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+        className="absolute top-0 left-0 w-8 h-8 md:w-16 md:h-16 border-t-2 border-l-2 border-transparent"
+        style={{ borderImage: "linear-gradient(to bottom right, #FFD89B, #DAA520) 1" }}
+      />
+      {/* Top Right */}
+      <motion.div 
+        animate={{ opacity: [0.3, 1, 0.3], boxShadow: ["0 0 0px #DAA520", "0 0 15px #DAA520", "0 0 0px #DAA520"] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "linear", delay: 1 }}
+        className="absolute top-0 right-0 w-8 h-8 md:w-16 md:h-16 border-t-2 border-r-2 border-transparent"
+        style={{ borderImage: "linear-gradient(to bottom left, #FFD89B, #DAA520) 1" }}
+      />
+      {/* Bottom Left */}
+      <motion.div 
+        animate={{ opacity: [0.3, 1, 0.3], boxShadow: ["0 0 0px #DAA520", "0 0 15px #DAA520", "0 0 0px #DAA520"] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "linear", delay: 2 }}
+        className="absolute bottom-0 left-0 w-8 h-8 md:w-16 md:h-16 border-b-2 border-l-2 border-transparent"
+        style={{ borderImage: "linear-gradient(to top right, #FFD89B, #DAA520) 1" }}
+      />
+      {/* Bottom Right */}
+      <motion.div 
+        animate={{ opacity: [0.3, 1, 0.3], boxShadow: ["0 0 0px #DAA520", "0 0 15px #DAA520", "0 0 0px #DAA520"] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "linear", delay: 0.5 }}
+        className="absolute bottom-0 right-0 w-8 h-8 md:w-16 md:h-16 border-b-2 border-r-2 border-transparent"
+        style={{ borderImage: "linear-gradient(to top left, #FFD89B, #DAA520) 1" }}
+      />
+      
+      {/* Glow effect */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-[#DAA520]/5 to-[#FFD89B]/5 blur-3xl -z-10" />
+
+      {children}
+    </div>
+  );
+};
+
 // --- Main Hero Component ---
 
 const HeroBanner = () => {
@@ -129,48 +171,46 @@ const HeroBanner = () => {
   return (
     <section
       id="hero"
-      className="relative min-h-[100vh] flex flex-col items-center justify-center pt-28 pb-16 overflow-hidden bg-background"
+      className="relative min-h-[100vh] flex flex-col items-center justify-center pt-28 pb-16 overflow-hidden bg-[#0D0D0D]"
     >
-      <Spotlight />
+      <LampEffect />
       <BackgroundBeams />
 
-      <div className="relative z-10 mx-auto text-center flex flex-col items-center gap-7 px-6 max-w-5xl w-full">
+      <div className="relative z-10 mx-auto text-center flex flex-col items-center gap-7 px-6 max-w-5xl w-full mt-10">
         {/* Animated Badge */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-card/80 border border-border backdrop-blur-md shadow-[0_0_15px_rgba(212,175,55,0.1)] hover:bg-card transition-all cursor-default"
+          className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-[#111118]/80 border border-white/10 backdrop-blur-md shadow-[0_0_15px_rgba(218,165,32,0.1)] hover:bg-[#111118] transition-all cursor-default"
         >
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-50" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#DAA520] opacity-50" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#DAA520]" />
           </span>
-          <span className="text-[13px] font-medium text-foreground">
+          <span className="text-[13px] font-medium text-[#F5F5F5]">
             The Gold Standard in AI Recruitment
           </span>
         </motion.div>
 
-        {/* Headline using TextGenerateEffect */}
-        <div className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight text-foreground leading-[1.05] text-center max-w-5xl">
-          <TextGenerateEffect words="Better ways to prepare." />
-          <div className="relative inline-block mt-2">
-            <motion.span
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.8 }}
-              className="text-primary relative z-10"
-            >
-              Smarter ways to get hired.
-            </motion.span>
-            <motion.span
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ duration: 0.8, delay: 1.2, ease: "easeOut" }}
-              className="absolute bottom-1 left-0 right-0 h-3 bg-primary/20 rounded-full origin-left -z-0"
-            />
+        {/* Headline using TextGenerateEffect & LShapedBorders */}
+        <LShapedBorders>
+          <div className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.05] text-center max-w-4xl mx-auto">
+            <div className="text-[#F5F5F5]">
+              <TextGenerateEffect words="Better ways to prepare." />
+            </div>
+            <div className="relative inline-block mt-2">
+              <motion.span
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.8 }}
+                className="text-transparent bg-clip-text bg-gradient-to-r from-[#DAA520] to-[#FFD89B] relative z-10"
+              >
+                Smarter ways to get hired.
+              </motion.span>
+            </div>
           </div>
-        </div>
+        </LShapedBorders>
 
         {/* Subtitle */}
         <motion.p
