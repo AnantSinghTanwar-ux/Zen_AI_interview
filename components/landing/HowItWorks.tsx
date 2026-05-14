@@ -121,12 +121,21 @@ const HowItWorks = () => {
       title: "3. AI Analyzes Responses",
       description: "Hover to reveal hidden insights. Every answer is processed through advanced neural models evaluating clarity, technical accuracy, and cognitive structure.",
       visual: (
-        <div className="w-full h-32 mt-6 relative rounded-xl border border-white/5 bg-background overflow-hidden">
+        <div className="w-full h-32 mt-6 relative rounded-xl border border-white/5 bg-background overflow-hidden group/visual">
+          {/* Scanning Line Animation */}
+          <div className="absolute left-0 top-0 w-full h-1 bg-primary/40 shadow-[0_0_15px_rgba(212,175,55,0.8)] animate-[scan_3s_ease-in-out_infinite]" />
+          
           <SpotlightEffect>
-            <div className="p-4 w-full h-full flex flex-col justify-center opacity-40 hover:opacity-100 transition-opacity">
-               <div className="h-2 w-3/4 bg-primary/20 rounded-full mb-3" />
-               <div className="h-2 w-1/2 bg-primary/20 rounded-full mb-3" />
-               <div className="h-2 w-5/6 bg-primary/20 rounded-full" />
+            <div className="p-4 w-full h-full flex flex-col justify-center opacity-60 group-hover/visual:opacity-100 transition-opacity">
+               <div className="h-2 bg-primary/30 rounded-full mb-3 overflow-hidden">
+                 <div className="h-full bg-primary/60 w-3/4 animate-[shimmer_2s_infinite]" />
+               </div>
+               <div className="h-2 bg-primary/30 rounded-full mb-3 overflow-hidden">
+                 <div className="h-full bg-primary/60 w-1/2 animate-[shimmer_2s_infinite_0.5s]" />
+               </div>
+               <div className="h-2 bg-primary/30 rounded-full overflow-hidden">
+                 <div className="h-full bg-primary/60 w-5/6 animate-[shimmer_2s_infinite_1s]" />
+               </div>
             </div>
           </SpotlightEffect>
         </div>

@@ -350,12 +350,22 @@ const PricingCalculator = () => {
               </p>
 
               {/* Tier Selector */}
-              <div className="flex gap-2 mb-6">
+              <div className="flex gap-2 mb-6 pt-3">
                 {(['starter','pack','pro'] as const).map(t => (
                   <button key={t} onClick={() => setDsaTier(t)}
-                    className={`flex-1 text-xs py-2 px-2 rounded-lg border transition-all font-medium ${
+                    className={`relative flex-1 text-xs py-2 px-1 sm:px-2 rounded-lg border transition-all font-medium ${
                       dsaTier === t ? 'bg-primary/20 border-primary text-primary' : 'bg-transparent border-[#1F1F2B] text-[#9CA3AF] hover:border-[#3A3A4A]'
                     }`}>
+                    {t === 'pack' && (
+                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#1F1F2B] text-[#9CA3AF] text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-white/10 whitespace-nowrap">
+                        Popular
+                      </span>
+                    )}
+                    {t === 'pro' && (
+                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-black text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm whitespace-nowrap animate-pulse">
+                        Best Value
+                      </span>
+                    )}
                     {dsaTiers[t].label}
                   </button>
                 ))}

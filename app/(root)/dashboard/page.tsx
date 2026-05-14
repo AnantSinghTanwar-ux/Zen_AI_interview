@@ -44,6 +44,7 @@ export default function DashboardPage() {
   const [showPaymentPopup, setShowPaymentPopup] = useState(false);
   const [suggestedProduct, setSuggestedProduct] = useState<string>("single_interview");
   const [premiumMessage, setPremiumMessage] = useState<string>("");
+  const [vapiHealth, setVapiHealth] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchCredits = async () => {
@@ -59,7 +60,21 @@ export default function DashboardPage() {
         setLoading(false);
       }
     };
+    
+    const fetchHealth = async () => {
+      try {
+        const res = await fetch("/api/vapi/health");
+        if (res.ok) {
+          const data = await res.json();
+          setVapiHealth(data.healthScore);
+        }
+      } catch (error) {
+        // Silently fail health check
+      }
+    };
+    
     fetchCredits();
+    fetchHealth();
   }, []);
 
   const credits = data?.credits || { interviews: 0, dsaSessions: 0 };
@@ -68,8 +83,12 @@ export default function DashboardPage() {
   const hasDSAAccess = credits.dsaSessions > 0;
 
   const openPaymentPopup = (product: string, message: string) => {
+    let finalMessage = message;
+    if (product === "single_interview" && vapiHealth !== null && vapiHealth <= 1) {
+      finalMessage = "⚠️ WARNING: The Vapi AI service is currently experiencing instability (Health is low). Voice interviews might fail. You can still purchase, but we recommend waiting.";
+    }
     setSuggestedProduct(product);
-    setPremiumMessage(message);
+    setPremiumMessage(finalMessage);
     setShowPaymentPopup(true);
   };
 

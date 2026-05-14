@@ -15,7 +15,7 @@ interface PremiumAccessPopupProps {
 
 const PRODUCT_INFO: Record<
   string,
-  { label: string; price: string; icon: React.ReactNode; description: string }
+  { label: string; price: string; icon: React.ReactNode; description: string; tag?: string }
 > = {
   single_interview: {
     label: "Interview Session",
@@ -23,11 +23,25 @@ const PRODUCT_INFO: Record<
     icon: <Sparkles className="w-5 h-5" />,
     description: "30-min AI-powered voice interview with detailed feedback",
   },
+  dsa_starter: {
+    label: "DSA Starter (1 Session)",
+    price: "₹29",
+    icon: <Zap className="w-5 h-5" />,
+    description: "1 text-based DSA session with AI interviewer",
+  },
   dsa_practice: {
-    label: "DSA Practice Session",
+    label: "DSA Pack (5 Sessions)",
     price: "₹99",
     icon: <Zap className="w-5 h-5" />,
-    description: "30-min text-based DSA practice with AI interviewer",
+    description: "5 text-based DSA sessions (₹19.8/session)",
+    tag: "Popular",
+  },
+  dsa_pro: {
+    label: "DSA Pro (12 Sessions)",
+    price: "₹199",
+    icon: <Zap className="w-5 h-5" />,
+    description: "12 text-based DSA sessions (₹16.6/session)",
+    tag: "Best Value",
   },
 };
 
@@ -99,18 +113,23 @@ export default function PremiumAccessPopup({
         </p>
 
         {/* Product Selector */}
-        <div className="space-y-2 mb-5">
+        <div className="space-y-2 mb-5 max-h-[300px] overflow-y-auto pr-1">
           {Object.entries(PRODUCT_INFO).map(([id, info]) => (
             <button
               key={id}
               type="button"
               onClick={() => setSelectedProduct(id)}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 text-left ${
+              className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 text-left relative ${
                 selectedProduct === id
                   ? "bg-primary/15 border-primary/40 shadow-[0_0_12px_rgba(157,125,249,0.15)]"
                   : "bg-white/[0.04] border-white/10 hover:bg-white/[0.08]"
               }`}
             >
+              {info.tag && (
+                <span className="absolute -top-2.5 right-3 bg-primary text-[#111118] text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                  {info.tag}
+                </span>
+              )}
               <div
                 className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
                   selectedProduct === id
