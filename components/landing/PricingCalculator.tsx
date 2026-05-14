@@ -321,7 +321,7 @@ const PricingCalculator = () => {
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5 mr-2" />
-                    Buy Now — ₹{PRICE_PER_INTERVIEW}
+                    Buy Now — ₹{interviewPriceInfo.price}
                     <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
@@ -536,7 +536,7 @@ const PricingCalculator = () => {
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-[#9CA3AF]">Price per Interview</span>
-                  <span className="text-[#EAEAF0]">₹{PRICE_PER_INTERVIEW}</span>
+                  <span className="text-[#EAEAF0]">₹{BASE_INTERVIEW_PRICE}</span>
                 </div>
                 {discount > 0 && (
                   <motion.div
