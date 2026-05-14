@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { motion, useAnimate, stagger } from "framer-motion";
 import { Sparkles, GraduationCap, ArrowRight, Briefcase, Brain, Target, TrendingUp, Shield, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 
 // --- Custom Components based on Aceternity/Magic UI concepts ---
 
@@ -266,15 +265,14 @@ const HeroBanner = () => {
             Institutional Access
           </Button>
 
-          <Link href="/recruiter-login" className="w-full sm:w-auto">
-            <Button
-              variant="outline"
-              className="btn-secondary w-full sm:w-auto text-base tracking-wide rounded-full px-8 py-6 h-auto group border-[#60A5FA]/50 hover:border-[#60A5FA] bg-[#60A5FA]/5 hover:bg-[#60A5FA]/15 text-[#F5F5F5] hover:text-white transition-all"
-            >
-              <Briefcase className="w-5 h-5 mr-2 text-[#60A5FA] group-hover:text-[#93C5FD] transition-colors" />
-              Recruiter Access
-            </Button>
-          </Link>
+          <Button
+            variant="outline"
+            onClick={() => scrollToSection("recruiters")}
+            className="btn-secondary w-full sm:w-auto text-base tracking-wide rounded-full px-8 py-6 h-auto group border-[#60A5FA]/50 hover:border-[#60A5FA] bg-[#60A5FA]/5 hover:bg-[#60A5FA]/15 text-[#F5F5F5] hover:text-white transition-all"
+          >
+            <Briefcase className="w-5 h-5 mr-2 text-[#60A5FA] group-hover:text-[#93C5FD] transition-colors" />
+            Recruiter Access
+          </Button>
         </motion.div>
 
         {/* Demo Carousel */}
@@ -296,7 +294,7 @@ const HeroBanner = () => {
             <motion.div
               animate={{ x: ["0%", "-50%"] }}
               transition={{
-                duration: 25,
+                duration: 40,
                 repeat: Infinity,
                 ease: "linear",
               }}
@@ -304,11 +302,7 @@ const HeroBanner = () => {
               style={{ paddingRight: '1rem' }}
               onClick={() => scrollToSection("pricing")}
             >
-              {/* First Set */}
-              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
-                <img src="/demo/1.png" className="w-full h-full object-cover" alt="Platform Demo 1" />
-              </div>
+              {/* First Set — images 2–5 */}
               <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
                 <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
                 <img src="/demo/2.jpg" className="w-full h-full object-cover" alt="Platform Demo 2" />
@@ -325,12 +319,8 @@ const HeroBanner = () => {
                 <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
                 <img src="/demo/5.png" className="w-full h-full object-cover" alt="Platform Demo 5" />
               </div>
-              
-              {/* Second Set (Duplicate for seamless scrolling) */}
-              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
-                <img src="/demo/1.png" className="w-full h-full object-cover" alt="Platform Demo 1" />
-              </div>
+
+              {/* Second Set (Duplicate for seamless loop) */}
               <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
                 <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
                 <img src="/demo/2.jpg" className="w-full h-full object-cover" alt="Platform Demo 2" />

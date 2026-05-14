@@ -24,6 +24,7 @@ import {
 } from "firebase/auth";
 import { getClientAuth } from "@/services/firebase/client";
 import { signIn, signUp, verifyCaptcha } from "@/lib/actions/auth.actions";
+import { checkAuthStatus } from "@/lib/actions/check-auth";
 import ReCAPTCHA from "react-google-recaptcha";
 import { useState, useRef } from "react";
 
@@ -128,7 +129,14 @@ function AuthForm({ type }: { type: FormType }) {
         syncTokenToExtension(token);
 
         toast.success("Sign In Success");
-        router.push(getSafeRedirectPath());
+        
+        // Check if user is a recruiter and redirect accordingly
+        const authStatus = await checkAuthStatus();
+        if (authStatus.isRecruiter) {
+          router.push("/recruiter");
+        } else {
+          router.push(getSafeRedirectPath());
+        }
         form.reset();
       } else {
         const { name, email, password } = values;
