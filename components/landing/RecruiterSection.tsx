@@ -125,14 +125,14 @@ const RecruiterSection = () => {
               style={{ paddingRight: '1rem' }}
             >
               {/* Set 1 */}
-              {["/demo/2.jpg", "/demo/3.png", "/demo/4.png", "/demo/5.png"].map((src, i) => (
+              {["/demo/new1.png", "/demo/new2.png", "/demo/new3.png", "/demo/new4.png", "/demo/new5.png"].map((src, i) => (
                 <div key={`a-${i}`} className="relative h-[240px] md:h-[380px] w-[430px] md:w-[650px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
                   <div className="absolute inset-0 bg-black/30 group-hover:bg-transparent transition-colors z-10"></div>
                   <img src={src} className="w-full h-full object-cover" alt={`Recruiter Dashboard ${i + 1}`} />
                 </div>
               ))}
               {/* Set 2 (seamless loop) */}
-              {["/demo/2.jpg", "/demo/3.png", "/demo/4.png", "/demo/5.png"].map((src, i) => (
+              {["/demo/new1.png", "/demo/new2.png", "/demo/new3.png", "/demo/new4.png", "/demo/new5.png"].map((src, i) => (
                 <div key={`b-${i}`} className="relative h-[240px] md:h-[380px] w-[430px] md:w-[650px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
                   <div className="absolute inset-0 bg-black/30 group-hover:bg-transparent transition-colors z-10"></div>
                   <img src={src} className="w-full h-full object-cover" alt={`Recruiter Dashboard ${i + 1}`} />

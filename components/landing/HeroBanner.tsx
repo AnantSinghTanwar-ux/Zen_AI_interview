@@ -302,41 +302,21 @@ const HeroBanner = () => {
               style={{ paddingRight: '1rem' }}
               onClick={() => scrollToSection("pricing")}
             >
-              {/* First Set — images 2–5 */}
-              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
-                <img src="/demo/2.jpg" className="w-full h-full object-cover" alt="Platform Demo 2" />
-              </div>
-              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
-                <img src="/demo/3.png" className="w-full h-full object-cover" alt="Platform Demo 3" />
-              </div>
-              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
-                <img src="/demo/4.png" className="w-full h-full object-cover" alt="Platform Demo 4" />
-              </div>
-              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
-                <img src="/demo/5.png" className="w-full h-full object-cover" alt="Platform Demo 5" />
-              </div>
+              {/* Set 1 */}
+              {["/demo/new1.png", "/demo/new2.png", "/demo/new3.png", "/demo/new4.png", "/demo/new5.png"].map((src, i) => (
+                <div key={`a-${i}`} className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
+                  <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
+                  <img src={src} className="w-full h-full object-cover" alt={`Platform Demo ${i + 1}`} />
+                </div>
+              ))}
 
               {/* Second Set (Duplicate for seamless loop) */}
-              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
-                <img src="/demo/2.jpg" className="w-full h-full object-cover" alt="Platform Demo 2" />
-              </div>
-              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
-                <img src="/demo/3.png" className="w-full h-full object-cover" alt="Platform Demo 3" />
-              </div>
-              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
-                <img src="/demo/4.png" className="w-full h-full object-cover" alt="Platform Demo 4" />
-              </div>
-              <div className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
-                <img src="/demo/5.png" className="w-full h-full object-cover" alt="Platform Demo 5" />
-              </div>
+              {["/demo/new1.png", "/demo/new2.png", "/demo/new3.png", "/demo/new4.png", "/demo/new5.png"].map((src, i) => (
+                <div key={`b-${i}`} className="relative h-[250px] md:h-[400px] w-[450px] md:w-[700px] rounded-xl overflow-hidden shadow-lg border border-white/10 group">
+                  <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors z-10"></div>
+                  <img src={src} className="w-full h-full object-cover" alt={`Platform Demo ${i + 1}`} />
+                </div>
+              ))}
             </motion.div>
           </div>
         </motion.div>
