@@ -102,11 +102,11 @@ const LandingNavbar = () => {
       <motion.nav
         initial={{ y: -100, opacity: 0 }}
         animate={{ 
-          y: isScrolled ? 20 : 0, 
+          y: isScrolled ? 12 : 0, 
           opacity: 1,
-          width: isScrolled ? "90%" : "100%",
+          width: isScrolled ? "94%" : "100%",
           maxWidth: "1280px",
-          borderRadius: isScrolled ? "9999px" : "0px",
+          borderRadius: isScrolled ? "24px" : "0px",
         }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         className={`fixed z-50 left-1/2 -translate-x-1/2 transition-colors duration-500 ${

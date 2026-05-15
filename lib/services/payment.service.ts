@@ -166,6 +166,31 @@ export async function createRazorpayOrder(
   return response.json();
 }
 
+export async function fetchRazorpayOrder(orderId: string): Promise<any> {
+  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+  if (!keyId || !keySecret) {
+    throw new Error("Razorpay credentials not configured");
+  }
+
+  const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+
+  const response = await fetch(`https://api.razorpay.com/v1/orders/${orderId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Razorpay API error: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 // ─── Signature Verification ─────────────────────────────────────────────────
 export function verifyRazorpaySignature(params: {
   orderId: string;
@@ -218,6 +243,7 @@ export async function grantCredits(params: {
   paymentId: string;
   orderId: string;
   productId: string;
+  hasVisibility?: boolean;
 }): Promise<UserCredits> {
   const userRef = db.collection("users").doc(params.userId);
 
@@ -245,16 +271,23 @@ export async function grantCredits(params: {
       productId: params.productId,
       creditType: params.creditType,
       creditsGranted: params.amount,
+      hasVisibility: params.hasVisibility || false,
       timestamp: now,
       status: "verified",
     };
 
+    const updateData: any = {
+      credits: currentCredits,
+      updatedAt: now,
+    };
+
+    if (params.hasVisibility) {
+      updateData.recruiterVisible = true;
+    }
+
     transaction.set(
       userRef,
-      {
-        credits: currentCredits,
-        updatedAt: now,
-      },
+      updateData,
       { merge: true }
     );
 

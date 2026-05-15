@@ -61,7 +61,7 @@ export function useRazorpayCheckout({
   const [isProcessing, setIsProcessing] = useState(false);
 
   const initiatePayment = useCallback(
-    async (productId: string, options?: { amountInPaise?: number }) => {
+    async (productId: string, options?: { amountInPaise?: number, recruiterVisibility?: boolean }) => {
       if (isProcessing) return;
       setIsProcessing(true);
 
@@ -75,6 +75,7 @@ export function useRazorpayCheckout({
         // 2. Create order from backend
         const body: any = { productId };
         if (options?.amountInPaise) body.amountInPaise = options.amountInPaise;
+        if (options?.recruiterVisibility) body.recruiterVisibility = options.recruiterVisibility;
 
         const orderRes = await fetch("/api/razorpay/create-order", {
           method: "POST",

@@ -85,6 +85,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Fetch order to check notes for hasVisibility
+    let hasVisibility = false;
+    try {
+      const { fetchRazorpayOrder } = await import('@/lib/services/payment.service');
+      const rzpOrder = await fetchRazorpayOrder(razorpay_order_id);
+      if (rzpOrder?.notes?.hasVisibility === "true") {
+        hasVisibility = true;
+      }
+    } catch (e) {
+      console.error("Failed to fetch Razorpay order for visibility check:", e);
+    }
+
     // 6. Grant credits to user
     const updatedCredits = await grantCredits({
       userId: user.id,
@@ -93,6 +105,7 @@ export async function POST(request: NextRequest) {
       paymentId: razorpay_payment_id,
       orderId: razorpay_order_id,
       productId: product.id,
+      hasVisibility,
     });
 
     console.log(

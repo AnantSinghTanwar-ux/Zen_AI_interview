@@ -294,7 +294,7 @@ const HeroBanner = () => {
             <motion.div
               animate={{ x: ["0%", "-50%"] }}
               transition={{
-                duration: 40,
+                duration: 60,
                 repeat: Infinity,
                 ease: "linear",
               }}

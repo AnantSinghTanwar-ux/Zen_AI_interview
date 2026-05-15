@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
 
     // 3. Parse & validate request
     const body = await request.json();
-    const { productId } = body;
+    const { productId, recruiterVisibility } = body;
 
     if (!productId || typeof productId !== "string") {
       return NextResponse.json(
@@ -43,6 +43,13 @@ export async function POST(request: NextRequest) {
 
     // 4. Server-side amount enforcement
     let amountInPaise = product.priceInPaise;
+    let hasVisibility = false;
+
+    // Apply recruiter visibility add-on
+    if (recruiterVisibility && (product.id === "single_interview" || product.id === "limited_offer_interview" || product.id === "interview_pack_5")) {
+      amountInPaise += 3000;
+      hasVisibility = true;
+    }
     
     // For bulk college plans, trust the client's calculated amount for now
     if (product.id === "bulk_college_plan") {
@@ -67,6 +74,7 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         productId: product.id,
         productName: product.name,
+        hasVisibility: hasVisibility ? "true" : "false",
       },
     });
 
