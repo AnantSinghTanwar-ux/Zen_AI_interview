@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import type { ExternalApplication, ApplicationScore, LeaderboardEntry } from "@/types/external-application";
 
-type Tab = "overview" | "applications" | "leaderboard" | "hiring";
+type Tab = "overview" | "applications" | "leaderboard" | "hiring" | "talent-pool";
 
 const TEMP_RESCORE_BUTTON_ENABLED = true;
 
@@ -37,6 +37,12 @@ export default function RecruiterDashboard() {
   const [hiringSourceFilter, setHiringSourceFilter] = useState("");
   const [exportingSheet, setExportingSheet] = useState(false);
   const [rescoringAll, setRescoringAll] = useState(false);
+
+  // Talent Pool state
+  const [talentPool, setTalentPool] = useState<any[]>([]);
+  const [talentRoles, setTalentRoles] = useState<string[]>([]);
+  const [talentRoleFilter, setTalentRoleFilter] = useState("");
+  const [talentLoading, setTalentLoading] = useState(false);
 
 
 
@@ -87,12 +93,29 @@ export default function RecruiterDashboard() {
     } catch { /* ignore */ }
   }, [roleFilter, companyFilter, sourceFilter]);
 
+  const fetchTalentPool = useCallback(async () => {
+    setTalentLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (talentRoleFilter) params.set("role", talentRoleFilter);
+
+      const res = await fetch(`/api/v2/recruiter/talent-pool?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTalentPool(data.candidates || []);
+        setTalentRoles(data.roles || []);
+      }
+    } catch { /* ignore */ }
+    setTalentLoading(false);
+  }, [talentRoleFilter]);
+
   useEffect(() => {
     Promise.all([fetchStats(), fetchApplications()]).finally(() => setLoading(false));
   }, [fetchStats, fetchApplications]);
 
   useEffect(() => { if (tab === "applications") fetchApplications(); }, [tab, fetchApplications]);
   useEffect(() => { if (tab === "leaderboard") fetchLeaderboard(); }, [tab, fetchLeaderboard]);
+  useEffect(() => { if (tab === "talent-pool") fetchTalentPool(); }, [tab, fetchTalentPool]);
 
   // Auto-refresh every 8s if any application is still being scored
   useEffect(() => {
@@ -333,6 +356,7 @@ export default function RecruiterDashboard() {
         { key: "overview", label: "Dashboard", icon: BarChart3 },
         { key: "applications", label: "Apps", icon: Users },
         { key: "leaderboard", label: "Rankings", icon: Trophy },
+        { key: "talent-pool", label: "Talent", icon: Globe },
         { key: "hiring", label: "Hire", icon: UserCheck },
       ] as const).map(({ key, label, icon: Icon }) => (
         <button
@@ -357,6 +381,7 @@ export default function RecruiterDashboard() {
           { key: "overview", label: "Dashboard", icon: BarChart3 },
           { key: "applications", label: "Applications", icon: Users },
           { key: "leaderboard", label: "Leaderboard", icon: Trophy },
+          { key: "talent-pool", label: "Talent Pool", icon: Globe },
           { key: "hiring", label: "Hire Candidates", icon: UserCheck },
         ] as const).map(({ key, label, icon: Icon }) => (
           <button
@@ -807,6 +832,125 @@ export default function RecruiterDashboard() {
         </div>
       )}
     </div>
+
+      {/* ========== TALENT POOL TAB ========== */}
+      {tab === "talent-pool" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/15 flex items-center justify-center">
+                <Globe className="w-5 h-5 text-purple-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-foreground">Open Talent Pool</h2>
+                <p className="text-muted-foreground text-xs">Candidates actively looking for opportunities</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <select 
+                value={talentRoleFilter} 
+                onChange={(e) => setTalentRoleFilter(e.target.value)} 
+                className="bg-white/[0.04] border border-white/10 rounded-lg px-4 py-2 text-sm text-foreground appearance-none min-w-[150px]"
+              >
+                <option value="">All Roles</option>
+                {talentRoles.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-3 mt-6">
+            <div className="hidden md:flex items-center px-4 py-2 text-xs font-semibold text-[#888] uppercase tracking-widest pl-4">
+               <div className="w-16">Rank</div>
+               <div className="flex-1">Candidate Profile</div>
+               <div className="w-48">Role details</div>
+               <div className="w-24 text-center">Score</div>
+               <div className="w-36 text-right pr-4">Recommendation</div>
+            </div>
+            
+            {talentLoading && (
+              <div className="flex items-center justify-center py-16 text-[#888] bg-white/[0.01] rounded-3xl border border-white/5">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              </div>
+            )}
+            
+            {!talentLoading && talentPool.length === 0 && (
+              <div className="text-center py-16 text-[#888] bg-white/[0.01] rounded-3xl border border-white/5">
+                <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p className="text-base mb-2">No candidates found in the talent pool.</p>
+                <p className="text-xs text-[#666]">Candidates who opt-in for visibility will appear here.</p>
+              </div>
+            )}
+
+            {!talentLoading && talentPool.map((entry, idx) => (
+               <div key={entry.id} className="group flex flex-col md:flex-row md:items-center gap-4 bg-[#0A0A0A]/40 hover:bg-[#FAFAFA]/[0.03] border border-white/[0.03] hover:border-purple-500/30 p-4 md:p-5 rounded-2xl transition-all duration-300 hover:shadow-[0_0_20px_rgba(168,85,247,0.1)] hover:-translate-y-1">
+                  <div className="md:w-16 flex justify-center md:justify-start pl-2">
+                     <span className={`text-3xl font-black ${idx <= 2 ? "text-purple-400 drop-shadow-[0_0_12px_rgba(168,85,247,0.4)]" : "text-white/20"}`}>#{idx + 1}</span>
+                  </div>
+
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                       <span className={`text-lg font-bold capitalize ${idx <= 2 ? "text-white" : "text-white/50"}`}>{entry.userName.charAt(0)}</span>
+                    </div>
+                    <div>
+                      <p className="text-foreground font-semibold text-lg">{entry.userName}</p>
+                      <p className="text-xs text-[#888]">{entry.userEmail}</p>
+                    </div>
+                  </div>
+
+                  <div className="md:w-48">
+                    <p className="text-foreground text-sm font-medium">{entry.role}</p>
+                    <p className="text-xs text-[#888] capitalize">{entry.interviewType} Interview</p>
+                  </div>
+
+                  <div className="md:w-24 flex justify-center">
+                    <div className="relative w-12 h-12 flex items-center justify-center flex-shrink-0">
+                      <svg className="absolute w-12 h-12 transform -rotate-90">
+                        <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2.5" fill="transparent" className="text-white/5" />
+                        <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2.5" fill="transparent" className={`${scoreColor(entry.overallScore).replace('text-', 'text-')} drop-shadow-[0_0_8px_rgba(163,230,53,0.5)]`} strokeDasharray="125" strokeDashoffset={125 - (125 * Math.min(entry.overallScore, 100) / 100)} strokeLinecap="round" />
+                      </svg>
+                      <span className={`relative z-10 text-xs font-bold ${scoreColor(entry.overallScore)}`}>{Math.round(entry.overallScore)}</span>
+                    </div>
+                  </div>
+
+                  <div className="md:w-36 flex flex-col items-end gap-2">
+                     <span className={`text-[10px] font-bold px-4 py-1.5 rounded-full border uppercase tracking-wider ${recBadgeColor(entry.recommendation)}`}>
+                       {entry.recommendation.replace("_", " ")}
+                     </span>
+                     <button 
+                       onClick={() => {
+                         // Adapting talent pool entry to detailApp structure for viewing
+                         setDetailApp({
+                           id: entry.id,
+                           candidateName: entry.userName,
+                           candidateEmail: entry.userEmail,
+                           roleTitle: entry.role,
+                           roleCategory: entry.role,
+                           companyName: "Talent Pool",
+                           sourcePlatform: "ZenAI",
+                           status: "available",
+                           score: {
+                             overallScore: entry.overallScore,
+                             technicalScore: entry.technicalScore,
+                             communicationScore: entry.communicationScore,
+                             problemSolvingScore: entry.problemSolvingScore,
+                             recommendation: entry.recommendation,
+                             feedbackSummary: entry.feedbackSummary,
+                             strengths: entry.strengths,
+                             weaknesses: entry.weaknesses
+                           }
+                         } as any);
+                       }}
+                       className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+                     >
+                       <Eye className="w-4 h-4" />
+                     </button>
+                  </div>
+               </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
 
       {/* ========== DETAIL PANEL ========== */}

@@ -69,6 +69,15 @@ export const PRODUCTS = {
     credits: 0, // Dynamic
     timeLimitMinutes: 30,
   },
+  RECRUITER_VISIBILITY: {
+    id: "recruiter_visibility",
+    name: "Recruiter Visibility Add-on",
+    description: "Get your interview performance visible to recruiters for hiring",
+    priceInPaise: 3000, // ₹30
+    creditType: "interviews" as const,
+    credits: 0, // No interview credits — this is a visibility add-on
+    timeLimitMinutes: 0,
+  },
 } as const;
 
 export type ProductId = keyof typeof PRODUCTS;

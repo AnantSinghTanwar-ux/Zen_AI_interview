@@ -82,6 +82,8 @@ const PricingCalculator = () => {
   const BASE_INTERVIEW_PRICE = 399;
   const [interviewPriceInfo, setInterviewPriceInfo] = useState<{ price: number, productId: string, remaining: number }>({ price: 399, productId: 'single_interview', remaining: 0 });
   const [dsaTier, setDsaTier] = useState<'starter'|'pack'|'pro'>('pack');
+  const [recruiterVisibility, setRecruiterVisibility] = useState(false);
+  const RECRUITER_VISIBILITY_PRICE = 30;
 
   useEffect(() => {
     fetch('/api/premium/interview-price')
@@ -159,8 +161,25 @@ const PricingCalculator = () => {
       },
     });
 
+  const { initiatePayment: initiateVisibilityPayment, isProcessing: isProcessingVisibility } =
+    useRazorpayCheckout({
+      onSuccess: () => {
+        setPaymentError(null);
+        setPaymentSuccess(`Recruiter visibility activated! Your profile is now discoverable.`);
+      },
+      onError: (error) => {
+        setPaymentSuccess(null);
+        setPaymentError(error);
+        setTimeout(() => setPaymentError(null), 5000);
+      },
+    });
+
   const handleBuyInterview = () => {
     initiateInterviewPayment(interviewPriceInfo.productId);
+  };
+
+  const handleBuyVisibility = () => {
+    initiateVisibilityPayment('recruiter_visibility');
   };
 
   const handleBuyDSA = () => {
@@ -313,6 +332,29 @@ const PricingCalculator = () => {
                 ))}
               </ul>
 
+              {/* Recruiter Visibility Add-on */}
+              <div
+                onClick={() => setRecruiterVisibility(!recruiterVisibility)}
+                className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all duration-300 mb-6 ${
+                  recruiterVisibility
+                    ? 'border-[#A855F7]/50 bg-[#A855F7]/10'
+                    : 'border-white/10 bg-white/[0.02] hover:border-white/20'
+                }`}
+              >
+                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                  recruiterVisibility
+                    ? 'border-[#A855F7] bg-[#A855F7]'
+                    : 'border-white/30'
+                }`}>
+                  {recruiterVisibility && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-[#EAEAF0]">Get visible to recruiters</p>
+                  <p className="text-xs text-[#9CA3AF]">Your scores appear in the recruiter talent pool</p>
+                </div>
+                <span className="text-sm font-bold text-[#A855F7]">+₹{RECRUITER_VISIBILITY_PRICE}</span>
+              </div>
+
               <Button
                 id="pricing-buy-interview"
                 onClick={handleBuyInterview}
@@ -324,7 +366,7 @@ const PricingCalculator = () => {
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5 mr-2" />
-                    Buy Now — ₹{interviewPriceInfo.price}
+                    Buy Now — ₹{recruiterVisibility ? interviewPriceInfo.price + RECRUITER_VISIBILITY_PRICE : interviewPriceInfo.price}
                     <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
