@@ -102,7 +102,7 @@ const HowItWorks = () => {
       colSpan: "md:col-span-2",
       icon: <Mic className="w-8 h-8 group-hover:text-primary transition-colors" />,
       title: "2. Take the AI Interview",
-      description: "Engage in a realistic voice-powered mock interview. Our agent adapts follow-ups in real-time, simulating the pressure of a real technical or behavioral screen.",
+      description: "Engage in a realistic voice-powered mock interview. Upload your resume to get a role-fit score and questions tuned to your strongest (and weakest) signals.",
       visual: (
         <div className="w-full h-32 mt-6 relative flex items-center justify-between px-8 rounded-xl bg-background/50 border border-white/5 overflow-hidden">
           <ConnectionBeam />

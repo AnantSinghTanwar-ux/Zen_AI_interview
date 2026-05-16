@@ -2,7 +2,7 @@
 
 import React, { useRef } from "react";
 import { motion, useInView } from "framer-motion";
-import { Mic, Code, Brain, BarChart3, Clock, Shield, MessageSquare, Lightbulb } from "lucide-react";
+import { Mic, Code, Brain, BarChart3, Clock, Shield, MessageSquare, Lightbulb, FileText } from "lucide-react";
 
 const features = [
   {
@@ -30,9 +30,15 @@ const features = [
     color: "#3B82F6",
   },
   {
+    icon: <FileText className="w-6 h-6" />,
+    title: "Resume Fit Insights",
+    description: "Upload your resume for a role-fit score, gap analysis, and interview questions tailored to what matters most for that role.",
+    color: "#A855F7",
+  },
+  {
     icon: <Clock className="w-6 h-6" />,
-    title: "30-Minute Focused Sessions",
-    description: "No endless prep marathons. Each session is a focused 30-minute mock that mirrors real interview timing at top companies.",
+    title: "Flexible Session Lengths",
+    description: "Choose 10 or 30-minute sessions so you can practice fast or go deep — both mirror real interview timing.",
     color: "#F97316",
   },
   {

@@ -53,7 +53,7 @@ const StarryBackground = ({ className = "" }: { className?: string }) => {
         transition={{
           duration: 2.5,
           repeat: Infinity,
-          repeatDelay: 6,
+          repeatDelay: 4.5,
           ease: "linear",
         }}
       />
