@@ -146,8 +146,11 @@ export default function DSAPracticePage() {
   const [messagesUsed, setMessagesUsed] = useState(0);
   const [messageLimit, setMessageLimit] = useState(60);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-
-  const SESSION_TIME_LIMIT = 30 * 60;
+  const [sessionTimeLimitSeconds, setSessionTimeLimitSeconds] = useState(30 * 60);
+  const [liveReviewEnabled, setLiveReviewEnabled] = useState(false);
+  const lastReviewAtRef = useRef(0);
+  const lastReviewedCodeRef = useRef("");
+  const reviewTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [selectedCompany, setSelectedCompany] = useState<PracticeCompanyKey>("microsoft");
   const [selectedDifficulty, setSelectedDifficulty] = useState<(typeof difficultyOptions)[number]>("Any");
@@ -203,7 +206,7 @@ export default function DSAPracticePage() {
         setTimeElapsed((prev) => {
           const next = prev + 1;
           // Enforce 30-minute hard limit
-          if (next >= SESSION_TIME_LIMIT) {
+          if (next >= sessionTimeLimitSeconds) {
             setTimerActive(false);
             setSessionExpired(true);
           }
@@ -218,6 +221,14 @@ export default function DSAPracticePage() {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [timerActive]);
+
+  useEffect(() => {
+    return () => {
+      if (reviewTimerRef.current) {
+        clearTimeout(reviewTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!availableTopics.includes(selectedTopic)) {
@@ -264,6 +275,10 @@ export default function DSAPracticePage() {
     },
     onError: (error) => {
       console.error("Streaming error:", error);
+      if (/message limit/i.test(error)) {
+        setSessionExpired(true);
+        setTimerActive(false);
+      }
       setMessages((prev) => [
         ...prev,
         {
@@ -276,7 +291,7 @@ export default function DSAPracticePage() {
     },
   });
 
-  const sendMessage = async (message: string) => {
+  const sendMessage = async (message: string, usageKeyOverride?: string) => {
     if (!message.trim() || isStreaming) return;
 
     setMessages((prev) => [
@@ -290,8 +305,42 @@ export default function DSAPracticePage() {
     setCurrentInput("");
 
     // Pass code content so the AI can review both chat + code
-    await sendStreamingMessage(message, chatId || undefined, interviewStage, codeContent || undefined);
+    await sendStreamingMessage(
+      message,
+      chatId || undefined,
+      interviewStage,
+      codeContent || undefined,
+      usageKeyOverride || premiumUsageKeyRef.current
+    );
   };
+
+  const requestCodeReview = async () => {
+    if (!codeContent.trim() || isStreaming || sessionExpired) return;
+    await sendMessage(
+      "Review my current solution. Point out bugs, edge cases, and suggest improvements with complexity analysis."
+    );
+  };
+
+  useEffect(() => {
+    if (!liveReviewEnabled || sessionExpired || isStreaming || !timerActive) return;
+    if (!codeContent.trim()) return;
+    if (codeContent === lastReviewedCodeRef.current) return;
+
+    if (reviewTimerRef.current) {
+      clearTimeout(reviewTimerRef.current);
+    }
+
+    reviewTimerRef.current = setTimeout(async () => {
+      const now = Date.now();
+      if (now - lastReviewAtRef.current < 45_000) return;
+      lastReviewAtRef.current = now;
+      lastReviewedCodeRef.current = codeContent;
+
+      await sendMessage(
+        "Give quick, concise feedback on my latest code changes. Focus on correctness and complexity."
+      );
+    }, 2500);
+  }, [codeContent, liveReviewEnabled, sessionExpired, isStreaming, timerActive, sendMessage]);
 
   // Show confirmation dialog if user already used a session
   const handleStartClick = () => {
@@ -340,6 +389,14 @@ export default function DSAPracticePage() {
         throw new Error("Failed to validate premium access");
       }
 
+      const sessionKey = typeof premiumPayload?.usageKey === "string"
+        ? premiumPayload.usageKey
+        : `dsa-${Date.now()}`;
+      premiumUsageKeyRef.current = sessionKey;
+      setMessageLimit(Number(premiumPayload?.messageLimit ?? 60));
+      const limitMinutes = Number(premiumPayload?.timeLimitMinutes ?? 30);
+      setSessionTimeLimitSeconds(limitMinutes * 60);
+
       // Reset session state
       const picked = pickQuestion();
       setCurrentQuestion({
@@ -365,7 +422,7 @@ export default function DSAPracticePage() {
         `Then ask me what approach I'd try first. Guide me with the Socratic method.`,
       ].join(" ");
 
-      await sendMessage(kickoff);
+      await sendMessage(kickoff, sessionKey);
     } catch (error) {
       console.error("Failed to start DSA interview:", error);
     }
@@ -601,7 +658,7 @@ export default function DSAPracticePage() {
             <div className="border-t border-white/10 bg-background/70 p-4 shrink-0">
               {sessionExpired && (
                 <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-300 text-center">
-                  ⏱ Session time limit reached (30 min). Purchase another session to continue.
+                  ⏱ Session time limit reached ({Math.round(sessionTimeLimitSeconds / 60)} min). Purchase another session to continue.
                 </div>
               )}
               <div className="flex gap-3">
@@ -639,6 +696,29 @@ export default function DSAPracticePage() {
             <div className="w-[500px] xl:w-[600px] flex flex-col gap-4 min-h-0 hidden lg:flex">
               {/* Code Editor */}
               <div className="flex-1 min-h-0">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs text-muted-foreground">Ask the AI to review your code in real time.</p>
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={liveReviewEnabled}
+                        onChange={(e) => setLiveReviewEnabled(e.target.checked)}
+                        className="h-3.5 w-3.5 rounded border border-white/20 bg-transparent"
+                      />
+                      Live Review
+                    </label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={requestCodeReview}
+                      disabled={isStreaming || sessionExpired || !codeContent.trim()}
+                      className="text-xs"
+                    >
+                      Analyze Code
+                    </Button>
+                  </div>
+                </div>
                 <CodeEditor value={codeContent} onChange={setCodeContent} />
               </div>
 

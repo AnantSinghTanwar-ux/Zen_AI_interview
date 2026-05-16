@@ -110,7 +110,8 @@
     type,
     jobContextJson,
     practiceContextJson,
-  }: AgentProps & { jobContextJson?: string; practiceContextJson?: string }) {
+    interviewPlanId,
+  }: AgentProps & { jobContextJson?: string; practiceContextJson?: string; interviewPlanId?: string }) {
     const router = useRouter();
     const vapi = useMemo(() => getVapiInstance(type as any), [type]);
     const [isSpeaking, setIsSpeaking] = useState(false);
@@ -129,11 +130,16 @@
     const [resumeText, setResumeText] = useState("");
     const [showPremiumPopup, setShowPremiumPopup] = useState(false);
     const [premiumMessage, setPremiumMessage] = useState<string | undefined>(undefined);
+    const [sessionLimitMinutes, setSessionLimitMinutes] = useState<number | null>(null);
+    const [sessionExpiresAtMs, setSessionExpiresAtMs] = useState<number | null>(null);
+    const [sessionExpired, setSessionExpired] = useState(false);
+    const activeSessionIdRef = useRef<string | null>(null);
+    const sessionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const currentCallIdRef = useRef<string | null>(null);
     const isStartingCallRef = useRef(false);
     const userIdRef = useRef<string | undefined | null>(userId);
     const saveCallLogRef = useRef<
-      ((vapiCallId: string, jobContext?: string) => Promise<any>) | null
+      ((vapiCallId: string, jobContext?: string, sessionId?: string) => Promise<any>) | null
     >(null);
     const addEmotionReadingRef = useRef<
       ((text: string, timestamp?: number) => Promise<void>) | null
@@ -232,9 +238,34 @@
       practiceContextJsonRef.current = practiceContextJson;
     }, [practiceContextJson]);
 
+    useEffect(() => {
+      return () => {
+        if (sessionTimeoutRef.current) {
+          clearTimeout(sessionTimeoutRef.current);
+        }
+      };
+    }, []);
+
     const setTrackedCallId = (callId: string | null) => {
       currentCallIdRef.current = callId;
       setCurrentCallId(callId);
+    };
+
+    const scheduleSessionTimeout = (expiresAtMs: number) => {
+      if (sessionTimeoutRef.current) {
+        clearTimeout(sessionTimeoutRef.current);
+      }
+
+      const msUntilExpiry = Math.max(0, expiresAtMs - Date.now());
+      sessionTimeoutRef.current = setTimeout(async () => {
+        setSessionExpired(true);
+        toast.error("Session time limit reached. The interview has been locked.");
+        try {
+          await vapi.stop();
+        } catch (error) {
+          console.warn("Failed to stop Vapi session after timeout:", error);
+        }
+      }, msUntilExpiry);
     };
 
     const roleContextText = useMemo(() => {
@@ -573,6 +604,13 @@
         setShowChat(false);
         setChatMessages([]);
         setFullAssistantMessage("");
+        setSessionExpiresAtMs(null);
+        setSessionLimitMinutes(null);
+        setSessionExpired(false);
+        if (sessionTimeoutRef.current) {
+          clearTimeout(sessionTimeoutRef.current);
+          sessionTimeoutRef.current = null;
+        }
         isJobContextInjectedRef.current = false;
         isPracticeContextInjectedRef.current = false;
 
@@ -617,7 +655,8 @@
               try {
                 await saveCallLogRef.current(
                   callId,
-                  jobContextJsonRef.current || undefined
+                  jobContextJsonRef.current || undefined,
+                  activeSessionIdRef.current || undefined
                 );
                 saveError = null;
                 break;
@@ -641,10 +680,12 @@
           } finally {
             setIsSavingCall(false);
             setTrackedCallId(null); // Clear the call ID after processing
+            activeSessionIdRef.current = null;
             isStartingCallRef.current = false;
           }
         } else {
           setTrackedCallId(null); // Clear even if not saving
+          activeSessionIdRef.current = null;
           isStartingCallRef.current = false;
         }
       };
@@ -812,6 +853,7 @@
           body: JSON.stringify({
             feature: "interview",
             quotaKind: "interview",
+            planId: interviewPlanId || "interview_30",
           }),
         });
 
@@ -835,6 +877,18 @@
         if (!premiumCheck.ok) {
           throw new Error("Failed to validate access. Please try again.");
         }
+
+        if (premiumPayload?.usageKey) {
+          activeSessionIdRef.current = premiumPayload.usageKey;
+        }
+        if (typeof premiumPayload?.timeLimitMinutes === "number") {
+          setSessionLimitMinutes(premiumPayload.timeLimitMinutes);
+        }
+        if (typeof premiumPayload?.expiresAtMs === "number") {
+          setSessionExpiresAtMs(premiumPayload.expiresAtMs);
+          scheduleSessionTimeout(premiumPayload.expiresAtMs);
+        }
+        setSessionExpired(false);
 
         const callData = await vapi.start(ASSISTANT, {
           variableValues: {

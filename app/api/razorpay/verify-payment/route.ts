@@ -6,7 +6,7 @@ import {
   getProductById,
   grantCredits,
   isPaymentAlreadyProcessed,
-  incrementLimitedOfferCount,
+  incrementUserPromoUsage,
 } from "@/lib/services/payment.service";
 
 export async function POST(request: NextRequest) {
@@ -85,13 +85,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch order to check notes for hasVisibility
+    // Fetch order to check notes for visibility + promo flags
     let hasVisibility = false;
+    let promoApplied = false;
+    let promoKind: "interview" | "dsa" | null = null;
     try {
       const { fetchRazorpayOrder } = await import('@/lib/services/payment.service');
       const rzpOrder = await fetchRazorpayOrder(razorpay_order_id);
       if (rzpOrder?.notes?.hasVisibility === "true") {
-        hasVisibility = true;
+        const visibilityAllowed =
+          product.id === "interview_30" ||
+          product.id === "single_interview" ||
+          product.id === "limited_offer_interview" ||
+          product.id === "interview_pack_5";
+        hasVisibility = visibilityAllowed;
+      }
+      if (rzpOrder?.notes?.promoApplied === "true") {
+        promoApplied = true;
+      }
+      const promoKindNote = String(rzpOrder?.notes?.promoKind || "").toLowerCase();
+      if (promoKindNote === "interview" || promoKindNote === "dsa") {
+        promoKind = promoKindNote as "interview" | "dsa";
       }
     } catch (e) {
       console.error("Failed to fetch Razorpay order for visibility check:", e);
@@ -112,10 +126,10 @@ export async function POST(request: NextRequest) {
       `Payment verified: ${razorpay_payment_id} → granted ${product.credits} ${product.creditType} to ${user.id}`
     );
 
-    // If it was a limited offer interview, increment the global counter
-    if (product.id === "limited_offer_interview") {
-      await incrementLimitedOfferCount().catch((err) =>
-        console.error("Failed to increment limited offer count:", err)
+    // Increment per-user promo usage if a promo was applied
+    if (promoApplied && promoKind) {
+      await incrementUserPromoUsage(user.id, promoKind).catch((err) =>
+        console.error("Failed to increment promo usage:", err)
       );
     }
 

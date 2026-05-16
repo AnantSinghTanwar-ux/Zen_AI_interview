@@ -4,6 +4,9 @@ import { checkRateLimit } from "@/lib/services/rate-limit.service";
 import {
   createRazorpayOrder,
   getProductById,
+  getPromoKind,
+  getPromoPrice,
+  getPromoRemaining,
 } from "@/lib/services/payment.service";
 
 export async function POST(request: NextRequest) {
@@ -44,9 +47,34 @@ export async function POST(request: NextRequest) {
     // 4. Server-side amount enforcement
     let amountInPaise = product.priceInPaise;
     let hasVisibility = false;
+    let promoApplied = false;
+    let promoKind: string | null = null;
+
+    // Apply per-user promo pricing (first 10 purchases per category)
+    const resolvedPromoKind = getPromoKind(product.id);
+    if (resolvedPromoKind) {
+      promoKind = resolvedPromoKind;
+      const remaining = await getPromoRemaining(user.id, resolvedPromoKind);
+      const promoPrice = getPromoPrice(product.id);
+      if (remaining > 0 && promoPrice) {
+        amountInPaise = promoPrice;
+        promoApplied = true;
+      }
+    }
 
     // Apply recruiter visibility add-on
-    if (recruiterVisibility && (product.id === "single_interview" || product.id === "limited_offer_interview" || product.id === "interview_pack_5")) {
+    if (recruiterVisibility) {
+      const visibilityAllowed =
+        product.id === "interview_30" ||
+        product.id === "single_interview" ||
+        product.id === "limited_offer_interview" ||
+        product.id === "interview_pack_5";
+      if (!visibilityAllowed) {
+        return NextResponse.json(
+          { error: "Recruiter visibility is only available with 30-minute interviews." },
+          { status: 400 }
+        );
+      }
       amountInPaise += 3000;
       hasVisibility = true;
     }
@@ -75,6 +103,9 @@ export async function POST(request: NextRequest) {
         productId: product.id,
         productName: product.name,
         hasVisibility: hasVisibility ? "true" : "false",
+        promoApplied: promoApplied ? "true" : "false",
+        promoKind: promoKind || "",
+        planMinutes: String(product.timeLimitMinutes ?? 0),
       },
     });
 

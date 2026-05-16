@@ -32,13 +32,15 @@ export function useStreamingChat({
       message: string,
       previousChatId?: string,
       stage?: string,
-      codeContent?: string
+      codeContent?: string,
+      premiumUsageKeyOverride?: string
     ): Promise<string> => {
       if (isStreaming) return "";
 
       setIsStreaming(true);
       let fullResponse = "";
       let currentChatId = "";
+      const effectiveUsageKey = premiumUsageKeyOverride || premiumUsageKey;
 
       try {
         const response = await fetch(endpoint, {
@@ -51,7 +53,7 @@ export function useStreamingChat({
             previousChatId,
             chatId: previousChatId,
             stage,
-            premiumUsageKey,
+            premiumUsageKey: effectiveUsageKey,
             codeContent,
           }),
         });
@@ -60,6 +62,13 @@ export function useStreamingChat({
           if (response.status === 402) {
             const payload = await response.json().catch(() => ({}));
             onPremiumRequired?.(payload?.message);
+            return "";
+          }
+
+          if (response.status === 429) {
+            const payload = await response.json().catch(() => ({}));
+            const msg = payload?.message || "You have reached the message limit for this session.";
+            onError?.(msg);
             return "";
           }
 

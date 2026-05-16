@@ -42,7 +42,9 @@ export default function DashboardPage() {
   const [data, setData] = useState<CreditsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPaymentPopup, setShowPaymentPopup] = useState(false);
-  const [suggestedProduct, setSuggestedProduct] = useState<string>("single_interview");
+  const [suggestedProduct, setSuggestedProduct] = useState<
+    "interview_10" | "interview_30" | "dsa_starter" | "dsa_practice" | "dsa_pro"
+  >("interview_30");
   const [premiumMessage, setPremiumMessage] = useState<string>("");
   const [vapiHealth, setVapiHealth] = useState<number | null>(null);
 
@@ -82,9 +84,12 @@ export default function DashboardPage() {
   const hasInterviewAccess = credits.interviews > 0 || (collegePlan?.active && (collegePlan.remaining ?? 0) > 0);
   const hasDSAAccess = credits.dsaSessions > 0;
 
-  const openPaymentPopup = (product: string, message: string) => {
+  const openPaymentPopup = (
+    product: "interview_10" | "interview_30" | "dsa_starter" | "dsa_practice" | "dsa_pro",
+    message: string
+  ) => {
     let finalMessage = message;
-    if (product === "single_interview" && vapiHealth !== null && vapiHealth <= 1) {
+    if (product === "interview_30" && vapiHealth !== null && vapiHealth <= 1) {
       finalMessage = "⚠️ WARNING: The Vapi AI service is currently experiencing instability (Health is low). Voice interviews might fail. You can still purchase, but we recommend waiting.";
     }
     setSuggestedProduct(product);
@@ -97,15 +102,15 @@ export default function DashboardPage() {
     {
       id: "interview",
       title: "AI Voice Interview",
-      description: "30-minute realistic mock interview with AI voice interaction, follow-up questions, and detailed scorecard",
+      description: "10 or 30-minute mock interview with AI voice interaction, follow-up questions, and detailed scorecard",
       icon: <Mic className="w-6 h-6" />,
       color: "#FACC15",
       href: "/interview",
       hasAccess: hasInterviewAccess,
       credits: credits.interviews + (collegePlan?.active ? (collegePlan.remaining ?? 0) : 0),
       creditLabel: "sessions",
-      product: "single_interview",
-      payMessage: "Purchase an Interview session (₹399) to access AI Voice Interviews.",
+      product: "interview_30",
+      payMessage: "Purchase an Interview session (₹149 for 10 min or ₹399 for 30 min) to access AI Voice Interviews.",
     },
     {
       id: "dsa",
@@ -118,7 +123,7 @@ export default function DashboardPage() {
       credits: credits.dsaSessions,
       creditLabel: "sessions",
       product: "dsa_practice",
-      payMessage: "Purchase a DSA Practice session (₹99) to access DSA Practice.",
+      payMessage: "Purchase a DSA Practice session (starting ₹19) to access DSA Practice.",
     },
     {
       id: "job-prep",
@@ -221,10 +226,10 @@ export default function DashboardPage() {
               </div>
               {credits.interviews === 0 && (
                 <button
-                  onClick={() => openPaymentPopup("single_interview", "Purchase Interview sessions to start practicing.")}
+                  onClick={() => openPaymentPopup("interview_30", "Purchase Interview sessions to start practicing.")}
                   className="text-xs text-[#FACC15] hover:underline cursor-pointer"
                 >
-                  + Buy interviews (₹399/session)
+                  + Buy interviews (₹149/₹399 per session)
                 </button>
               )}
             </div>
@@ -245,7 +250,7 @@ export default function DashboardPage() {
                   onClick={() => openPaymentPopup("dsa_practice", "Purchase DSA Practice sessions to start solving problems.")}
                   className="text-xs text-[#10B981] hover:underline cursor-pointer"
                 >
-                  + Buy DSA sessions (₹99/session)
+                  + Buy DSA sessions (starting ₹19/session)
                 </button>
               )}
             </div>

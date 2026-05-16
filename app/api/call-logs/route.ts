@@ -4,6 +4,7 @@ import { vapiCallDataService } from "@/services/vapi/call-data.service";
 import { db } from "@/services/firebase/admin";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { checkRateLimit } from "@/lib/services/rate-limit.service";
+import { getPremiumSession } from "@/lib/services/payment.service";
 import {
   acquireIdempotencyLock,
   completeIdempotencyLock,
@@ -313,7 +314,7 @@ export async function POST(request: NextRequest) {
       idempotencyToken = idempotency.token;
     }
 
-    const { vapiCallId, userId, jobContext } = await request.json();
+    const { vapiCallId, userId, jobContext, sessionId } = await request.json();
 
     if (!vapiCallId) {
       if (idempotencyToken) {
@@ -324,6 +325,19 @@ export async function POST(request: NextRequest) {
       }
       return NextResponse.json(
         { error: "vapiCallId is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!sessionId) {
+      if (idempotencyToken) {
+        await failIdempotencyLock({
+          token: idempotencyToken,
+          error: "sessionId is required",
+        });
+      }
+      return NextResponse.json(
+        { error: "sessionId is required" },
         { status: 400 }
       );
     }
@@ -339,6 +353,23 @@ export async function POST(request: NextRequest) {
         { error: "User mismatch" },
         { status: 403 }
       );
+    }
+
+    let premiumSession: Awaited<ReturnType<typeof getPremiumSession>> | null = null;
+    if (sessionId) {
+      premiumSession = await getPremiumSession(sessionId);
+      if (!premiumSession || premiumSession.userId !== user.id || premiumSession.feature !== "interview") {
+        if (idempotencyToken) {
+          await failIdempotencyLock({
+            token: idempotencyToken,
+            error: "Invalid or expired interview session",
+          });
+        }
+        return NextResponse.json(
+          { error: "Invalid or expired interview session" },
+          { status: 403 }
+        );
+      }
     }
 
     const getUserIdentityForExternalApp = async () => {
@@ -482,7 +513,16 @@ export async function POST(request: NextRequest) {
       transcript: transcript || null,
       summary: vapiCallData?.summary || null,
       analysis: vapiCallData?.analysis || null,
+      sessionId: sessionId || null,
+      timeLimitMinutes: premiumSession?.timeLimitMinutes || null,
+      durationExceeded: false,
     };
+
+    if (premiumSession?.expiresAtMs && callLogData.endedAt) {
+      const endedAtMs = new Date(callLogData.endedAt).getTime();
+      const graceMs = 15_000;
+      callLogData.durationExceeded = endedAtMs > premiumSession.expiresAtMs + graceMs;
+    }
 
     const logId = await callLogService.saveCallLog(callLogData);
 

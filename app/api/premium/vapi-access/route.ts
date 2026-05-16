@@ -4,6 +4,8 @@ import {
   getUserCredits,
   consumeCredit,
   CreditType,
+  getProductById,
+  createPremiumSession,
 } from "@/lib/services/payment.service";
 import { isSeedPremiumEmail } from "@/lib/services/premium-access.service";
 import {
@@ -33,12 +35,25 @@ export async function POST(request: NextRequest) {
     const feature = body.feature || "interview";
     const quotaKind = body.quotaKind || "interview";
     const action = body.action || "consume"; // "check" | "consume"
+    const requestedPlanId = typeof body.planId === "string" ? body.planId : undefined;
 
-    // Map feature to credit type
-    const creditType: CreditType =
-      feature === "dsa-practice" || quotaKind === "dsa"
-        ? "dsaSessions"
-        : "interviews";
+    const isDsa = feature === "dsa-practice" || quotaKind === "dsa";
+    const planId = isDsa ? "dsa_practice" : (requestedPlanId || "interview_30");
+    const product = getProductById(planId);
+
+    if (!isDsa && (!product || (product.creditType !== "interviews10" && product.creditType !== "interviews30" && product.creditType !== "interviews"))) {
+      return NextResponse.json(
+        { error: "Invalid interview plan" },
+        { status: 400 }
+      );
+    }
+
+    const creditType: CreditType = isDsa
+      ? "dsaSessions"
+      : (product?.creditType === "interviews" ? "interviews30" : (product?.creditType as CreditType));
+
+    const timeLimitMinutes = isDsa ? 30 : (product?.timeLimitMinutes || 30);
+    const messageLimit = isDsa ? 60 : null;
 
     // Get user email from Firestore
     const userRef = db.collection("users").doc(user.id);
@@ -48,19 +63,42 @@ export async function POST(request: NextRequest) {
 
     // ─── Priority 1: Seed premium bypass ────────────────────────────
     if (isSeedPremiumEmail(userEmail)) {
+      if (action === "check") {
+        return NextResponse.json({
+          allowed: true,
+          isPremium: true,
+          reason: "seed-premium",
+          trialConsumed: false,
+          remaining: null,
+          dailyLimit: null,
+          timeLimitMinutes,
+        });
+      }
+
+      const session = await createPremiumSession({
+        userId: user.id,
+        feature: isDsa ? "dsa-practice" : "interview",
+        planId,
+        timeLimitMinutes,
+        messageLimit,
+      });
+
       return NextResponse.json({
         allowed: true,
         isPremium: true,
         reason: "seed-premium",
         trialConsumed: false,
-        usageKey: "seed-access",
+        usageKey: session.id,
+        expiresAtMs: session.expiresAtMs,
+        timeLimitMinutes,
+        messageLimit,
         dailyLimit: null,
       });
     }
 
     // ─── Priority 2: Individual paid credits ────────────────────────
     const credits = await getUserCredits(user.id);
-    const available = credits[creditType];
+    const available = (credits as any)[creditType] ?? 0;
 
     if (available > 0) {
       if (action === "check") {
@@ -71,6 +109,7 @@ export async function POST(request: NextRequest) {
           trialConsumed: false,
           remaining: available,
           dailyLimit: null,
+          timeLimitMinutes,
         });
       }
 
@@ -80,12 +119,23 @@ export async function POST(request: NextRequest) {
       });
 
       if (result.allowed) {
+        const session = await createPremiumSession({
+          userId: user.id,
+          feature: isDsa ? "dsa-practice" : "interview",
+          planId,
+          timeLimitMinutes,
+          messageLimit,
+        });
+
         return NextResponse.json({
           allowed: true,
           isPremium: true,
           reason: "paid-credits",
           trialConsumed: false,
-          usageKey: `credit-${creditType}-${Date.now()}`,
+          usageKey: session.id,
+          expiresAtMs: session.expiresAtMs,
+          timeLimitMinutes,
+          messageLimit,
           remaining: result.remaining,
           dailyLimit: null,
         });
@@ -93,7 +143,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ─── Priority 3: College plan (interviews only) ─────────────────
-    if (creditType === "interviews" && userEmail) {
+    if (!isDsa && creditType !== "interviews10" && userEmail) {
       const collegePlan = await getCollegePlanForUser(userEmail);
 
       if (collegePlan) {
@@ -104,8 +154,9 @@ export async function POST(request: NextRequest) {
             reason: "college-plan",
             collegeName: collegePlan.collegeName,
             trialConsumed: false,
-            remaining: collegePlan.maxInterviews - collegePlan.usedInterviews,
+            remaining: collegePlan.totalInterviews - collegePlan.usedInterviews,
             dailyLimit: null,
+            timeLimitMinutes,
           });
         }
 
@@ -115,13 +166,23 @@ export async function POST(request: NextRequest) {
         });
 
         if (collegeResult.allowed) {
+          const session = await createPremiumSession({
+            userId: user.id,
+            feature: "interview",
+            planId,
+            timeLimitMinutes,
+            messageLimit,
+          });
+
           return NextResponse.json({
             allowed: true,
             isPremium: true,
             reason: "college-plan",
             collegeName: collegeResult.collegeName,
             trialConsumed: false,
-            usageKey: `college-${collegePlan.emailDomain}-${Date.now()}`,
+            usageKey: session.id,
+            expiresAtMs: session.expiresAtMs,
+            timeLimitMinutes,
             remaining: collegeResult.remaining,
             dailyLimit: null,
           });
@@ -135,7 +196,7 @@ export async function POST(request: NextRequest) {
             error: "College interview quota exhausted",
             message: `Your college (${collegeResult.collegeName}) has used all purchased interview sessions. Contact your placement cell for more or purchase individually.`,
             credits,
-            requiredProduct: "single_interview",
+            requiredProduct: "interview_30",
           },
           { status: 402 }
         );
@@ -149,12 +210,11 @@ export async function POST(request: NextRequest) {
         code: "PAYMENT_REQUIRED",
         error: "No credits remaining",
         message:
-          creditType === "dsaSessions"
-            ? "You need to purchase a DSA Practice session to continue. Each session costs ₹99 for 30 minutes."
-            : "You need to purchase an Interview session to continue. Each session costs ₹399 for 30 minutes.",
+          isDsa
+            ? "You need to purchase a DSA Practice session to continue. Pricing starts at ₹19 for 30 minutes."
+            : "You need to purchase an Interview session to continue. Choose 10 min (₹149) or 30 min (₹399).",
         credits,
-        requiredProduct:
-          creditType === "dsaSessions" ? "dsa_practice" : "single_interview",
+        requiredProduct: isDsa ? "dsa_practice" : planId,
       },
       { status: 402 }
     );

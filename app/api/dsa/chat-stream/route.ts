@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { checkRateLimit } from "@/lib/services/rate-limit.service";
+import { getPremiumSession } from "@/lib/services/payment.service";
 
 /**
  * DSA Practice Chat Stream — powered by OpenRouter (cost-optimized)
@@ -73,25 +74,57 @@ export async function POST(request: NextRequest) {
     const { allowed, response } = await checkRateLimit(request, user.id, "dsa-chat-stream");
     if (!allowed) return response!;
 
-    const { message, chatId, stage, codeContent } = await request.json();
+    const { message, chatId, stage, codeContent, premiumUsageKey } = await request.json();
 
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
       return new Response("OpenRouter API key not configured", { status: 500 });
     }
 
-    // Build or retrieve chat history
-    const sessionId = chatId || `dsa-${user.id}-${Date.now()}`;
+    if (!premiumUsageKey || typeof premiumUsageKey !== "string") {
+      return new Response(
+        JSON.stringify({
+          error: "PREMIUM_REQUIRED",
+          message: "Purchase a DSA Practice session to continue.",
+        }),
+        { status: 402, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const premiumSession = await getPremiumSession(premiumUsageKey);
+    if (!premiumSession || premiumSession.userId !== user.id || premiumSession.feature !== "dsa-practice") {
+      return new Response(
+        JSON.stringify({
+          error: "INVALID_SESSION",
+          message: "Your DSA session is not valid. Please start a new session.",
+        }),
+        { status: 402, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    if (Date.now() > premiumSession.expiresAtMs) {
+      return new Response(
+        JSON.stringify({
+          error: "SESSION_EXPIRED",
+          message: "Your DSA session has expired. Purchase another session to continue.",
+        }),
+        { status: 402, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Build or retrieve chat history (session scoped)
+    const sessionId = premiumUsageKey || chatId || `dsa-${user.id}-${Date.now()}`;
 
     // Check message limit
+    const maxMessages = premiumSession.messageLimit || MAX_MESSAGES_PER_SESSION;
     const currentCount = sessionMessageCounts.get(sessionId) || 0;
-    if (currentCount >= MAX_MESSAGES_PER_SESSION) {
+    if (currentCount >= maxMessages) {
       return new Response(
         JSON.stringify({
           error: "MESSAGE_LIMIT_REACHED",
-          message: `You've used all ${MAX_MESSAGES_PER_SESSION} messages for this session. Start a new session to continue practicing.`,
+          message: `You've used all ${maxMessages} messages for this session. Start a new session to continue practicing.`,
           messagesUsed: currentCount,
-          messageLimit: MAX_MESSAGES_PER_SESSION,
+          messageLimit: maxMessages,
         }),
         { status: 429, headers: { "Content-Type": "application/json" } }
       );
@@ -160,7 +193,7 @@ export async function POST(request: NextRequest) {
           encoder.encode(`data: ${JSON.stringify({
             id: sessionId,
             messagesUsed: currentCount + 1,
-            messageLimit: MAX_MESSAGES_PER_SESSION,
+            messageLimit: maxMessages,
           })}\n\n`)
         );
 

@@ -61,6 +61,7 @@ interface AgentProps {
   questions?: string[];
   jobContextJson?: string;
   practiceContextJson?: string;
+  interviewPlanId?: string;
 }
 
 interface RouteParams {

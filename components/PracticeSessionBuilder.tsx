@@ -57,6 +57,7 @@ export default function PracticeSessionBuilder({
   const [role, setRole] = useState("Software Engineer");
   const [experienceLevel, setExperienceLevel] = useState("SDE-1 / Early Career");
   const [selectedFocus, setSelectedFocus] = useState<string[]>(["Core CS Fundamentals", "Problem Solving"]);
+  const [selectedPlanId, setSelectedPlanId] = useState<"interview_10" | "interview_30">("interview_30");
   const [started, setStarted] = useState(false);
   const [showPaymentPopup, setShowPaymentPopup] = useState(false);
   const [isCheckingAccess, setIsCheckingAccess] = useState(false);
@@ -103,17 +104,23 @@ export default function PracticeSessionBuilder({
   const checkAndStartSession = async () => {
     setIsCheckingAccess(true);
     try {
-      const res = await fetch("/api/premium/vapi-access", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          feature: "interview",
-          quotaKind: "interview",
-          action: "check",
-        }),
-      });
+      const runAccessCheck = async (planId: "interview_10" | "interview_30") => {
+        const res = await fetch("/api/premium/vapi-access", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            feature: "interview",
+            quotaKind: "interview",
+            action: "check",
+            planId,
+          }),
+        });
 
-      const data = await res.json().catch(() => ({}));
+        const data = await res.json().catch(() => ({}));
+        return { res, data };
+      };
+
+      let { res, data } = await runAccessCheck(selectedPlanId);
 
       if (res.status === 401) {
         window.location.href = "/sign-in";
@@ -121,6 +128,14 @@ export default function PracticeSessionBuilder({
       }
 
       if (res.status === 402 || data.allowed === false) {
+        if (selectedPlanId === "interview_30") {
+          const fallback = await runAccessCheck("interview_10");
+          if (fallback.res.ok && fallback.data?.allowed !== false) {
+            setSelectedPlanId("interview_10");
+            setStarted(true);
+            return;
+          }
+        }
         setShowPaymentPopup(true);
         return;
       }
@@ -154,6 +169,7 @@ export default function PracticeSessionBuilder({
         type="generate"
         jobContextJson={jobContextJson}
         practiceContextJson={effectiveContextJson}
+        interviewPlanId={selectedPlanId}
       />
     );
   }
@@ -288,7 +304,7 @@ export default function PracticeSessionBuilder({
                   <p className="text-muted-foreground mt-2">The context window has been optimally seeded.</p>
                </div>
 
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-8">
                  <div className="bg-white/[0.02] border border-white/10 backdrop-blur-md rounded-2xl p-6">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-[#888] mb-2 flex items-center gap-2"><Code className="w-3 h-3" /> Technical Style</p>
                     <p className="text-white/90 text-sm leading-relaxed">{profile.interviewStyle}</p>
@@ -300,6 +316,34 @@ export default function PracticeSessionBuilder({
                          <span key={p} className="px-2 py-1 bg-black/40 border border-white/10 rounded-md text-xs text-white/80">{p}</span>
                        ))}
                     </div>
+                 </div>
+               </div>
+
+               <div className="bg-white/[0.02] border border-white/10 backdrop-blur-md rounded-2xl p-6">
+                 <p className="text-[10px] font-bold uppercase tracking-widest text-[#888] mb-3 flex items-center gap-2">
+                   <Target className="w-3 h-3" /> Session Length
+                 </p>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                   {([
+                     { id: "interview_10", label: "10 Minutes", price: "₹149" },
+                     { id: "interview_30", label: "30 Minutes", price: "₹399" },
+                   ] as const).map((plan) => {
+                     const isActive = selectedPlanId === plan.id;
+                     return (
+                       <button
+                         key={plan.id}
+                         onClick={() => setSelectedPlanId(plan.id)}
+                         className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-sm font-semibold transition-all duration-300 ${
+                           isActive
+                             ? "border-lime-400 bg-lime-400/10 text-lime-400 shadow-[0_0_15px_rgba(163,230,53,0.2)]"
+                             : "border-white/10 bg-white/[0.02] text-white/70 hover:bg-white/[0.06]"
+                         }`}
+                       >
+                         <span>{plan.label}</span>
+                         <span className="text-xs font-bold text-white/80">{plan.price}</span>
+                       </button>
+                     );
+                   })}
                  </div>
                </div>
 
@@ -321,7 +365,7 @@ export default function PracticeSessionBuilder({
       <PremiumAccessPopup
         open={showPaymentPopup}
         message="Purchase an interview session to start your AI-powered mock interview."
-        suggestedProduct="single_interview"
+        suggestedProduct={selectedPlanId}
         onClose={() => setShowPaymentPopup(false)}
         onActivated={() => {
           setShowPaymentPopup(false);

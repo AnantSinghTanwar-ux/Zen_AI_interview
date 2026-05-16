@@ -80,7 +80,24 @@ const PricingCalculator = () => {
 
   // Individual pricing
   const BASE_INTERVIEW_PRICE = 399;
-  const [interviewPriceInfo, setInterviewPriceInfo] = useState<{ price: number, productId: string, remaining: number }>({ price: 399, productId: 'single_interview', remaining: 0 });
+  const [pricing, setPricing] = useState({
+    interview: {
+      promoRemaining: 0,
+      plans: {
+        interview_10: { price: 149, productId: "interview_10", minutes: 10 },
+        interview_30: { price: 399, productId: "interview_30", minutes: 30 },
+      },
+    },
+    dsa: {
+      promoRemaining: 0,
+      tiers: {
+        starter: { price: 29, productId: "dsa_starter", sessions: 1 },
+        pack: { price: 99, productId: "dsa_practice", sessions: 5 },
+        pro: { price: 199, productId: "dsa_pro", sessions: 12 },
+      },
+    },
+  });
+  const [selectedInterviewPlan, setSelectedInterviewPlan] = useState<"interview_10" | "interview_30">("interview_30");
   const [dsaTier, setDsaTier] = useState<'starter'|'pack'|'pro'>('pack');
   const [recruiterVisibility, setRecruiterVisibility] = useState(false);
   const RECRUITER_VISIBILITY_PRICE = 30;
@@ -88,9 +105,19 @@ const PricingCalculator = () => {
   useEffect(() => {
     fetch('/api/premium/interview-price')
       .then(res => res.json())
-      .then(data => setInterviewPriceInfo(data))
+      .then(data => {
+        if (data?.interview && data?.dsa) {
+          setPricing(data);
+        }
+      })
       .catch(console.error);
   }, []);
+
+  useEffect(() => {
+    if (selectedInterviewPlan === "interview_10" && recruiterVisibility) {
+      setRecruiterVisibility(false);
+    }
+  }, [selectedInterviewPlan, recruiterVisibility]);
 
   // College calculator
   const [students, setStudents] = useState(50);
@@ -161,26 +188,18 @@ const PricingCalculator = () => {
       },
     });
 
-  const { initiatePayment: initiateVisibilityPayment, isProcessing: isProcessingVisibility } =
-    useRazorpayCheckout({
-      onSuccess: () => {
-        setPaymentError(null);
-        setPaymentSuccess(`Recruiter visibility activated! Your profile is now discoverable.`);
-      },
-      onError: (error) => {
-        setPaymentSuccess(null);
-        setPaymentError(error);
-        setTimeout(() => setPaymentError(null), 5000);
-      },
-    });
+  const activeInterviewPlan = pricing.interview.plans[selectedInterviewPlan];
+  const allowRecruiterVisibility = selectedInterviewPlan === "interview_30";
 
   const handleBuyInterview = () => {
-    initiateInterviewPayment(interviewPriceInfo.productId, { recruiterVisibility });
+    initiateInterviewPayment(activeInterviewPlan.productId, {
+      recruiterVisibility: allowRecruiterVisibility ? recruiterVisibility : false,
+    });
   };
 
   const handleBuyDSA = () => {
-    const productMap = { starter: 'dsa_starter', pack: 'dsa_practice', pro: 'dsa_pro' } as const;
-    initiateDSAPayment(productMap[dsaTier]);
+    const productMap = pricing.dsa.tiers;
+    initiateDSAPayment(productMap[dsaTier].productId);
   };
 
   const handleCollegeSubmit = () => {
@@ -194,7 +213,7 @@ const PricingCalculator = () => {
   };
 
   const interviewFeatures = [
-    "30-minute AI-powered voice interview",
+    `${activeInterviewPlan.minutes}-minute AI-powered voice interview`,
     "Realistic simulation with follow-ups",
     "Detailed performance scorecard",
     "Category-wise feedback & tips",
@@ -202,9 +221,24 @@ const PricingCalculator = () => {
   ];
 
   const dsaTiers = {
-    starter: { label: '1 Session', price: 29, sessions: 1, perSession: 29 },
-    pack: { label: '5 Sessions', price: 99, sessions: 5, perSession: 19 },
-    pro: { label: '12 Sessions', price: 199, sessions: 12, perSession: 16 },
+    starter: {
+      label: "1 Session",
+      price: pricing.dsa.tiers.starter.price,
+      sessions: 1,
+      perSession: pricing.dsa.tiers.starter.price,
+    },
+    pack: {
+      label: "5 Sessions",
+      price: pricing.dsa.tiers.pack.price,
+      sessions: 5,
+      perSession: Number((pricing.dsa.tiers.pack.price / 5).toFixed(1)),
+    },
+    pro: {
+      label: "12 Sessions",
+      price: pricing.dsa.tiers.pro.price,
+      sessions: 12,
+      perSession: Number((pricing.dsa.tiers.pro.price / 12).toFixed(1)),
+    },
   };
   const activeDsa = dsaTiers[dsaTier];
 
@@ -292,23 +326,46 @@ const PricingCalculator = () => {
                   Voice-powered mock interview with real-time AI feedback.
                 </p>
 
+                {/* Plan Selector */}
+                <div className="flex gap-2 mb-6">
+                  {(["interview_10", "interview_30"] as const).map((planId) => {
+                    const plan = pricing.interview.plans[planId];
+                    const isActive = selectedInterviewPlan === planId;
+                    return (
+                      <button
+                        key={planId}
+                        onClick={() => setSelectedInterviewPlan(planId)}
+                        className={`flex-1 text-xs py-2 px-2 rounded-lg border transition-all font-medium ${
+                          isActive
+                            ? "bg-primary/20 border-primary text-primary"
+                            : "bg-transparent border-[#1F1F2B] text-[#9CA3AF] hover:border-[#3A3A4A]"
+                        }`}
+                      >
+                        {plan.minutes} Min
+                      </button>
+                    );
+                  })}
+                </div>
+
                 {/* Price */}
                 <div className="flex items-baseline gap-2 mb-8">
                   <span className="text-5xl md:text-6xl font-bold text-foreground transition-all duration-300">
-                    ₹{recruiterVisibility ? interviewPriceInfo.price + RECRUITER_VISIBILITY_PRICE : interviewPriceInfo.price}
+                    ₹{allowRecruiterVisibility && recruiterVisibility
+                      ? activeInterviewPlan.price + RECRUITER_VISIBILITY_PRICE
+                      : activeInterviewPlan.price}
                   </span>
                   <div className="text-muted-foreground text-sm">
                     <div>per session</div>
                     <div className="flex items-center gap-1 text-xs mt-0.5">
                       <Clock className="w-3 h-3" />
-                      30 minutes
+                      {activeInterviewPlan.minutes} minutes
                     </div>
                   </div>
                 </div>
 
-                {interviewPriceInfo.remaining > 0 && (
+                {pricing.interview.promoRemaining > 0 && (
                   <div className="mb-4 text-xs font-semibold text-primary px-3 py-1 bg-primary/10 rounded-full w-fit">
-                    Limited Offer: Only {interviewPriceInfo.remaining} spots left at ₹{interviewPriceInfo.price}!
+                    Limited Offer: Only {pricing.interview.promoRemaining} spots left at ₹{activeInterviewPlan.price}!
                   </div>
                 )}
 
@@ -330,11 +387,13 @@ const PricingCalculator = () => {
 
               {/* Recruiter Visibility Add-on */}
               <div
-                onClick={() => setRecruiterVisibility(!recruiterVisibility)}
-                className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all duration-300 mb-6 relative overflow-hidden ${
-                  recruiterVisibility
-                    ? 'border-[#A855F7] bg-[#A855F7]/15 shadow-[0_0_20px_rgba(168,85,247,0.2)] ring-1 ring-[#A855F7]/30'
-                    : 'border-white/10 bg-white/[0.02] hover:border-white/20'
+                onClick={() => allowRecruiterVisibility && setRecruiterVisibility(!recruiterVisibility)}
+                className={`flex items-center gap-3 p-4 rounded-xl border transition-all duration-300 mb-6 relative overflow-hidden ${
+                  allowRecruiterVisibility
+                    ? recruiterVisibility
+                      ? 'border-[#A855F7] bg-[#A855F7]/15 shadow-[0_0_20px_rgba(168,85,247,0.2)] ring-1 ring-[#A855F7]/30 cursor-pointer'
+                      : 'border-white/10 bg-white/[0.02] hover:border-white/20 cursor-pointer'
+                    : 'border-white/10 bg-white/[0.01] opacity-60 cursor-not-allowed'
                 }`}
               >
                 {recruiterVisibility && (
@@ -360,7 +419,12 @@ const PricingCalculator = () => {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-[#9CA3AF]">Your scores appear in the recruiter talent pool</p>
+                  <p className="text-xs text-[#9CA3AF]">
+                    {allowRecruiterVisibility
+                      ? "Your scores appear in the recruiter talent pool"
+                      : "Available only on 30-minute interviews"
+                    }
+                  </p>
                 </div>
                 <span className="text-sm font-bold text-[#A855F7] relative z-10">+₹{RECRUITER_VISIBILITY_PRICE}</span>
               </div>
@@ -376,7 +440,9 @@ const PricingCalculator = () => {
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5 mr-2" />
-                    Buy Now — ₹{recruiterVisibility ? interviewPriceInfo.price + RECRUITER_VISIBILITY_PRICE : interviewPriceInfo.price}
+                    Buy Now — ₹{allowRecruiterVisibility && recruiterVisibility
+                      ? activeInterviewPlan.price + RECRUITER_VISIBILITY_PRICE
+                      : activeInterviewPlan.price}
                     <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
@@ -453,6 +519,12 @@ const PricingCalculator = () => {
                   </div>
                 </div>
               </div>
+
+              {pricing.dsa.promoRemaining > 0 && (
+                <div className="mb-4 text-xs font-semibold text-primary px-3 py-1 bg-primary/10 rounded-full w-fit">
+                  Limited Offer: Only {pricing.dsa.promoRemaining} spots left at ₹{activeDsa.price}!
+                </div>
+              )}
 
               {/* Features */}
               <ul className="space-y-4 mb-8 flex-1">

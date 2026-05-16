@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, CreditCard, Sparkles, Shield, Zap } from "lucide-react";
 import { useRazorpayCheckout } from "@/hooks/useRazorpayCheckout";
 
@@ -9,19 +9,26 @@ interface PremiumAccessPopupProps {
   message?: string;
   onClose: () => void;
   onActivated?: () => void;
-  /** Which product to prompt — defaults to "single_interview" */
-  suggestedProduct?: "single_interview" | "dsa_practice";
+  /** Which product to prompt — defaults to "interview_30" */
+  suggestedProduct?: "interview_10" | "interview_30" | "dsa_starter" | "dsa_practice" | "dsa_pro";
 }
 
-const PRODUCT_INFO: Record<
+const BASE_PRODUCT_INFO: Record<
   string,
   { label: string; price: string; icon: React.ReactNode; description: string; tag?: string }
 > = {
-  single_interview: {
-    label: "Interview Session",
+  interview_10: {
+    label: "10-Min Interview",
+    price: "₹149",
+    icon: <Sparkles className="w-5 h-5" />,
+    description: "10-min AI-powered voice interview with focused feedback",
+  },
+  interview_30: {
+    label: "30-Min Interview",
     price: "₹399",
     icon: <Sparkles className="w-5 h-5" />,
     description: "30-min AI-powered voice interview with detailed feedback",
+    tag: "Popular",
   },
   dsa_starter: {
     label: "DSA Starter (1 Session)",
@@ -33,14 +40,14 @@ const PRODUCT_INFO: Record<
     label: "DSA Pack (5 Sessions)",
     price: "₹99",
     icon: <Zap className="w-5 h-5" />,
-    description: "5 text-based DSA sessions (₹19.8/session)",
+    description: "5 text-based DSA sessions with AI interviewer",
     tag: "Popular",
   },
   dsa_pro: {
     label: "DSA Pro (12 Sessions)",
     price: "₹199",
     icon: <Zap className="w-5 h-5" />,
-    description: "12 text-based DSA sessions (₹16.6/session)",
+    description: "12 text-based DSA sessions with AI interviewer",
     tag: "Best Value",
   },
 };
@@ -53,11 +60,46 @@ export default function PremiumAccessPopup({
   message,
   onClose,
   onActivated,
-  suggestedProduct = "single_interview",
+  suggestedProduct = "interview_30",
 }: PremiumAccessPopupProps) {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState(suggestedProduct);
+  const [dynamicPrices, setDynamicPrices] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (open) {
+      setSelectedProduct(suggestedProduct);
+    }
+  }, [open, suggestedProduct]);
+
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/premium/interview-price")
+      .then((res) => res.json())
+      .then((data) => {
+        const prices: Record<string, number> = {};
+        if (data?.interview?.plans?.interview_10?.price) {
+          prices.interview_10 = Number(data.interview.plans.interview_10.price);
+        }
+        if (data?.interview?.plans?.interview_30?.price) {
+          prices.interview_30 = Number(data.interview.plans.interview_30.price);
+        }
+        if (data?.dsa?.tiers?.starter?.price) {
+          prices.dsa_starter = Number(data.dsa.tiers.starter.price);
+        }
+        if (data?.dsa?.tiers?.pack?.price) {
+          prices.dsa_practice = Number(data.dsa.tiers.pack.price);
+        }
+        if (data?.dsa?.tiers?.pro?.price) {
+          prices.dsa_pro = Number(data.dsa.tiers.pro.price);
+        }
+        setDynamicPrices(prices);
+      })
+      .catch(() => {
+        setDynamicPrices({});
+      });
+  }, [open]);
 
   const { initiatePayment, isProcessing } = useRazorpayCheckout({
     onSuccess: (result) => {
@@ -82,7 +124,9 @@ export default function PremiumAccessPopup({
 
   if (!open) return null;
 
-  const product = PRODUCT_INFO[selectedProduct];
+  const product = BASE_PRODUCT_INFO[selectedProduct];
+  const resolvedPrice = dynamicPrices[selectedProduct] ?? Number(product.price.replace(/[₹,]/g, ""));
+  const productPriceLabel = Number.isFinite(resolvedPrice) ? `₹${resolvedPrice}` : product.price;
 
   const handlePayment = async () => {
     setError(null);
@@ -114,7 +158,7 @@ export default function PremiumAccessPopup({
 
         {/* Product Selector */}
         <div className="space-y-2 mb-5 max-h-[300px] overflow-y-auto pr-1">
-          {Object.entries(PRODUCT_INFO).map(([id, info]) => (
+          {Object.entries(BASE_PRODUCT_INFO).map(([id, info]) => (
             <button
               key={id}
               type="button"
@@ -148,7 +192,7 @@ export default function PremiumAccessPopup({
                 </p>
               </div>
               <span className="text-lg font-bold text-foreground shrink-0">
-                {info.price}
+                {dynamicPrices[id] ? `₹${dynamicPrices[id]}` : info.price}
               </span>
             </button>
           ))}
@@ -185,7 +229,7 @@ export default function PremiumAccessPopup({
             ? "Processing..."
             : successMessage
               ? "✓ Payment Complete"
-              : `Pay ${product.price} — ${product.label}`}
+              : `Pay ${productPriceLabel} — ${product.label}`}
         </button>
 
         <p className="text-xs text-muted-foreground text-center mt-3">
