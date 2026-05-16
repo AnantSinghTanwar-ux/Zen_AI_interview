@@ -236,7 +236,11 @@ const HeroBanner = () => {
           }}
           className="text-lg md:text-xl text-muted-foreground max-w-2xl font-normal leading-relaxed mt-4"
         >
-          Experience high-fidelity mock interviews that feel indistinguishable from human recruiters. Master your pitch, perfect your code, and land your dream role.
+          Experience high-fidelity mock interviews that feel indistinguishable from human recruiters. Master your pitch, perfect your code and{" "}
+          <span className="font-bold text-[#DAA520] bg-[#DAA520]/10 px-1 rounded">
+            Resume
+          </span>
+            , and land your dream role.
         </motion.p>
 
         {/* CTAs */}
