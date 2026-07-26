@@ -1,4 +1,5 @@
 import PracticeSessionBuilder from "@/components/PracticeSessionBuilder";
+import Agent from "@/components/Agent";
 import PageLayout from "@/components/PageLayout";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { redirect } from "next/navigation";
@@ -132,17 +133,29 @@ async function InterviewPage({
     }
   }
 
+  const isRealInterview = !!scheduleIdParam;
+
   return (
     <>
       <PageLayout showFooter={false}>
         <div className="w-full">
-          <PracticeSessionBuilder
-            userName={user.name}
-            userId={user.id}
-            jobContextJson={jobContextJson}
-            initialPracticeContextJson={jobPrepContextJson}
-            autoStart={sourceParam === "job-prep"}
-          />
+          {isRealInterview ? (
+            <Agent
+              userName={user.name}
+              userId={user.id}
+              type="generate"
+              jobContextJson={jobContextJson}
+              practiceContextJson={jobPrepContextJson}
+            />
+          ) : (
+            <PracticeSessionBuilder
+              userName={user.name}
+              userId={user.id}
+              jobContextJson={jobContextJson}
+              initialPracticeContextJson={jobPrepContextJson}
+              autoStart={sourceParam === "job-prep"}
+            />
+          )}
         </div>
       </PageLayout>
     </>
