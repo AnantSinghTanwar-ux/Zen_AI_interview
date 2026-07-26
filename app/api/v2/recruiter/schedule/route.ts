@@ -57,11 +57,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // Validate required fields
-    const { applicantId, jobId, scheduledAt, duration, meetingLink, notes } = body;
+    const { applicantId, jobId, scheduledAt, duration, interviewType, meetingLink, notes } = body;
 
     if (!applicantId || !jobId || !scheduledAt) {
       return NextResponse.json(
         { error: "applicantId, jobId, and scheduledAt are required" },
+        { status: 400 }
+      );
+    }
+
+    if (interviewType === "external" && !meetingLink?.trim()) {
+      return NextResponse.json(
+        { error: "meetingLink is required for external interviews" },
         { status: 400 }
       );
     }
@@ -95,6 +102,7 @@ export async function POST(request: NextRequest) {
       jobTitle: job.title,
       scheduledAt,
       duration: duration || 30,
+      interviewType: interviewType || "ai",
       meetingLink: meetingLink || "",
       notes: notes || "",
     });

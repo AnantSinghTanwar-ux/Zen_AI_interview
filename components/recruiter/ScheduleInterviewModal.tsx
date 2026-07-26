@@ -22,6 +22,7 @@ export default function ScheduleInterviewModal({
   onClose,
   onScheduled,
 }: ScheduleInterviewModalProps) {
+  const [interviewType, setInterviewType] = useState<"ai" | "external">("ai");
   const [scheduledAt, setScheduledAt] = useState("");
   const [duration, setDuration] = useState(30);
   const [meetingLink, setMeetingLink] = useState("");
@@ -33,6 +34,11 @@ export default function ScheduleInterviewModal({
 
     if (!scheduledAt) {
       toast.error("Please select a date and time");
+      return;
+    }
+
+    if (interviewType === "external" && !meetingLink.trim()) {
+      toast.error("Please provide a meeting link for the external interview");
       return;
     }
 
@@ -52,7 +58,8 @@ export default function ScheduleInterviewModal({
           jobId,
           scheduledAt: scheduledDate.toISOString(),
           duration,
-          meetingLink: meetingLink.trim(),
+          interviewType,
+          meetingLink: interviewType === "external" ? meetingLink.trim() : "",
           notes: notes.trim(),
         }),
       });
@@ -90,6 +97,33 @@ export default function ScheduleInterviewModal({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          
+          {/* Type Toggle */}
+          <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/5">
+            <button
+              type="button"
+              onClick={() => setInterviewType("ai")}
+              className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all ${
+                interviewType === "ai"
+                  ? "bg-primary text-black shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+              }`}
+            >
+              AI Interview (Internal)
+            </button>
+            <button
+              type="button"
+              onClick={() => setInterviewType("external")}
+              className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all ${
+                interviewType === "external"
+                  ? "bg-primary text-black shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+              }`}
+            >
+              External Meeting (Meet/Zoom)
+            </button>
+          </div>
+
           {/* Date/Time */}
           <div>
             <label className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1.5">
@@ -101,7 +135,7 @@ export default function ScheduleInterviewModal({
               value={scheduledAt}
               onChange={(e) => setScheduledAt(e.target.value)}
               required
-              className="w-full px-3 py-2 text-sm rounded-xl"
+              className="w-full px-3 py-2 text-sm rounded-xl bg-white/[0.04] border border-white/10 text-foreground"
             />
           </div>
 
@@ -114,7 +148,7 @@ export default function ScheduleInterviewModal({
             <select
               value={duration}
               onChange={(e) => setDuration(Number(e.target.value))}
-              className="w-full px-3 py-2 text-sm rounded-xl"
+              className="w-full px-3 py-2 text-sm rounded-xl bg-white/[0.04] border border-white/10 text-foreground"
             >
               <option value={15}>15 minutes</option>
               <option value={30}>30 minutes</option>
@@ -124,20 +158,23 @@ export default function ScheduleInterviewModal({
             </select>
           </div>
 
-          {/* Meeting Link */}
-          <div>
-            <label className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1.5">
-              <Link2 className="w-3.5 h-3.5 text-primary" />
-              Meeting Link <span className="text-muted-foreground">(optional)</span>
-            </label>
-            <input
-              type="url"
-              placeholder="https://meet.google.com/..."
-              value={meetingLink}
-              onChange={(e) => setMeetingLink(e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-xl"
-            />
-          </div>
+          {/* Meeting Link - Conditionally Rendered */}
+          {interviewType === "external" && (
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1.5">
+                <Link2 className="w-3.5 h-3.5 text-primary" />
+                Meeting Link *
+              </label>
+              <input
+                type="url"
+                placeholder="https://meet.google.com/..."
+                value={meetingLink}
+                onChange={(e) => setMeetingLink(e.target.value)}
+                required
+                className="w-full px-3 py-2 text-sm rounded-xl bg-white/[0.04] border border-white/10 text-foreground"
+              />
+            </div>
+          )}
 
           {/* Notes */}
           <div>

@@ -64,8 +64,43 @@ async function InterviewPage({
   const focusParam = Array.isArray(query.focus) ? query.focus[0] : query.focus;
   const sourceParam = Array.isArray(query.source) ? query.source[0] : query.source;
 
+  const scheduleIdParam = Array.isArray(query.scheduleId) ? query.scheduleId[0] : query.scheduleId;
   let jobPrepContextJson: string | undefined;
-  if (sourceParam === "job-prep" && companyKey) {
+
+  if (scheduleIdParam) {
+    // We import dynamically or inline fetch if needed, but since this is a server component, we can use services directly.
+    const { schedulingService } = await import("@/services/recruiter/scheduling.service");
+    const { jobService } = await import("@/services/recruiter/job.service");
+    
+    const schedule = await schedulingService.getSchedule(scheduleIdParam);
+    if (schedule) {
+      const job = await jobService.getJob(schedule.jobId);
+      if (job) {
+        // Find best matching company profile or use default
+        const allCompanies = ["google", "microsoft", "amazon", "apple", "meta", "stripe"];
+        const matchedKey = allCompanies.find(k => job.companyName.toLowerCase().includes(k)) || "microsoft";
+        const companyProfile = getCompanyByKey(matchedKey as PracticeCompanyKey);
+        
+        if (companyProfile) {
+           const contextConfig = generateInterviewContext(
+             companyProfile,
+             job.title,
+             job.experienceLevel,
+             "fullstack"
+           );
+
+           jobPrepContextJson = JSON.stringify({
+             mode: "real-interview",
+             ...contextConfig,
+             company: job.companyName,
+             vapiContext: `You are an AI interviewer conducting a REAL interview for the position of ${job.title} at ${job.companyName}. The candidate's name is ${schedule.candidateName}. \n\n${generateVapiPromptContext(contextConfig)}\n\nJob Description: ${job.description}\nRequired Skills: ${job.requiredSkills.join(", ")}\nRecruiter Notes: ${schedule.notes || "None"}`,
+             selectedFocusAreas: ["Behavioral", "Technical"],
+             notes: "This is a REAL scheduled interview. Conduct it professionally and rigorously according to the job description.",
+           });
+        }
+      }
+    }
+  } else if (sourceParam === "job-prep" && companyKey) {
     const companyProfile = getCompanyByKey(companyKey);
     if (companyProfile) {
       const contextConfig = generateInterviewContext(

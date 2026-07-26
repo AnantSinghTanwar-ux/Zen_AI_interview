@@ -18,6 +18,7 @@ class SchedulingService {
     jobTitle: string;
     scheduledAt: string;
     duration: number;
+    interviewType?: "ai" | "external";
     meetingLink?: string;
     notes?: string;
   }): Promise<ScheduledInterview> {
@@ -33,6 +34,15 @@ class SchedulingService {
     // Validate duration
     const duration = Math.max(15, Math.min(180, params.duration || 30));
 
+    const docRef = db.collection(COLLECTION).doc();
+
+    let finalMeetingLink = params.meetingLink?.trim().slice(0, 500) || "";
+    if (params.interviewType === "ai") {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://zen-ai-interview.vercel.app";
+      // Generate a secure link that leads to the AI interview page with the scheduleId
+      finalMeetingLink = `${baseUrl}/interview?scheduleId=${docRef.id}`;
+    }
+
     const now = new Date().toISOString();
     const docData = {
       jobId: params.jobId,
@@ -44,7 +54,8 @@ class SchedulingService {
       jobTitle: params.jobTitle.trim().slice(0, 300),
       scheduledAt: scheduledDate.toISOString(),
       duration,
-      meetingLink: params.meetingLink?.trim().slice(0, 500) || "",
+      interviewType: params.interviewType || "ai",
+      meetingLink: finalMeetingLink,
       notes: params.notes?.trim().slice(0, 1000) || "",
       status: "scheduled" as ScheduleStatus,
       interviewId: "",
@@ -52,7 +63,7 @@ class SchedulingService {
       updatedAt: now,
     };
 
-    const docRef = await db.collection(COLLECTION).add(docData);
+    await docRef.set(docData);
     const schedule: ScheduledInterview = { id: docRef.id, ...docData };
 
     // Send notification to candidate (fire-and-forget, don't block on failure)

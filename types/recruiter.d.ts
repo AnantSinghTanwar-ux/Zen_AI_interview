@@ -128,6 +128,7 @@ export interface ScheduledInterview {
   scheduledAt: string;
   duration: number; // minutes
   meetingLink?: string;
+  interviewType?: 'ai' | 'external';
   notes?: string;
   status: ScheduleStatus;
   interviewId?: string; // link to existing AI interview
