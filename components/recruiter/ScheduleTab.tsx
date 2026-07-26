@@ -157,7 +157,7 @@ function ScheduleCard({
               <Clock className="w-3.5 h-3.5" />
               {date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} • {schedule.duration}min
             </span>
-            {schedule.meetingLink && (
+            {schedule.meetingLink && schedule.interviewType !== "ai" && (
               <a
                 href={schedule.meetingLink}
                 target="_blank"

@@ -104,6 +104,7 @@ async function InterviewPage({
 
            jobPrepContextJson = JSON.stringify({
              mode: "real-interview",
+             scheduleId: scheduleIdParam,
              ...contextConfig,
              company: job.companyName,
              vapiContext: `You are an AI interviewer conducting a REAL interview for the position of ${job.title} at ${job.companyName}. The candidate's name is ${schedule.candidateName}.\n\n${typeInstruction}\n\n${generateVapiPromptContext(contextConfig)}\n\nJob Description: ${job.description}\nRequired Skills: ${job.requiredSkills.join(", ")}\nRecruiter Notes: ${schedule.notes || "None"}`,

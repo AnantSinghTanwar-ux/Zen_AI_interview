@@ -276,7 +276,7 @@ function ScheduleCard({ schedule }: { schedule: ScheduledInterview }) {
             <p className="text-xs text-foreground/50 mt-2">{schedule.notes}</p>
           )}
         </div>
-        {schedule.meetingLink && !isPast && (
+        {schedule.meetingLink && schedule.status !== "completed" && schedule.status !== "cancelled" && (
           <a
             href={schedule.meetingLink}
             target="_blank"

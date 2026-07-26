@@ -62,6 +62,8 @@ export interface Applicant {
   invitedAt?: string;
   completedAt?: string;
   notes?: string;
+  interviewScore?: number;
+  interviewRecommendation?: string;
 }
 
 // ─── AI Resume Screening ────────────────────────────────────────────────────

@@ -76,7 +76,7 @@ export function useCallLogs(userId: string | null | undefined) {
     }
   };
 
-  const saveCallLog = async (vapiCallId: string, jobContext?: string, sessionId?: string) => {
+  const saveCallLog = async (vapiCallId: string, jobContext?: string, sessionId?: string, scheduleId?: string) => {
     if (!userId || !vapiCallId) {
       console.warn("Skipping call log save because userId or vapiCallId is missing");
       return;
@@ -90,6 +90,10 @@ export function useCallLogs(userId: string | null | undefined) {
 
       if (sessionId) {
         body.sessionId = sessionId;
+      }
+      
+      if (scheduleId) {
+        body.scheduleId = scheduleId;
       }
 
       // If job context is available (from extension), pass it so the API

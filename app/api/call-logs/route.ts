@@ -314,7 +314,7 @@ export async function POST(request: NextRequest) {
       idempotencyToken = idempotency.token;
     }
 
-    const { vapiCallId, userId, jobContext, sessionId } = await request.json();
+    const { vapiCallId, userId, jobContext, sessionId, scheduleId } = await request.json();
 
     if (!vapiCallId) {
       if (idempotencyToken) {
@@ -410,6 +410,42 @@ export async function POST(request: NextRequest) {
           applicationId,
           interviewId: callIdForPipeline,
         });
+      }
+    };
+
+    const processInternalInterviewEvaluation = async (schedId: string, msgs: any[], details: any) => {
+      try {
+        const { schedulingService } = await import("@/services/recruiter/scheduling.service");
+        const { applicantService } = await import("@/services/recruiter/applicant.service");
+        const { interviewEvaluationService } = await import("@/services/interview/interview-evaluation.service");
+
+        const schedule = await schedulingService.getSchedule(schedId);
+        if (schedule && schedule.applicantId) {
+          console.log(`Evaluating internal interview for schedule ${schedId}...`);
+          const evalResult = await interviewEvaluationService.evaluateInterview(msgs, details);
+          
+          const score = (evalResult.overallRating || 0) * 10;
+
+          await applicantService.updateApplicantStatus(schedule.applicantId, "completed", {
+            // @ts-ignore - dynamic extras
+            interviewScore: score,
+            interviewRecommendation: evalResult.recommendation,
+          });
+
+          await schedulingService.updateScheduleStatus(schedId, "completed");
+
+          await db.collection("interview_evaluations").add({
+            applicantId: schedule.applicantId,
+            scheduleId: schedId,
+            jobId: schedule.jobId,
+            evaluation: evalResult,
+            vapiCallId,
+            createdAt: new Date().toISOString()
+          });
+          console.log(`Finished evaluating internal interview for schedule ${schedId}`);
+        }
+      } catch (err) {
+        console.error("Failed to process internal interview evaluation:", err);
       }
     };
 
@@ -529,6 +565,19 @@ export async function POST(request: NextRequest) {
     // If job context was provided (from extension), auto-create an external_application
     // and enqueue recruiter score generation asynchronously.
     await ensureRecruiterPipelineForJobContext(vapiCallId);
+
+    if (scheduleId) {
+      // Fire-and-forget internal evaluation
+      processInternalInterviewEvaluation(
+        scheduleId, 
+        vapiCallData?.artifact?.messages || vapiCallData?.messages || [], 
+        {
+          duration: callLogData.duration,
+          status: callLogData.status,
+          messageCount: callLogData.messageCount
+        }
+      ).catch(console.error);
+    }
 
     const payload = {
       success: true,

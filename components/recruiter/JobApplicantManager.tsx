@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import ResumeScreeningPanel from "./ResumeScreeningPanel";
 import ScheduleInterviewModal from "./ScheduleInterviewModal";
+import TopInterviewedCandidates from "./TopInterviewedCandidates";
 import type { Applicant, ResumeScreeningResult, RecruitmentJob } from "@/types/recruiter";
 
 interface EnrichedApplicant extends Applicant {
@@ -139,6 +140,8 @@ export default function JobApplicantManager({ jobId }: { jobId: string }) {
           <option value="name">Sort by Name</option>
         </select>
       </div>
+
+      <TopInterviewedCandidates applicants={applicants} jobTitle={job?.title || "Job"} />
 
       {/* Applicant List */}
       {applicants.length === 0 ? (

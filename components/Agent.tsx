@@ -139,7 +139,7 @@
     const isStartingCallRef = useRef(false);
     const userIdRef = useRef<string | undefined | null>(userId);
     const saveCallLogRef = useRef<
-      ((vapiCallId: string, jobContext?: string, sessionId?: string) => Promise<any>) | null
+      ((vapiCallId: string, jobContext?: string, sessionId?: string, scheduleId?: string) => Promise<any>) | null
     >(null);
     const addEmotionReadingRef = useRef<
       ((text: string, timestamp?: number) => Promise<void>) | null
@@ -650,13 +650,22 @@
               throw new Error("Call log service is not ready");
             }
 
-            let saveError: unknown = null;
+            let extractedScheduleId: string | undefined = undefined;
+            try {
+              const pContext = practiceContextJsonRef.current ? JSON.parse(practiceContextJsonRef.current) : {};
+              const jContext = jobContextJsonRef.current ? JSON.parse(jobContextJsonRef.current) : {};
+              extractedScheduleId = pContext.scheduleId || jContext.scheduleId;
+            } catch (e) {
+              console.warn("Failed to parse context for scheduleId");
+            }
+
             for (let attempt = 1; attempt <= 3; attempt += 1) {
               try {
                 await saveCallLogRef.current(
                   callId,
                   jobContextJsonRef.current || undefined,
-                  activeSessionIdRef.current || undefined
+                  activeSessionIdRef.current || undefined,
+                  extractedScheduleId
                 );
                 saveError = null;
                 break;
