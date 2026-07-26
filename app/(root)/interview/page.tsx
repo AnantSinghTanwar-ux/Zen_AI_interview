@@ -89,13 +89,25 @@ async function InterviewPage({
              "fullstack"
            );
 
+           // Tailor focus areas and instructions based on job type
+           let selectedFocusAreas = ["Behavioral", "Technical"];
+           let typeInstruction = "This is a comprehensive interview covering both technical skills and behavioral fit.";
+           
+           if (job.type === "technical") {
+             selectedFocusAreas = ["Core CS Fundamentals", "System Design", "Problem Solving"];
+             typeInstruction = "This is a STRICTLY TECHNICAL interview. Focus entirely on technical questions, coding concepts, system design, and the required skills. Do NOT ask behavioral questions.";
+           } else if (job.type === "behavioral") {
+             selectedFocusAreas = ["Behavioral", "Communication", "Leadership"];
+             typeInstruction = "This is a STRICTLY BEHAVIORAL interview. Focus entirely on past experiences, conflict resolution, leadership, and cultural fit using the STAR method. Do NOT ask technical coding questions.";
+           }
+
            jobPrepContextJson = JSON.stringify({
              mode: "real-interview",
              ...contextConfig,
              company: job.companyName,
-             vapiContext: `You are an AI interviewer conducting a REAL interview for the position of ${job.title} at ${job.companyName}. The candidate's name is ${schedule.candidateName}. \n\n${generateVapiPromptContext(contextConfig)}\n\nJob Description: ${job.description}\nRequired Skills: ${job.requiredSkills.join(", ")}\nRecruiter Notes: ${schedule.notes || "None"}`,
-             selectedFocusAreas: ["Behavioral", "Technical"],
-             notes: "This is a REAL scheduled interview. Conduct it professionally and rigorously according to the job description.",
+             vapiContext: `You are an AI interviewer conducting a REAL interview for the position of ${job.title} at ${job.companyName}. The candidate's name is ${schedule.candidateName}.\n\n${typeInstruction}\n\n${generateVapiPromptContext(contextConfig)}\n\nJob Description: ${job.description}\nRequired Skills: ${job.requiredSkills.join(", ")}\nRecruiter Notes: ${schedule.notes || "None"}`,
+             selectedFocusAreas,
+             notes: `This is a REAL scheduled interview. Conduct it professionally and rigorously according to the job description and interview type (${job.type}).`,
            });
         }
       }

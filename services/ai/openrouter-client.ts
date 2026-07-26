@@ -16,7 +16,7 @@ export interface OpenRouterRequestOptions {
 const OPENROUTER_BASE_URL =
   process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
 
-const DEFAULT_MODEL_FALLBACK = "openrouter/auto";
+const DEFAULT_MODEL_FALLBACK = "openai/gpt-4o-mini";
 
 function normalizeModel(model?: string | null): string {
   const value = String(model || "").trim();

@@ -139,7 +139,7 @@ class ResumeScreeningService {
       modelCandidates: getOpenRouterModelCandidates(
         process.env.OPENROUTER_MODEL,
         process.env.GOOGLE_AI_FEEDBACK_MODEL,
-        "openrouter/auto"
+        "openai/gpt-4o-mini"
       ),
       temperature: 0.15,
       maxTokens: 1_500,
