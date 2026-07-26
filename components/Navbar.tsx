@@ -3,7 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import LogoutButton from './LogoutButton';
-import { Menu, X, Swords, Target } from 'lucide-react';
+import NotificationBell from './NotificationBell';
+import { Menu, X, Swords, Target, Briefcase, FileText } from 'lucide-react';
 import { Button } from './ui/button';
 import { useState, useEffect } from 'react';
 import { checkAuthStatus } from '@/lib/actions/check-auth';
@@ -85,16 +86,19 @@ const Navbar = () => {
               <Link href="/recruiter" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Recruiter</Link>
             ) : isAuthenticated ? (
               <>
+                <Link href="/jobs" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1 flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5" />Jobs</Link>
                 <Link href="/job-prep" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1 flex items-center gap-1.5"><Target className="w-3.5 h-3.5" />Job Prep</Link>
                 <Link href="/interview" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Practice</Link>
-                <Link href="/feedback" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Feedback</Link>
-                <Link href="/call-data" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Interviews</Link>
+                <Link href="/my-applications" className="text-white/85 text-sm font-medium hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1 flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" />Applications</Link>
               </>
             ) : null}
             {isAuthLoading ? (
               <div className="h-10 w-28 rounded-full border border-white/10 bg-white/5 animate-pulse" />
             ) : isAuthenticated ? (
-              <LogoutButton />
+              <div className="flex items-center gap-2">
+                <NotificationBell />
+                <LogoutButton />
+              </div>
             ) : (
               <Link href="/sign-in">
                 <Button className="bg-primary hover:bg-primary/90 text-white rounded-full px-6 border-none shadow-[0_0_15px_rgba(157,125,249,0.3)] transition-all hover:scale-105">Sign In</Button>
@@ -128,6 +132,14 @@ const Navbar = () => {
               ) : isAuthenticated ? (
                 <>
                   <Link 
+                    href="/jobs" 
+                    className="text-foreground/90 font-medium text-lg w-full text-center py-3 hover:bg-white/5 rounded-2xl transition-all flex items-center justify-center gap-2"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Briefcase className="w-4 h-4" />
+                    Jobs
+                  </Link>
+                  <Link 
                     href="/job-prep" 
                     className="text-foreground/90 font-medium text-lg w-full text-center py-3 hover:bg-white/5 rounded-2xl transition-all flex items-center justify-center gap-2"
                     onClick={() => setIsMobileMenuOpen(false)}
@@ -143,18 +155,12 @@ const Navbar = () => {
                     Practice
                   </Link>
                   <Link 
-                    href="/feedback" 
-                    className="text-foreground/90 font-medium text-lg w-full text-center py-3 hover:bg-white/5 rounded-2xl transition-all"
+                    href="/my-applications" 
+                    className="text-foreground/90 font-medium text-lg w-full text-center py-3 hover:bg-white/5 rounded-2xl transition-all flex items-center justify-center gap-2"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    Feedback
-                  </Link>
-                  <Link 
-                    href="/call-data" 
-                    className="text-foreground/90 font-medium text-lg w-full text-center py-3 hover:bg-white/5 rounded-2xl transition-all"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Interviews
+                    <FileText className="w-4 h-4" />
+                    My Applications
                   </Link>
                 </>
               ) : null}

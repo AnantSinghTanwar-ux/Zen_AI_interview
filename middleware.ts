@@ -13,7 +13,8 @@ export function middleware(request: NextRequest) {
     '/job-prep',
     '/feedback',
     '/call-data',
-    '/recruiter'
+    '/recruiter',
+    '/my-applications'
   ];
 
   // Check if current path requires auth

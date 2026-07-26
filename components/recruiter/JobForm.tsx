@@ -80,7 +80,11 @@ export default function JobForm({ onSuccess, onCancel }: JobFormProps) {
           experienceLevel: "mid",
           type: "mixed",
         });
-        onSuccess?.();
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          window.location.href = "/recruiter";
+        }
       } else {
         const err = await res.json();
         toast.error(err.error || "Failed to create job");

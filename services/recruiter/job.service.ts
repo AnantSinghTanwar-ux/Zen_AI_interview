@@ -1,27 +1,6 @@
 import { db } from "@/services/firebase/admin";
 import { RecruitmentJob } from "@/types/recruiter";
 
-function isMissingIndexError(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-
-  const maybeError = error as {
-    code?: unknown;
-    details?: unknown;
-    message?: unknown;
-  };
-
-  const code = typeof maybeError.code === "number" ? maybeError.code : null;
-  const details = typeof maybeError.details === "string" ? maybeError.details : "";
-  const message = typeof maybeError.message === "string" ? maybeError.message : "";
-
-  if (code !== 9) return false;
-
-  return (
-    details.toLowerCase().includes("query requires an index") ||
-    message.toLowerCase().includes("query requires an index")
-  );
-}
-
 function toMillis(value: unknown): number {
   if (!value) return 0;
 
@@ -64,34 +43,13 @@ class JobService {
   }
 
   async listJobsByRecruiter(recruiterId: string): Promise<RecruitmentJob[]> {
-    let snapshot;
-
-    try {
-      snapshot = await db
-        .collection(this.COLLECTION)
-        .where("recruiterId", "==", recruiterId)
-        .orderBy("createdAt", "desc")
-        .get();
-    } catch (error) {
-      if (!isMissingIndexError(error)) {
-        throw error;
-      }
-
-      console.warn(
-        "[JobService] Missing Firestore index detected, falling back to in-memory sort for jobs."
-      );
-
-      snapshot = await db
-        .collection(this.COLLECTION)
-        .where("recruiterId", "==", recruiterId)
-        .get();
-    }
+    const snapshot = await db
+      .collection(this.COLLECTION)
+      .where("recruiterId", "==", recruiterId)
+      .get();
 
     return snapshot.docs
-      .map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
+      .map((doc) => ({ id: doc.id, ...doc.data() }))
       .sort(
         (a, b) =>
           toMillis((b as { createdAt?: unknown }).createdAt) -
@@ -99,11 +57,72 @@ class JobService {
       ) as RecruitmentJob[];
   }
 
+  /**
+   * List all active jobs — used by the public job board.
+   * Supports search and filter parameters.
+   */
+  async listActiveJobs(filters?: {
+    search?: string;
+    experienceLevel?: string;
+    type?: string;
+    skills?: string[];
+  }): Promise<RecruitmentJob[]> {
+    const snapshot = await db
+      .collection(this.COLLECTION)
+      .where("status", "==", "active")
+      .get();
+
+    let jobs = snapshot.docs.map(
+      (doc) => ({ id: doc.id, ...doc.data() }) as RecruitmentJob
+    );
+
+    // Apply in-memory filters (Firestore doesn't support substring or array-contains-any with other where clauses well)
+    if (filters?.search) {
+      const searchLower = filters.search.toLowerCase();
+      jobs = jobs.filter(
+        (j) =>
+          j.title.toLowerCase().includes(searchLower) ||
+          j.description.toLowerCase().includes(searchLower) ||
+          j.companyName.toLowerCase().includes(searchLower)
+      );
+    }
+
+    if (filters?.experienceLevel) {
+      jobs = jobs.filter((j) => j.experienceLevel === filters.experienceLevel);
+    }
+
+    if (filters?.type) {
+      jobs = jobs.filter((j) => j.type === filters.type);
+    }
+
+    if (filters?.skills && filters.skills.length > 0) {
+      const skillsLower = filters.skills.map((s) => s.toLowerCase());
+      jobs = jobs.filter((j) =>
+        skillsLower.some((skill) =>
+          j.requiredSkills.some((rs) => rs.toLowerCase().includes(skill))
+        )
+      );
+    }
+
+    // Check deadline — filter out expired jobs
+    const now = Date.now();
+    jobs = jobs.filter((j) => {
+      if (!j.deadline) return true;
+      return new Date(j.deadline).getTime() > now;
+    });
+
+    return jobs.sort(
+      (a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)
+    );
+  }
+
   async updateJob(
     jobId: string,
     updates: Partial<RecruitmentJob>
   ): Promise<void> {
-    await db.collection(this.COLLECTION).doc(jobId).update(updates);
+    // Prevent updating immutable fields
+    const { id: _id, createdAt: _ca, recruiterId: _rid, ...safeUpdates } = updates;
+    await db.collection(this.COLLECTION).doc(jobId).update(safeUpdates);
   }
 
   async addApplicantToJob(jobId: string, applicantId: string): Promise<void> {
@@ -119,6 +138,14 @@ class JobService {
 
   async closeJob(jobId: string): Promise<void> {
     await db.collection(this.COLLECTION).doc(jobId).update({ status: "closed" });
+  }
+
+  /**
+   * Delete a job (soft delete — sets status to closed).
+   * Hard delete is intentionally not supported to preserve referential integrity.
+   */
+  async deleteJob(jobId: string): Promise<void> {
+    await this.closeJob(jobId);
   }
 }
 

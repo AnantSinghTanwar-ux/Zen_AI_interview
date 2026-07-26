@@ -7,11 +7,14 @@ import {
   Trophy, Loader2, Building2, Globe,
   ThumbsUp, ThumbsDown,
   Award, ExternalLink, Search, Eye, Download, RefreshCw,
-  UserCheck, FileSpreadsheet, SlidersHorizontal, Sparkles
+  UserCheck, FileSpreadsheet, SlidersHorizontal, Sparkles,
+  Briefcase, CalendarDays
 } from "lucide-react";
 import type { ExternalApplication, ApplicationScore, LeaderboardEntry } from "@/types/external-application";
+import JobManagementDashboard from "./JobManagementDashboard";
+import ScheduleTab from "./ScheduleTab";
 
-type Tab = "overview" | "applications" | "leaderboard" | "hiring" | "talent-pool";
+type Tab = "overview" | "applications" | "leaderboard" | "hiring" | "talent-pool" | "jobs" | "schedule";
 
 const TEMP_RESCORE_BUTTON_ENABLED = true;
 
@@ -354,10 +357,12 @@ export default function RecruiterDashboard() {
     <div className="flex md:hidden gap-2 mb-4 overflow-x-auto pb-2">
       {([
         { key: "overview", label: "Dashboard", icon: BarChart3 },
+        { key: "jobs", label: "Jobs", icon: Briefcase },
         { key: "applications", label: "Apps", icon: Users },
         { key: "leaderboard", label: "Rankings", icon: Trophy },
         { key: "talent-pool", label: "Talent", icon: Globe },
         { key: "hiring", label: "Hire", icon: UserCheck },
+        { key: "schedule", label: "Schedule", icon: CalendarDays },
       ] as const).map(({ key, label, icon: Icon }) => (
         <button
           key={key}
@@ -379,10 +384,12 @@ export default function RecruiterDashboard() {
       <div className="hidden md:flex flex-col items-center py-6 gap-6 w-20 shrink-0 bg-[#0A0A0A]/40 border border-white/[0.04] backdrop-blur-3xl rounded-3xl sticky top-24 h-fit z-10 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
         {([
           { key: "overview", label: "Dashboard", icon: BarChart3 },
+          { key: "jobs", label: "Job Postings", icon: Briefcase },
           { key: "applications", label: "Applications", icon: Users },
           { key: "leaderboard", label: "Leaderboard", icon: Trophy },
           { key: "talent-pool", label: "Talent Pool", icon: Globe },
           { key: "hiring", label: "Hire Candidates", icon: UserCheck },
+          { key: "schedule", label: "Interview Schedule", icon: CalendarDays },
         ] as const).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -1081,6 +1088,16 @@ export default function RecruiterDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Jobs Tab */}
+      {tab === "jobs" && (
+        <JobManagementDashboard />
+      )}
+
+      {/* Schedule Tab */}
+      {tab === "schedule" && (
+        <ScheduleTab />
       )}
     </>
   );

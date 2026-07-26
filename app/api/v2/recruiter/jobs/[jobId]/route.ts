@@ -152,3 +152,110 @@ export async function PATCH(
     );
   }
 }
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ jobId: string }> }
+) {
+  try {
+    const { user, error } = await recruiterGuard();
+    if (error) return error;
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { jobId } = await params;
+    const recruiter = await recruiterService.getRecruiterByUserId(user.id);
+    if (!recruiter) {
+      return NextResponse.json({ error: "Recruiter profile not found" }, { status: 403 });
+    }
+
+    const existingJob = await jobService.getJob(jobId);
+    if (!existingJob) {
+      return NextResponse.json({ error: "Job not found" }, { status: 404 });
+    }
+    if (existingJob.recruiterId !== recruiter.id) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const updates: Record<string, unknown> = {};
+
+    if (typeof body.title === "string" && body.title.trim()) {
+      updates.title = body.title.trim().slice(0, 200);
+    }
+    if (typeof body.description === "string" && body.description.trim()) {
+      updates.description = body.description.trim().slice(0, 5000);
+    }
+    if (Array.isArray(body.requiredSkills)) {
+      updates.requiredSkills = body.requiredSkills
+        .filter((s: unknown): s is string => typeof s === "string" && s.trim().length > 0)
+        .map((s: string) => s.trim().slice(0, 100))
+        .slice(0, 30);
+    }
+    if (body.experienceLevel && ["junior", "mid", "senior", "lead"].includes(body.experienceLevel)) {
+      updates.experienceLevel = body.experienceLevel;
+    }
+    if (body.type && ["technical", "behavioral", "mixed"].includes(body.type)) {
+      updates.type = body.type;
+    }
+    if (body.status && ["draft", "active", "closed"].includes(body.status)) {
+      updates.status = body.status;
+    }
+    if (typeof body.location === "string") {
+      updates.location = body.location.trim().slice(0, 200);
+    }
+    if (body.salaryRange && typeof body.salaryRange === "object") {
+      const min = Number(body.salaryRange.min);
+      const max = Number(body.salaryRange.max);
+      if (Number.isFinite(min) && Number.isFinite(max) && min >= 0 && max >= min) {
+        updates.salaryRange = { min, max };
+      }
+    }
+    if (typeof body.deadline === "string") {
+      const d = new Date(body.deadline);
+      if (!isNaN(d.getTime())) {
+        updates.deadline = d.toISOString();
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+    }
+
+    await jobService.updateJob(jobId, updates as any);
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("[PUT /api/v2/recruiter/jobs/[jobId]] Error:", err);
+    return NextResponse.json({ error: "Failed to update job" }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ jobId: string }> }
+) {
+  try {
+    const { user, error } = await recruiterGuard();
+    if (error) return error;
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { jobId } = await params;
+    const recruiter = await recruiterService.getRecruiterByUserId(user.id);
+    if (!recruiter) {
+      return NextResponse.json({ error: "Recruiter profile not found" }, { status: 403 });
+    }
+
+    const existingJob = await jobService.getJob(jobId);
+    if (!existingJob) {
+      return NextResponse.json({ error: "Job not found" }, { status: 404 });
+    }
+    if (existingJob.recruiterId !== recruiter.id) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    await jobService.deleteJob(jobId);
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("[DELETE /api/v2/recruiter/jobs/[jobId]] Error:", err);
+    return NextResponse.json({ error: "Failed to delete job" }, { status: 500 });
+  }
+}

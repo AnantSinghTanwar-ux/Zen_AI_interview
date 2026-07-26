@@ -1,11 +1,15 @@
 import { db } from "@/services/firebase/admin";
-import { Applicant, ScreeningResult } from "@/types/recruiter";
+import { Applicant, ApplicantStatus, ScreeningResult, ResumeScreeningResult } from "@/types/recruiter";
 import { jobService } from "./job.service";
 
 class ApplicantService {
   private readonly COLLECTION = "applicants";
   private readonly RESULTS_COLLECTION = "screening_results";
+  private readonly RESUME_SCREENINGS_COLLECTION = "resume_screenings";
 
+  /**
+   * Import applicants from CSV (existing flow — recruiter batch import).
+   */
   async importApplicants(
     jobId: string,
     applicants: Array<{ name: string; email: string; resumeUrl?: string }>
@@ -14,7 +18,6 @@ class ApplicantService {
     let failed = 0;
     let duplicates = 0;
 
-    // Get existing applicants for this job to check duplicates
     const existingSnapshot = await db
       .collection(this.COLLECTION)
       .where("jobId", "==", jobId)
@@ -54,13 +57,56 @@ class ApplicantService {
     if (imported > 0) {
       await batch.commit();
 
-      // Update job applicantIds
       for (const id of newApplicantIds) {
         await jobService.addApplicantToJob(jobId, id);
       }
     }
 
     return { imported, failed, duplicates };
+  }
+
+  /**
+   * Candidate self-application flow.
+   * Returns the applicant ID if successful, null if duplicate.
+   */
+  async applyForJob(params: {
+    jobId: string;
+    name: string;
+    email: string;
+    resumeText?: string;
+    coverLetter?: string;
+    candidateUserId?: string;
+  }): Promise<{ applicantId: string | null; isDuplicate: boolean }> {
+    const email = params.email.trim().toLowerCase();
+
+    // Check for duplicate application (same email + same job)
+    const existingSnapshot = await db
+      .collection(this.COLLECTION)
+      .where("jobId", "==", params.jobId)
+      .where("email", "==", email)
+      .limit(1)
+      .get();
+
+    if (!existingSnapshot.empty) {
+      return { applicantId: null, isDuplicate: true };
+    }
+
+    const now = new Date().toISOString();
+    const docRef = await db.collection(this.COLLECTION).add({
+      jobId: params.jobId,
+      name: params.name.trim().slice(0, 200),
+      email,
+      resumeText: params.resumeText?.slice(0, 15_000) || "",
+      coverLetter: params.coverLetter?.trim().slice(0, 5_000) || "",
+      candidateUserId: params.candidateUserId || "",
+      status: "pending" as ApplicantStatus,
+      appliedAt: now,
+    });
+
+    // Add applicant to job's applicantIds array
+    await jobService.addApplicantToJob(params.jobId, docRef.id);
+
+    return { applicantId: docRef.id, isDuplicate: false };
   }
 
   async getApplicantsByJob(
@@ -75,14 +121,14 @@ class ApplicantService {
       query = query.where("status", "==", status);
     }
 
-    query = query.orderBy("appliedAt", "desc");
-
     const snapshot = await query.get();
 
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Applicant[];
+    return snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }) as Applicant)
+      .sort(
+        (a, b) =>
+          new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
+      );
   }
 
   async getApplicant(applicantId: string): Promise<Applicant | null> {
@@ -93,21 +139,26 @@ class ApplicantService {
 
   async updateApplicantStatus(
     applicantId: string,
-    status: Applicant["status"],
+    status: ApplicantStatus,
     extras?: Partial<Applicant>
   ): Promise<void> {
-    const updates: Record<string, any> = { status };
+    const updates: Record<string, unknown> = { status };
 
     if (status === "invited") updates.invitedAt = new Date().toISOString();
     if (status === "completed") updates.completedAt = new Date().toISOString();
 
     if (extras) {
-      Object.assign(updates, extras);
+      // Only copy safe fields
+      const { id: _id, jobId: _jid, email: _e, ...safeExtras } = extras;
+      Object.assign(updates, safeExtras);
     }
 
     await db.collection(this.COLLECTION).doc(applicantId).update(updates);
   }
 
+  /**
+   * Get applicant with legacy interview screening results.
+   */
   async getApplicantWithResults(
     applicantId: string
   ): Promise<(Applicant & { results?: ScreeningResult }) | null> {
@@ -127,8 +178,50 @@ class ApplicantService {
     return { ...applicant, results };
   }
 
+  /**
+   * Get applicant with AI resume screening result.
+   */
+  async getApplicantWithScreening(
+    applicantId: string
+  ): Promise<(Applicant & { screening?: ResumeScreeningResult }) | null> {
+    const applicant = await this.getApplicant(applicantId);
+    if (!applicant) return null;
+
+    const screeningSnapshot = await db
+      .collection(this.RESUME_SCREENINGS_COLLECTION)
+      .where("applicantId", "==", applicantId)
+      .limit(1)
+      .get();
+
+    const screening = screeningSnapshot.empty
+      ? undefined
+      : ({ id: screeningSnapshot.docs[0].id, ...screeningSnapshot.docs[0].data() } as ResumeScreeningResult);
+
+    return { ...applicant, screening };
+  }
+
+  /**
+   * Get all applications by a specific user (for candidate dashboard).
+   */
+  async getApplicationsByUser(userId: string): Promise<Applicant[]> {
+    const snapshot = await db
+      .collection(this.COLLECTION)
+      .where("candidateUserId", "==", userId)
+      .get();
+
+    return snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }) as Applicant)
+      .sort(
+        (a, b) =>
+          new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
+      );
+  }
+
   async addNote(applicantId: string, note: string): Promise<void> {
-    await db.collection(this.COLLECTION).doc(applicantId).update({ notes: note });
+    await db
+      .collection(this.COLLECTION)
+      .doc(applicantId)
+      .update({ notes: note.trim().slice(0, 2000) });
   }
 }
 

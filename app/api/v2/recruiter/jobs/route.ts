@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
 
     const jobs = await jobService.listJobsByRecruiter(recruiter.id!);
 
-    return NextResponse.json(jobs, { status: 200 });
+    return NextResponse.json({ jobs }, { status: 200 });
   } catch (error) {
     console.error("Error listing jobs:", error);
     return NextResponse.json(

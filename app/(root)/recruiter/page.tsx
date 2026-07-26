@@ -1,20 +1,19 @@
 import RecruiterDashboard from "@/components/recruiter/RecruiterDashboard";
 import PageLayout from "@/components/PageLayout";
-import { getCurrentUser } from "@/lib/actions/auth.actions";
+import { checkAuthStatus } from "@/lib/actions/check-auth";
 import { redirect } from "next/navigation";
-import { isAllowedRecruiterEmail } from "@/lib/auth/recruiter-access";
 
 export const dynamic = "force-dynamic";
 
 export default async function RecruiterPage() {
-  const user = await getCurrentUser();
+  const authStatus = await checkAuthStatus();
 
-  if (!user) {
+  if (!authStatus.isAuthenticated) {
     redirect("/sign-in?redirect=/recruiter");
   }
 
-  if (!isAllowedRecruiterEmail(user.email)) {
-    redirect("/");
+  if (!authStatus.isRecruiter) {
+    redirect("/pricing");
   }
 
   return (
