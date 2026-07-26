@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const jobId = await jobService.createJob({
+    const jobPayload: any = {
       recruiterId: recruiter.id!,
       companyName: recruiter.companyName,
       title: data.title,
@@ -108,9 +108,20 @@ export async function POST(request: NextRequest) {
       requiredSkills: data.requiredSkills || [],
       experienceLevel: data.experienceLevel || "mid",
       type: data.type || "mixed",
-      salaryRange: data.salaryRange,
       status: "active",
-    });
+    };
+
+    if (data.salaryRange !== undefined) {
+        jobPayload.salaryRange = data.salaryRange;
+    }
+    if (data.location !== undefined) {
+        jobPayload.location = data.location;
+    }
+    if (data.deadline !== undefined) {
+        jobPayload.deadline = data.deadline;
+    }
+
+    const jobId = await jobService.createJob(jobPayload);
 
     await recruiterService.incrementJobCount(recruiter.id!);
 
