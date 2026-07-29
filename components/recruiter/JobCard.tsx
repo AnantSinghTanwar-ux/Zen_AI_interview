@@ -1,7 +1,7 @@
 "use client";
 
 import { RecruitmentJob } from "@/types/recruiter";
-import { Briefcase, Users, Clock, Edit2, Trash2, Eye, MapPin } from "lucide-react";
+import { Briefcase, Users, Clock, Edit2, Trash2, Eye, MapPin, Zap } from "lucide-react";
 import Link from "next/link";
 
 interface JobCardProps {
@@ -93,14 +93,21 @@ export default function JobCard({ job, onEdit, onDelete }: JobCardProps) {
         </span>
       </div>
 
-      {/* Actions */}
       <div className="flex items-center gap-2 mt-4 pt-3 border-t border-white/5">
+        <Link
+          href={`/recruiter/bulk-screening?jobId=${job.id}`}
+          className="flex items-center gap-1.5 text-xs font-medium text-violet-400 hover:bg-violet-500/10 px-3 py-1.5 rounded-lg transition-colors"
+          title="Bulk Screen Candidates"
+        >
+          <Zap className="w-3.5 h-3.5" />
+          Bulk Screen
+        </Link>
         <Link
           href={`/recruiter/jobs/${job.id}`}
           className="flex items-center gap-1.5 text-xs font-medium text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors"
         >
           <Eye className="w-3.5 h-3.5" />
-          View Applicants
+          Applicants
         </Link>
         {onEdit && job.status !== "closed" && (
           <button

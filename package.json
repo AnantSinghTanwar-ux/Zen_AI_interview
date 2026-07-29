@@ -8,6 +8,7 @@
     "start": "node scripts/preflight-redis.mjs && next start",
     "lint": "next lint",
     "worker": "node scripts/preflight-redis.mjs && tsx scripts/start-feedback-worker.ts",
+    "worker:screening": "node scripts/preflight-redis.mjs && tsx scripts/start-screening-worker.ts",
     "smoke:50": "node --env-file=.env --import tsx scripts/smoke-50-users.ts"
   },
   "dependencies": {
@@ -19,6 +20,7 @@
     "@types/canvas-confetti": "^1.9.0",
     "@vapi-ai/web": "^2.5.2",
     "ai": "^4.3.16",
+    "bullmq": "^5.81.2",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -43,6 +45,7 @@
     "react-icons": "^5.6.0",
     "recharts": "^3.1.2",
     "redis": "^4.7.0",
+    "resend": "^6.18.1",
     "server-only": "^0.0.1",
     "sonner": "^2.0.4",
     "tailwind-merge": "^3.3.0",

@@ -8,13 +8,13 @@ import {
   ThumbsUp, ThumbsDown,
   Award, ExternalLink, Search, Eye, Download, RefreshCw,
   UserCheck, FileSpreadsheet, SlidersHorizontal, Sparkles,
-  Briefcase, CalendarDays
+  Briefcase, CalendarDays, Zap
 } from "lucide-react";
 import type { ExternalApplication, ApplicationScore, LeaderboardEntry } from "@/types/external-application";
 import JobManagementDashboard from "./JobManagementDashboard";
 import ScheduleTab from "./ScheduleTab";
 
-type Tab = "overview" | "applications" | "leaderboard" | "hiring" | "talent-pool" | "jobs" | "schedule";
+type Tab = "overview" | "applications" | "leaderboard" | "hiring" | "talent-pool" | "jobs" | "schedule" | "bulk-screening";
 
 const TEMP_RESCORE_BUTTON_ENABLED = true;
 
@@ -363,10 +363,17 @@ export default function RecruiterDashboard() {
         { key: "talent-pool", label: "Talent", icon: Globe },
         { key: "hiring", label: "Hire", icon: UserCheck },
         { key: "schedule", label: "Schedule", icon: CalendarDays },
+        { key: "bulk-screening", label: "Bulk", icon: Zap },
       ] as const).map(({ key, label, icon: Icon }) => (
         <button
           key={key}
-          onClick={() => setTab(key)}
+          onClick={() => {
+            if (key === "bulk-screening") {
+              window.location.href = "/recruiter/bulk-screening";
+            } else {
+              setTab(key as Tab);
+            }
+          }}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
             tab === key
               ? "bg-[#A3E635] text-black shadow-lg"
@@ -390,11 +397,18 @@ export default function RecruiterDashboard() {
           { key: "talent-pool", label: "Talent Pool", icon: Globe },
           { key: "hiring", label: "Hire Candidates", icon: UserCheck },
           { key: "schedule", label: "Interview Schedule", icon: CalendarDays },
+          { key: "bulk-screening", label: "Bulk Screening Engine", icon: Zap },
         ] as const).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             title={label}
-            onClick={() => setTab(key)}
+            onClick={() => {
+              if (key === "bulk-screening") {
+                window.location.href = "/recruiter/bulk-screening";
+              } else {
+                setTab(key as Tab);
+              }
+            }}
             className={`p-4 rounded-xl transition-all duration-300 ${
               tab === key
                 ? "bg-[#A3E635] text-black shadow-[0_0_20px_rgba(163,230,53,0.3)] hover:scale-105"
