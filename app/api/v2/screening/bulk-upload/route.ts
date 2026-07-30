@@ -328,6 +328,7 @@ export async function POST(req: NextRequest) {
       for (let i = 0; i < topCandidateIds.length; i += BATCH_SIZE) {
         const chunk = topCandidateIds.slice(i, i + BATCH_SIZE);
         const batch = db.batch();
+        const newApplicantIds: string[] = [];
 
         for (const candidateId of chunk) {
           const candidate = extractedCandidates.find((c) => c.docId === candidateId);
@@ -344,6 +345,8 @@ export async function POST(req: NextRequest) {
           
           const appRef = db.collection("applicants").doc();
           const applicantId = appRef.id;
+          newApplicantIds.push(applicantId);
+          
           batch.set(appRef, {
             jobId,
             name: candidate.name || candidate.fileName || "Candidate",
@@ -353,11 +356,6 @@ export async function POST(req: NextRequest) {
             appliedAt: now,
             interviewScore: null,
             interviewRecommendation: null,
-          });
-          
-          const jobRef = db.collection("jobs").doc(jobId);
-          batch.update(jobRef, {
-            applicantIds: FieldValue.arrayUnion(applicantId)
           });
 
           if (candidate.email) {
@@ -393,12 +391,21 @@ export async function POST(req: NextRequest) {
           batch.update(ref, updates);
         }
         await batch.commit();
+        if (newApplicantIds.length > 0) {
+          const jobRef = db.collection("jobs").doc(jobId);
+          try {
+             await jobRef.update({
+               applicantIds: FieldValue.arrayUnion(...newApplicantIds)
+             });
+          } catch(e) { console.error(e); }
+        }
       }
     } else {
       // No email service configured — just mark shortlisted and generate links
       for (let i = 0; i < topCandidateIds.length; i += BATCH_SIZE) {
         const chunk = topCandidateIds.slice(i, i + BATCH_SIZE);
         const batch = db.batch();
+        const newApplicantIdsFallback: string[] = [];
         for (const candidateId of chunk) {
           const candidate = extractedCandidates.find((c) => c.docId === candidateId);
           if (!candidate) continue;
@@ -414,6 +421,7 @@ export async function POST(req: NextRequest) {
           
           const appRef = db.collection("applicants").doc();
           const applicantId = appRef.id;
+          newApplicantIdsFallback.push(applicantId);
           batch.set(appRef, {
             jobId,
             name: candidate.name || candidate.fileName || "Candidate",
@@ -424,13 +432,16 @@ export async function POST(req: NextRequest) {
             interviewScore: null,
             interviewRecommendation: null,
           });
-          
-          const jobRef = db.collection("jobs").doc(jobId);
-          batch.update(jobRef, {
-            applicantIds: FieldValue.arrayUnion(applicantId)
-          });
         }
         await batch.commit();
+        if (newApplicantIdsFallback.length > 0) {
+          const jobRef = db.collection("jobs").doc(jobId);
+          try {
+             await jobRef.update({
+               applicantIds: FieldValue.arrayUnion(...newApplicantIdsFallback)
+             });
+          } catch(e) { console.error(e); }
+        }
       }
     }
 
