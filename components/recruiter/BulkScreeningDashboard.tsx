@@ -10,6 +10,7 @@ import {
   RotateCcw,
   ArrowLeft,
   Loader2,
+  Mail,
 } from "lucide-react";
 import type {
   ScreenedCandidateRow,
@@ -53,6 +54,7 @@ export default function BulkScreeningDashboard({
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [searchQuery, setSearchQuery] = useState("");
   const [resultsLoading, setResultsLoading] = useState(false);
+  const [sendingEmails, setSendingEmails] = useState(false);
 
   // Fetch results from Firestore
   const fetchResults = useCallback(async (bjId: string, page = 1, sort = "llmScore", order = "desc", search = "") => {
@@ -123,6 +125,28 @@ export default function BulkScreeningDashboard({
     setSearchQuery("");
   }, []);
 
+  // Send invites to all shortlisted candidates
+  const handleSendInvites = useCallback(async () => {
+    if (!bulkJobId || sendingEmails) return;
+    setSendingEmails(true);
+    try {
+      const res = await fetch("/api/v2/screening/send-invites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bulkJobId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send invites");
+      toast.success(data.message || `Sent ${data.sent} invites!`);
+      // Refresh results to show updated email status
+      if (bulkJobId) fetchResults(bulkJobId, resultsPage, sortBy, sortOrder, searchQuery);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send invites");
+    } finally {
+      setSendingEmails(false);
+    }
+  }, [bulkJobId, sendingEmails, fetchResults, resultsPage, sortBy, sortOrder, searchQuery]);
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -152,13 +176,26 @@ export default function BulkScreeningDashboard({
         </div>
 
         {phase === "results" && (
-          <button
-            onClick={handleReset}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground px-4 py-2 rounded-xl hover:bg-white/[0.04] border border-white/[0.06] transition-all"
-          >
-            <RotateCcw className="w-4 h-4" />
-            New Screening
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSendInvites}
+              disabled={sendingEmails}
+              className="flex items-center gap-2 text-sm font-medium text-white bg-gradient-to-r from-violet-500 to-primary px-5 py-2 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 shadow-lg shadow-primary/20"
+            >
+              {sendingEmails ? (
+                <><Loader2 className="w-4 h-4 animate-spin" />Sending...</>
+              ) : (
+                <><Mail className="w-4 h-4" />Send Invites to All Shortlisted</>
+              )}
+            </button>
+            <button
+              onClick={handleReset}
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground px-4 py-2 rounded-xl hover:bg-white/[0.04] border border-white/[0.06] transition-all"
+            >
+              <RotateCcw className="w-4 h-4" />
+              New Screening
+            </button>
+          </div>
         )}
       </div>
 

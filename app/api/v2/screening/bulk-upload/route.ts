@@ -1,39 +1,81 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/services/firebase/admin";
 import {
-  extractTextFromBuffer,
   extractContacts,
-  isResumeTextValid,
 } from "@/services/recruiter/resume-extractor.service";
 import {
   batchScoreCandidates,
   selectTopNCandidates,
 } from "@/services/recruiter/batch-scoring.service";
 import {
-  sendInterviewInviteEmail,
-  hasBrevoKey,
-} from "@/services/recruiter/email.service";
-import {
   generateInterviewToken,
   buildInterviewLink,
-  getInterviewDeadline,
-  formatDeadline,
 } from "@/services/recruiter/interview-token.service";
 import {
   MAX_RESUME_FILE_SIZE,
   ACCEPTED_RESUME_EXTENSIONS,
   COLLECTION_BULK_JOBS,
   COLLECTION_BULK_CANDIDATES,
+  MAX_RESUME_LENGTH,
 } from "@/constants/screening.config";
 import type { RecruitmentJob } from "@/types/recruiter";
 
 // ─── POST /api/v2/screening/bulk-upload ─────────────────────────────────────
 //
 // Serverless-compatible bulk screening pipeline.
-// Processes everything inline: extract → score → shortlist → email.
-// No Redis or BullMQ required.
+// Processes everything inline: extract → score → shortlist.
+// Emailing is done separately via a dedicated button/endpoint.
 
 export const maxDuration = 300; // Vercel Pro: 5 min timeout
+
+/**
+ * Robust text extraction that handles PDF, DOCX, and TXT.
+ * Each extractor is wrapped individually to prevent one failure from killing the whole pipeline.
+ */
+async function extractTextSafe(buffer: Buffer, fileName: string): Promise<string> {
+  const ext = fileName.toLowerCase().split(".").pop() || "";
+
+  try {
+    if (ext === "pdf") {
+      const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      const uint8 = new Uint8Array(buffer);
+      const doc = await pdfjs.getDocument({ data: uint8 }).promise;
+      const pages: string[] = [];
+      for (let i = 1; i <= doc.numPages; i++) {
+        const page = await doc.getPage(i);
+        const content = await page.getTextContent();
+        const text = content.items
+          .map((item: any) => ("str" in item ? item.str : ""))
+          .join(" ");
+        pages.push(text);
+      }
+      return pages.join("\n").trim().slice(0, MAX_RESUME_LENGTH);
+    }
+
+    if (ext === "docx" || ext === "doc") {
+      try {
+        const mammoth = await import("mammoth");
+        const result = await mammoth.extractRawText({ buffer });
+        return (result.value || "").trim().slice(0, MAX_RESUME_LENGTH);
+      } catch (docxErr) {
+        console.error(`[Extract] mammoth failed for ${fileName}, trying raw text fallback:`, docxErr);
+        // Fallback: try to extract any readable text from the buffer
+        const rawText = buffer.toString("utf-8").replace(/[^\x20-\x7E\n\r\t]/g, " ").replace(/\s+/g, " ").trim();
+        if (rawText.length > 50) return rawText.slice(0, MAX_RESUME_LENGTH);
+        throw docxErr;
+      }
+    }
+
+    if (ext === "txt") {
+      return buffer.toString("utf-8").trim().slice(0, MAX_RESUME_LENGTH);
+    }
+
+    throw new Error(`Unsupported file type: .${ext}`);
+  } catch (err) {
+    console.error(`[Extract] Failed for ${fileName}:`, err);
+    throw err;
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -63,7 +105,7 @@ export async function POST(req: NextRequest) {
 
     const job = { id: jobDoc.id, ...jobDoc.data() } as RecruitmentJob;
 
-    // ── Collect and validate resume files ──
+    // ── Collect ALL resume files from formData ──
     const files: File[] = [];
     for (const [key, value] of formData.entries()) {
       if (key === "files" && value instanceof File) {
@@ -144,15 +186,30 @@ export async function POST(req: NextRequest) {
     }> = [];
 
     let extractionFailed = 0;
+    const extractionErrors: string[] = [];
 
+    // Read all file buffers first to avoid stream-already-consumed issues
+    const fileBuffers: Array<{ file: File; buffer: Buffer }> = [];
     for (const file of validFiles) {
       try {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        const text = await extractTextFromBuffer(buffer, file.name);
+        fileBuffers.push({ file, buffer });
+      } catch (err) {
+        extractionFailed++;
+        extractionErrors.push(`${file.name}: failed to read file`);
+        console.error(`[BulkUpload] Failed to read ${file.name}:`, err);
+      }
+    }
 
-        if (!isResumeTextValid(text)) {
+    // Extract text from each file
+    for (const { file, buffer } of fileBuffers) {
+      try {
+        const text = await extractTextSafe(buffer, file.name);
+
+        if (!text || text.trim().length < 30) {
           extractionFailed++;
+          extractionErrors.push(`${file.name}: text too short (${text?.length || 0} chars)`);
           continue;
         }
 
@@ -197,6 +254,8 @@ export async function POST(req: NextRequest) {
         });
       } catch (err) {
         extractionFailed++;
+        const errMsg = err instanceof Error ? err.message : String(err);
+        extractionErrors.push(`${file.name}: ${errMsg}`);
         console.error(`[BulkUpload] Extraction failed for ${file.name}:`, err);
       }
     }
@@ -213,9 +272,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         bulkJobId: bulkJobRef.id,
         error: "No resumes could be extracted",
+        extractionErrors,
         totalFiles: files.length,
         validFiles: validFiles.length,
         extracted: 0,
+        stage: "completed",
       }, { status: 200 });
     }
 
@@ -251,96 +312,30 @@ export async function POST(req: NextRequest) {
       "progress.llmScored": scores.filter((s) => !s.error).length,
     });
 
-    // ── STAGE 3: Select top N and shortlist ──
+    // ── STAGE 3: Select top N and shortlist + generate interview links ──
     const topCandidateIds = selectTopNCandidates(scores, topN);
 
-    // Mark shortlisted candidates
+    // Mark shortlisted candidates and generate interview tokens/links
     for (let i = 0; i < topCandidateIds.length; i += BATCH_SIZE) {
       const chunk = topCandidateIds.slice(i, i + BATCH_SIZE);
       const batch = db.batch();
       for (const candidateId of chunk) {
-        const ref = db.collection(COLLECTION_BULK_CANDIDATES).doc(candidateId);
-        batch.update(ref, { isShortlisted: true });
-      }
-      await batch.commit();
-    }
-
-    await bulkJobRef.update({
-      stage: "emailing",
-      "progress.shortlisted": topCandidateIds.length,
-    });
-
-    // ── STAGE 4: Email shortlisted candidates ──
-    let emailed = 0;
-    let emailFailed = 0;
-
-    if (hasBrevoKey()) {
-      const deadline = getInterviewDeadline();
-      const deadlineStr = formatDeadline(deadline);
-
-      for (const candidateId of topCandidateIds) {
-        const candidate = extractedCandidates.find((c) => c.docId === candidateId);
-        if (!candidate || !candidate.email) {
-          emailFailed++;
-          continue;
-        }
-
-        try {
-          const token = generateInterviewToken(candidateId, jobId, bulkJobRef.id);
-          const interviewLink = buildInterviewLink(token);
-
-          // Update candidate with interview info
-          await db.collection(COLLECTION_BULK_CANDIDATES).doc(candidateId).update({
-            interviewToken: token,
-            interviewLink,
-          });
-
-          // Send email
-          const emailResult = await sendInterviewInviteEmail({
-            to: candidate.email,
-            candidateName: candidate.name || "Candidate",
-            jobTitle: job.title,
-            companyName: job.companyName || "Our Company",
-            interviewLink,
-            deadline: deadlineStr,
-          });
-
-          if (emailResult.success) {
-            emailed++;
-            await db.collection(COLLECTION_BULK_CANDIDATES).doc(candidateId).update({
-              emailSentAt: new Date().toISOString(),
-              emailId: emailResult.emailId,
-            });
-          } else {
-            emailFailed++;
-            console.error(`[BulkUpload] Email failed for ${candidate.email}: ${emailResult.error}`);
-          }
-
-          // Small delay between emails to respect rate limits
-          await new Promise<void>((resolve) => setTimeout(resolve, 100));
-        } catch (err) {
-          emailFailed++;
-          console.error(`[BulkUpload] Email error for ${candidate.email}:`, err);
-        }
-      }
-    } else {
-      // No email service configured — still generate tokens/links
-      const deadline = getInterviewDeadline();
-      for (const candidateId of topCandidateIds) {
         const token = generateInterviewToken(candidateId, jobId, bulkJobRef.id);
         const interviewLink = buildInterviewLink(token);
-        await db.collection(COLLECTION_BULK_CANDIDATES).doc(candidateId).update({
+        const ref = db.collection(COLLECTION_BULK_CANDIDATES).doc(candidateId);
+        batch.update(ref, {
+          isShortlisted: true,
           interviewToken: token,
           interviewLink,
         });
       }
+      await batch.commit();
     }
 
     // ── FINALIZE ──
     await bulkJobRef.update({
       stage: "completed",
-      "progress.emailed": emailed,
-      "progress.emailFailed": emailFailed,
+      "progress.shortlisted": topCandidateIds.length,
       completedAt: new Date().toISOString(),
     });
 
@@ -350,13 +345,12 @@ export async function POST(req: NextRequest) {
       validFiles: validFiles.length,
       extracted: extractedCandidates.length,
       extractionFailed,
+      extractionErrors: extractionErrors.length > 0 ? extractionErrors : undefined,
       scored: scores.filter((s) => !s.error).length,
       shortlisted: topCandidateIds.length,
-      emailed,
-      emailFailed,
       skipped: skippedErrors.length,
       errors: skippedErrors.length > 0 ? skippedErrors.slice(0, 20) : undefined,
-      message: `Screening complete: ${topCandidateIds.length} candidates shortlisted, ${emailed} emailed.`,
+      message: `Screening complete: ${extractedCandidates.length} extracted, ${topCandidateIds.length} shortlisted. Use "Send Invites" to email candidates.`,
       stage: "completed",
     });
   } catch (err) {
