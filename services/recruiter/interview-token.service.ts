@@ -33,7 +33,7 @@ export function generateInterviewToken(
  */
 export function buildInterviewLink(token: string): string {
   const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL || "https://zen-ai-zeta.vercel.app";
+    process.env.NEXT_PUBLIC_APP_URL || "https://zen-ai-interview.vercel.app";
   return `${baseUrl}/interview/join?token=${token}`;
 }
 
