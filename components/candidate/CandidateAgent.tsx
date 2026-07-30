@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Mic, Activity, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
-const ASSISTANT = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID;
+const ASSISTANT = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID || "fb5af732-a8a6-4213-9318-37a3d92d5d93";
 
 export interface CandidateContext {
   candidateId: string;
