@@ -29,6 +29,7 @@ export default function CandidateAgent({ context }: { context: CandidateContext 
   
   // Track messages for transcript building
   const messagesRef = useRef<any[]>([]);
+  const transcriptRef = useRef("");
 
   useEffect(() => {
     if (!vapi) return;
@@ -36,16 +37,20 @@ export default function CandidateAgent({ context }: { context: CandidateContext 
     const onCallStart = () => {
       setCallStatus("ACTIVE");
       messagesRef.current = [];
+      transcriptRef.current = "";
       setTranscript("");
     };
 
     const onCallEnd = async () => {
-      setCallStatus("FINISHED");
-      
-      // Attempt to score the interview immediately
-      if (currentCallIdRef.current || messagesRef.current.length > 0) {
-        await submitScore();
+      // If the call drops before any real conversation happens, allow them to retry
+      if (transcriptRef.current.trim().length < 10) {
+        setCallStatus("INACTIVE");
+        toast.error("The interview disconnected before starting. Please try again.");
+        return;
       }
+
+      setCallStatus("FINISHED");
+      await submitScore();
     };
 
     const onMessage = (message: any) => {
@@ -53,9 +58,11 @@ export default function CandidateAgent({ context }: { context: CandidateContext 
       
       // If we got a final transcript, append to our running text
       if (message.type === "transcript" && message.transcriptType === "final") {
-        setTranscript(prev => prev + `\nCandidate: ${message.transcript}`);
+        transcriptRef.current += `\nCandidate: ${message.transcript}`;
+        setTranscript(transcriptRef.current);
       } else if (message.role === "assistant" && message.message) {
-        setTranscript(prev => prev + `\nInterviewer: ${message.message}`);
+        transcriptRef.current += `\nInterviewer: ${message.message}`;
+        setTranscript(transcriptRef.current);
       }
     };
 
@@ -93,7 +100,7 @@ export default function CandidateAgent({ context }: { context: CandidateContext 
         body: JSON.stringify({
           candidateId: context.candidateId,
           jobId: context.jobId,
-          transcript: transcript,
+          transcript: transcriptRef.current,
           callId: currentCallIdRef.current,
         }),
       });
