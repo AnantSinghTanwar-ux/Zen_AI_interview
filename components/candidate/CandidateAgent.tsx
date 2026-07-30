@@ -42,10 +42,10 @@ export default function CandidateAgent({ context }: { context: CandidateContext 
     };
 
     const onCallEnd = async () => {
-      // If the call drops before any real conversation happens, allow them to retry
-      if (transcriptRef.current.trim().length < 10) {
+      // Check if candidate actually spoke to prevent empty scores
+      if (!transcriptRef.current.includes("Candidate: ")) {
         setCallStatus("INACTIVE");
-        toast.error("The interview disconnected before starting. Please try again.");
+        toast.error("The interview ended before you could speak. Please check your mic and try again.");
         return;
       }
 

@@ -39,6 +39,31 @@ export async function GET(
     const statusFilter = searchParams.get("status") || undefined;
     let applicants = await applicantService.getApplicantsByJob(jobId, statusFilter);
 
+    // Fetch bulk candidates
+    const { db } = await import("@/services/firebase/admin");
+    const bulkSnapshot = await db.collection("bulk_candidates").where("jobId", "==", jobId).get();
+    const existingEmails = new Set(applicants.map(a => a.email));
+
+    for (const doc of bulkSnapshot.docs) {
+      const data = doc.data();
+      if (!data.email || existingEmails.has(data.email)) continue;
+      
+      if (statusFilter && statusFilter !== (data.isShortlisted ? "shortlisted" : "pending")) continue;
+
+      applicants.push({
+        id: doc.id,
+        jobId: data.jobId,
+        name: data.name || data.fileName || "Candidate",
+        email: data.email,
+        resumeText: data.resumeText || "",
+        status: data.isShortlisted ? "shortlisted" : "pending",
+        appliedAt: data.createdAt || new Date().toISOString(),
+        interviewScore: data.interviewScore || null,
+        interviewRecommendation: data.interviewFeedback || null,
+      } as any);
+      existingEmails.add(data.email);
+    }
+
     // Fetch screening results for all applicants
     const screeningResults = await resumeScreeningService.getScreeningsByJob(jobId);
     const screeningMap = new Map<string, ResumeScreeningResult>();
@@ -48,10 +73,29 @@ export async function GET(
       }
     }
 
+    // Also enrich the bulk candidates with their own screening data directly from their doc
+    const bulkScreeningMap = new Map<string, any>();
+    for (const doc of bulkSnapshot.docs) {
+      const data = doc.data();
+      bulkScreeningMap.set(doc.id, {
+        id: doc.id,
+        applicantId: doc.id,
+        jobId: data.jobId,
+        overallScore: data.llmScore || data.semanticScore || 0,
+        recommendation: data.recommendation || "pending",
+        assessmentSummary: data.assessmentSummary || "",
+        skillMatchPercent: data.skillMatchPercent || 0,
+        matchedSkills: data.matchedSkills || [],
+        missingSkills: data.missingSkills || [],
+        createdAt: data.createdAt || new Date().toISOString(),
+        isReviewed: true
+      });
+    }
+
     // Enrich applicants with screening data
     let enriched = applicants.map((a) => ({
       ...a,
-      screening: screeningMap.get(a.id) || null,
+      screening: screeningMap.get(a.id) || bulkScreeningMap.get(a.id) || null,
     }));
 
     // Search filter
