@@ -1,19 +1,23 @@
-import nodemailer from "nodemailer";
-
-// ─── Transactional Email Service (Brevo via SMTP) ───────────────────────────
+// ─── Transactional Email Service (Brevo HTTP API) ───────────────────────────
 //
-// Handles automated interview invitation emails using Brevo SMTP relay.
-// Using SMTP via nodemailer is often more reliable than HTTP API and
-// perfectly handles the user's specific Brevo setup.
+// Handles automated interview invitation emails using Brevo HTTP API.
+// We are using HTTP API because Brevo API Keys (xkeysib-...) do not work
+// for SMTP authentication (SMTP requires a separate SMTP password).
 //
 // Setup:
 //   1. Sign up at https://brevo.com
-//   2. Get SMTP keys from Brevo dashboard
-//   3. Set BREVO_API_KEY, BREVO_SENDER_EMAIL, and BREVO_SENDER_NAME in .env
+//   2. Set BREVO_API_KEY, BREVO_SENDER_EMAIL, and BREVO_SENDER_NAME in .env
+//
+// IMPORTANT SECURITY REQUIREMENT:
+// Brevo has a security setting called "Authorised IPs" enabled by default.
+// Because Vercel uses dynamic IP addresses, you MUST disable IP whitelisting
+// in your Brevo account here: https://app.brevo.com/security/authorised_ips
+// Otherwise, emails will fail to send with an "unrecognised IP address" error.
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "tanwaranantsingh10@gmail.com";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "ZenAI";
+const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
 interface SendEmailParams {
   to: string;
@@ -36,17 +40,6 @@ interface SendEmailResult {
 export function hasBrevoKey(): boolean {
   return Boolean(BREVO_API_KEY);
 }
-
-// Initialize Nodemailer transporter with Brevo SMTP
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: BREVO_SENDER_EMAIL,
-    pass: BREVO_API_KEY, // Brevo uses the API key (or specific SMTP key) as the password for SMTP relay
-  },
-});
 
 /**
  * Build the HTML email template for interview invitations.
@@ -172,7 +165,7 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * Send an interview invitation email via Brevo SMTP (nodemailer).
+ * Send an interview invitation email via Brevo API.
  */
 export async function sendInterviewInviteEmail(
   params: SendEmailParams
@@ -186,17 +179,43 @@ export async function sendInterviewInviteEmail(
   }
 
   try {
-    const info = await transporter.sendMail({
-      from: `"${BREVO_SENDER_NAME}" <${BREVO_SENDER_EMAIL}>`,
-      to: params.to,
-      subject: `Interview Invitation: ${params.jobTitle} at ${params.companyName}`,
-      text: buildInterviewInvitePlainText(params),
-      html: buildInterviewInviteHTML(params),
+    const response = await fetch(BREVO_API_URL, {
+      method: "POST",
+      headers: {
+        "api-key": BREVO_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sender: {
+          name: BREVO_SENDER_NAME,
+          email: BREVO_SENDER_EMAIL,
+        },
+        to: [
+          {
+            email: params.to,
+            name: params.candidateName,
+          },
+        ],
+        subject: `Interview Invitation: ${params.jobTitle} at ${params.companyName}`,
+        htmlContent: buildInterviewInviteHTML(params),
+        textContent: buildInterviewInvitePlainText(params),
+        tags: ["interview-invite"],
+      }),
     });
 
+    if (!response.ok) {
+      const errorBody = await response.text();
+      return {
+        success: false,
+        emailId: null,
+        error: `Brevo API error ${response.status}: ${errorBody}`,
+      };
+    }
+
+    const data = await response.json();
     return {
       success: true,
-      emailId: info.messageId || null,
+      emailId: data.messageId || null,
       error: null,
     };
   } catch (err) {

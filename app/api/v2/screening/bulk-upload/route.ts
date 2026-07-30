@@ -42,8 +42,9 @@ async function extractTextSafe(buffer: Buffer, fileName: string): Promise<string
 
   try {
     if (ext === "pdf") {
-      const pdfParse = (await import("pdf-parse")).default;
-      const data = await pdfParse(buffer);
+      const pdfParseModule = await import("pdf-parse");
+      const pdfParse = pdfParseModule.default || pdfParseModule;
+      const data = await (pdfParse as any)(buffer);
       return (data.text || "").trim().slice(0, MAX_RESUME_LENGTH);
     }
 
