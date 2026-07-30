@@ -135,8 +135,14 @@ export default function CandidateAgent({ context }: { context: CandidateContext 
       const callData = await vapi.start(ASSISTANT, {
         variableValues: {
           username: context.name,
+          userId: context.candidateId,
+          dsaChatEnabled: "false",
           resumeContent: context.resumeText.slice(0, 5000), // Vapi var limit
+          jobDetailsJson: jobContextJson.slice(0, 5000),
           jobContextJson: jobContextJson.slice(0, 5000),
+          practiceProfileJson: "",
+          practiceContextJson: "",
+          jobPrepContextJson: "",
           role: "Technical Recruiter",
         },
       });
