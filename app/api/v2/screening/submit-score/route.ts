@@ -14,9 +14,11 @@ export async function POST(req: NextRequest) {
   try {
     const { candidateId, jobId, transcript, callId } = await req.json();
 
-    if (!candidateId || !jobId || !transcript) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    if (!candidateId || !jobId) {
+      return NextResponse.json({ error: "Missing candidateId or jobId" }, { status: 400 });
     }
+
+    const safeTranscript = transcript || "No transcript available. The call may have ended before any conversation took place.";
 
     // 1. Fetch Job context
     const jobDoc = await db.collection("jobs").doc(jobId).get();
@@ -53,7 +55,7 @@ OUTPUT FORMAT:
 }`;
 
     const userPrompt = `Here is the interview transcript:
-${transcript}
+${safeTranscript}
 
 Evaluate the candidate and provide the JSON output.`;
 
