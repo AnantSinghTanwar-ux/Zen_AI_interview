@@ -327,7 +327,7 @@ function createOrchestratorWorker(): Worker {
           });
 
           // Generate job description embedding first
-          const jobDoc = await db.collection("recruitment_jobs").doc(jobId).get();
+          const jobDoc = await db.collection("jobs").doc(jobId).get();
           const jobDescription = jobDoc.data()?.description || "";
           const jobSkills = (jobDoc.data()?.requiredSkills || []).join(", ");
           const jobText = `${jobDoc.data()?.title || ""} ${jobDescription} ${jobSkills}`;
@@ -433,7 +433,7 @@ function createOrchestratorWorker(): Worker {
 
           // Fetch job details for LLM scoring
           const jobDoc = await db
-            .collection("recruitment_jobs")
+            .collection("jobs")
             .doc(jobId)
             .get();
           const job = { id: jobDoc.id, ...jobDoc.data() } as any;
@@ -511,7 +511,7 @@ function createOrchestratorWorker(): Worker {
 
           // Fetch job details for email content
           const jobDoc = await db
-            .collection("recruitment_jobs")
+            .collection("jobs")
             .doc(jobId)
             .get();
           const jobData = jobDoc.data();

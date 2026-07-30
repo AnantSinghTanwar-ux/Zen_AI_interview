@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     const topN = Math.max(1, Math.min(parseInt(topNStr || "200", 10), 5000));
 
     // Validate job exists
-    const jobDoc = await db.collection("recruitment_jobs").doc(jobId).get();
+    const jobDoc = await db.collection("jobs").doc(jobId).get();
     if (!jobDoc.exists) {
       return NextResponse.json(
         { error: "Job not found" },
