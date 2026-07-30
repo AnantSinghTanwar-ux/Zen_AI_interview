@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Mic, Activity, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
-const ASSISTANT = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID || "fb5af732-a8a6-4213-9318-37a3d92d5d93";
+const ASSISTANT = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID;
 
 export interface CandidateContext {
   candidateId: string;
@@ -42,10 +42,11 @@ export default function CandidateAgent({ context }: { context: CandidateContext 
     };
 
     const onCallEnd = async () => {
-      // Check if candidate actually spoke to prevent empty scores
+      // If the call drops before any real conversation happens, allow them to retry
+      // A real conversation MUST have at least one Candidate message.
       if (!transcriptRef.current.includes("Candidate: ")) {
         setCallStatus("INACTIVE");
-        toast.error("The interview ended before you could speak. Please check your mic and try again.");
+        toast.error("The interview disconnected before starting. Please try again.");
         return;
       }
 
@@ -135,14 +136,8 @@ export default function CandidateAgent({ context }: { context: CandidateContext 
       const callData = await vapi.start(ASSISTANT, {
         variableValues: {
           username: context.name,
-          userId: context.candidateId,
-          dsaChatEnabled: "false",
           resumeContent: context.resumeText.slice(0, 5000), // Vapi var limit
-          jobDetailsJson: jobContextJson.slice(0, 5000),
           jobContextJson: jobContextJson.slice(0, 5000),
-          practiceProfileJson: "",
-          practiceContextJson: "",
-          jobPrepContextJson: "",
           role: "Technical Recruiter",
         },
       });

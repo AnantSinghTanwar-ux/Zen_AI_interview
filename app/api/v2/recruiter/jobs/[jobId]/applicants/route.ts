@@ -39,31 +39,6 @@ export async function GET(
     const statusFilter = searchParams.get("status") || undefined;
     let applicants = await applicantService.getApplicantsByJob(jobId, statusFilter);
 
-    // Fetch bulk candidates
-    const { db } = await import("@/services/firebase/admin");
-    const bulkSnapshot = await db.collection("bulk_candidates").where("jobId", "==", jobId).get();
-    const existingEmails = new Set(applicants.map(a => a.email));
-
-    for (const doc of bulkSnapshot.docs) {
-      const data = doc.data();
-      if (!data.email || existingEmails.has(data.email)) continue;
-      
-      if (statusFilter && statusFilter !== (data.isShortlisted ? "shortlisted" : "pending")) continue;
-
-      applicants.push({
-        id: doc.id,
-        jobId: data.jobId,
-        name: data.name || data.fileName || "Candidate",
-        email: data.email,
-        resumeText: data.resumeText || "",
-        status: data.isShortlisted ? "shortlisted" : "pending",
-        appliedAt: data.createdAt || new Date().toISOString(),
-        interviewScore: data.interviewScore || null,
-        interviewRecommendation: data.interviewFeedback || null,
-      } as any);
-      existingEmails.add(data.email);
-    }
-
     // Fetch screening results for all applicants
     const screeningResults = await resumeScreeningService.getScreeningsByJob(jobId);
     const screeningMap = new Map<string, ResumeScreeningResult>();
@@ -73,30 +48,54 @@ export async function GET(
       }
     }
 
-    // Also enrich the bulk candidates with their own screening data directly from their doc
-    const bulkScreeningMap = new Map<string, any>();
-    for (const doc of bulkSnapshot.docs) {
-      const data = doc.data();
-      bulkScreeningMap.set(doc.id, {
-        id: doc.id,
-        applicantId: doc.id,
-        jobId: data.jobId,
-        overallScore: data.llmScore || data.semanticScore || 0,
-        recommendation: data.recommendation || "pending",
-        assessmentSummary: data.assessmentSummary || "",
-        skillMatchPercent: data.skillMatchPercent || 0,
-        matchedSkills: data.matchedSkills || [],
-        missingSkills: data.missingSkills || [],
-        createdAt: data.createdAt || new Date().toISOString(),
-        isReviewed: true
-      });
-    }
-
     // Enrich applicants with screening data
     let enriched = applicants.map((a) => ({
       ...a,
-      screening: screeningMap.get(a.id) || bulkScreeningMap.get(a.id) || null,
+      screening: screeningMap.get(a.id) || null,
     }));
+
+    // Fetch Bulk Candidates and merge them
+    const { db } = await import("@/services/firebase/admin");
+    const { COLLECTION_BULK_CANDIDATES } = await import("@/constants/screening.config");
+    const bulkSnapshot = await db.collection(COLLECTION_BULK_CANDIDATES).where("jobId", "==", jobId).get();
+    
+    const bulkApplicants = bulkSnapshot.docs.map(doc => {
+      const data = doc.data();
+      let status = "screened";
+      if (data.interviewScore !== undefined && data.interviewScore !== null) {
+        status = "completed";
+      } else if (data.emailSentAt) {
+        status = "invited";
+      } else if (data.isShortlisted) {
+        status = "shortlisted";
+      }
+
+      return {
+        id: doc.id,
+        jobId: jobId,
+        name: data.name || data.fileName || "Unknown",
+        email: data.email || "",
+        status: status,
+        appliedAt: data.createdAt || new Date().toISOString(),
+        interviewScore: data.interviewScore || null,
+        notes: data.interviewFeedback || null,
+        screening: {
+          overallScore: data.llmScore || data.semanticScore || 0,
+          skillMatchPercent: data.skillMatchPercent || 0,
+          matchedSkills: data.matchedSkills || [],
+          missingSkills: data.missingSkills || [],
+          recommendation: data.recommendation || "review",
+          summary: data.assessmentSummary || "",
+        }
+      };
+    });
+
+    enriched = [...enriched, ...bulkApplicants as any];
+
+    // Filter by status if needed
+    if (statusFilter) {
+      enriched = enriched.filter(a => a.status === statusFilter);
+    }
 
     // Search filter
     const search = searchParams.get("search")?.toLowerCase().trim();
