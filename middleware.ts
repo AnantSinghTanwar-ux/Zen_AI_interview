@@ -22,6 +22,11 @@ export function middleware(request: NextRequest) {
 
   // If trying to access a protected path without a session cookie, redirect to /sign-in
   if (isProtectedPath && !session) {
+    // EXCEPTIONS: Allow public access to /interview/join for candidates
+    if (pathname.startsWith('/interview/join')) {
+      return NextResponse.next();
+    }
+    
     const redirectUrl = new URL('/sign-in', request.url);
     // Optionally preserve the original destination to redirect back after sign in
     redirectUrl.searchParams.set('callbackUrl', pathname);
