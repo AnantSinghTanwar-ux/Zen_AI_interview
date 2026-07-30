@@ -121,6 +121,15 @@ export interface ExtractedCandidate {
   /** Whether candidate is in the final shortlist (top N). */
   isShortlisted: boolean;
 
+  /** Score received from the AI interview (0-100) */
+  interviewScore?: number | null;
+
+  /** Feedback received from the AI interview */
+  interviewFeedback?: string | null;
+
+  /** Timestamp when the interview was completed */
+  interviewCompletedAt?: string | null;
+
   createdAt: string;
 }
 
@@ -159,4 +168,6 @@ export interface ScreenedCandidateRow {
   isShortlisted: boolean;
   emailSentAt: string | null;
   interviewLink: string | null;
+  interviewScore?: number | null;
+  interviewFeedback?: string | null;
 }

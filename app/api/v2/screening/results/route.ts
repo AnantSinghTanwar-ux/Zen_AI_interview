@@ -83,6 +83,8 @@ export async function GET(req: NextRequest) {
       isShortlisted: data.isShortlisted || false,
       emailSentAt: data.emailSentAt || null,
       interviewLink: data.interviewLink || null,
+      interviewScore: data.interviewScore ?? null,
+      interviewFeedback: data.interviewFeedback || null,
     };
   });
 

@@ -217,7 +217,7 @@ export default function CandidateVerificationTable({
               {loading ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-4 py-12 text-center text-muted-foreground"
                   >
                     <div className="flex items-center justify-center gap-2">
@@ -229,7 +229,7 @@ export default function CandidateVerificationTable({
               ) : candidates.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-4 py-12 text-center text-muted-foreground"
                   >
                     No candidates found
@@ -331,6 +331,15 @@ export default function CandidateVerificationTable({
                           )}
                         </td>
 
+                        {/* Interview Score */}
+                        <td className="px-4 py-3">
+                          <div
+                            className={`inline-flex items-center justify-center w-12 h-8 rounded-lg text-sm font-bold ${scoreColor(candidate.interviewScore || null)} ${scoreBg(candidate.interviewScore || null)}`}
+                          >
+                            {candidate.interviewScore ?? "—"}
+                          </div>
+                        </td>
+
                         {/* Email Status */}
                         <td className="px-4 py-3">
                           {candidate.emailSentAt ? (
@@ -376,19 +385,32 @@ export default function CandidateVerificationTable({
                       {/* Expanded Details Row */}
                       {isExpanded && (
                         <tr key={`${candidate.id}-detail`}>
-                          <td colSpan={7} className="px-6 py-4 bg-white/[0.01]">
+                          <td colSpan={8} className="px-6 py-4 bg-white/[0.01]">
                             <div className="grid grid-cols-2 gap-6">
                               {/* Assessment */}
-                              {candidate.assessmentSummary && (
-                                <div>
-                                  <h4 className="text-[11px] font-semibold text-violet-400 uppercase tracking-wider mb-2">
-                                    AI Assessment
-                                  </h4>
-                                  <p className="text-sm text-foreground/70 leading-relaxed">
-                                    {candidate.assessmentSummary}
-                                  </p>
-                                </div>
-                              )}
+                              <div className="space-y-6">
+                                {candidate.assessmentSummary && (
+                                  <div>
+                                    <h4 className="text-[11px] font-semibold text-violet-400 uppercase tracking-wider mb-2">
+                                      Resume AI Assessment
+                                    </h4>
+                                    <p className="text-sm text-foreground/70 leading-relaxed">
+                                      {candidate.assessmentSummary}
+                                    </p>
+                                  </div>
+                                )}
+                                
+                                {candidate.interviewFeedback && (
+                                  <div>
+                                    <h4 className="text-[11px] font-semibold text-blue-400 uppercase tracking-wider mb-2">
+                                      Live Interview Feedback
+                                    </h4>
+                                    <p className="text-sm text-foreground/70 leading-relaxed">
+                                      {candidate.interviewFeedback}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
 
                               {/* Skills */}
                               <div className="space-y-3">
