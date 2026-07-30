@@ -110,7 +110,6 @@ export default function BulkResumeUploader({
     setUploadProgress(0);
 
     try {
-      // Upload in chunks
       const validFiles = files.filter(
         (f) =>
           ACCEPTED_EXTENSIONS.includes(getFileExtension(f.file.name)) &&
@@ -118,55 +117,41 @@ export default function BulkResumeUploader({
           f.file.size > 0
       );
 
-      const totalChunks = Math.ceil(validFiles.length / CHUNK_SIZE);
-      let totalUploaded = 0;
-      let bulkJobId = "";
+      const formData = new FormData();
+      formData.append("jobId", jobId);
+      formData.append("topN", String(topN));
 
-      for (let chunk = 0; chunk < totalChunks; chunk++) {
-        const chunkFiles = validFiles.slice(
-          chunk * CHUNK_SIZE,
-          (chunk + 1) * CHUNK_SIZE
-        );
-
-        const formData = new FormData();
-        formData.append("jobId", jobId);
-        formData.append("topN", String(topN));
-
-        for (const { file } of chunkFiles) {
-          formData.append("files", file);
-        }
-
-        const res = await fetch("/api/v2/screening/bulk-upload", {
-          method: "POST",
-          body: formData,
-        });
-
-        const result = await res.json();
-
-        if (!res.ok) {
-          throw new Error(result.error || "Upload failed");
-        }
-
-        if (result.bulkJobId) {
-          bulkJobId = result.bulkJobId;
-        }
-
-        totalUploaded += chunkFiles.length;
-        setUploadProgress(
-          Math.round((totalUploaded / validFiles.length) * 100)
-        );
+      for (const { file } of validFiles) {
+        formData.append("files", file);
       }
 
+      setUploadProgress(30); // Uploading
+
+      const res = await fetch("/api/v2/screening/bulk-upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      setUploadProgress(90); // Processing done
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result.error || "Screening failed");
+      }
+
+      setUploadProgress(100);
+
       toast.success(
-        `Uploaded ${totalUploaded} resumes. Screening pipeline started!`
+        result.message || `Screening complete: ${result.shortlisted || 0} candidates shortlisted!`
       );
 
-      if (bulkJobId) {
-        onUploadComplete(bulkJobId);
+      if (result.bulkJobId) {
+        onUploadComplete(result.bulkJobId);
       }
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Upload failed"
+        err instanceof Error ? err.message : "Screening failed"
       );
     } finally {
       setUploading(false);
@@ -293,7 +278,7 @@ export default function BulkResumeUploader({
             <div className="px-5 py-3 border-t border-white/5">
               <div className="flex items-center justify-between text-xs mb-2">
                 <span className="text-primary font-medium">
-                  Uploading...
+                  AI Screening in progress...
                 </span>
                 <span className="text-muted-foreground">
                   {uploadProgress}%
@@ -322,7 +307,7 @@ export default function BulkResumeUploader({
               {uploading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Uploading...
+                  AI Screening...
                 </>
               ) : (
                 <>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import {
   Zap,
@@ -8,17 +8,13 @@ import {
   Users,
   Sparkles,
   RotateCcw,
-  Download,
   ArrowLeft,
+  Loader2,
 } from "lucide-react";
 import type {
-  ScreeningStage,
-  ScreeningProgress,
-  ScreeningProgressEvent,
   ScreenedCandidateRow,
 } from "@/types/bulk-screening";
 import BulkResumeUploader from "./BulkResumeUploader";
-import ScreeningProgressBar from "./ScreeningProgressBar";
 import CandidateVerificationTable from "./CandidateVerificationTable";
 
 interface BulkScreeningDashboardProps {
@@ -27,17 +23,6 @@ interface BulkScreeningDashboardProps {
 }
 
 type DashboardPhase = "upload" | "processing" | "results";
-
-const DEFAULT_PROGRESS: ScreeningProgress = {
-  extracted: 0,
-  extractionFailed: 0,
-  embedded: 0,
-  semanticFiltered: 0,
-  llmScored: 0,
-  shortlisted: 0,
-  emailed: 0,
-  emailFailed: 0,
-};
 
 export default function BulkScreeningDashboard({
   jobId,
@@ -49,14 +34,9 @@ export default function BulkScreeningDashboard({
 
   // Upload config
   const [topN, setTopN] = useState(200);
-  const [totalResumes, setTotalResumes] = useState(0);
 
-  // Progress tracking
-  const [stage, setStage] = useState<ScreeningStage>("uploading");
-  const [progress, setProgress] = useState<ScreeningProgress>(DEFAULT_PROGRESS);
-  const [progressMessage, setProgressMessage] = useState("");
-  const [eta, setEta] = useState(-1);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  // Processing status
+  const [processingMessage, setProcessingMessage] = useState("Starting screening pipeline...");
 
   // Results
   const [candidates, setCandidates] = useState<ScreenedCandidateRow[]>([]);
@@ -74,74 +54,17 @@ export default function BulkScreeningDashboard({
   const [searchQuery, setSearchQuery] = useState("");
   const [resultsLoading, setResultsLoading] = useState(false);
 
-  // SSE connection for real-time progress
-  const connectSSE = useCallback((jobId: string) => {
-    // Close existing connection
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-    }
-
-    const es = new EventSource(
-      `/api/v2/screening/progress?jobId=${jobId}`
-    );
-
-    es.onmessage = (event) => {
-      try {
-        const data: ScreeningProgressEvent = JSON.parse(event.data);
-
-        setStage(data.stage);
-        setProgress(data.progress);
-        setProgressMessage(data.message || "");
-        setTotalResumes(data.totalResumes);
-        setEta(data.estimatedSecondsRemaining ?? -1);
-
-        if (data.stage === "completed") {
-          setPhase("results");
-          es.close();
-          eventSourceRef.current = null;
-          toast.success("Screening pipeline completed!");
-        }
-
-        if (data.stage === "failed") {
-          es.close();
-          eventSourceRef.current = null;
-          toast.error("Screening pipeline failed. Check logs for details.");
-        }
-      } catch {
-        // Ignore parse errors
-      }
-    };
-
-    es.onerror = () => {
-      // EventSource auto-reconnects, but log for debugging
-      console.warn("[SSE] Connection error, will retry...");
-    };
-
-    eventSourceRef.current = es;
-  }, []);
-
-  // Cleanup SSE on unmount
-  useEffect(() => {
-    return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-      }
-    };
-  }, []);
-
-  // Fetch results when in results phase
-  const fetchResults = useCallback(async () => {
-    if (!bulkJobId) return;
-
+  // Fetch results from Firestore
+  const fetchResults = useCallback(async (bjId: string, page = 1, sort = "llmScore", order = "desc", search = "") => {
     setResultsLoading(true);
     try {
       const params = new URLSearchParams({
-        bulkJobId,
-        page: String(resultsPage),
+        bulkJobId: bjId,
+        page: String(page),
         pageSize: "50",
-        sortBy,
-        sortOrder,
-        ...(searchQuery ? { search: searchQuery } : {}),
+        sortBy: sort,
+        sortOrder: order,
+        ...(search ? { search } : {}),
       });
 
       const res = await fetch(`/api/v2/screening/results?${params}`);
@@ -157,36 +80,43 @@ export default function BulkScreeningDashboard({
     } finally {
       setResultsLoading(false);
     }
-  }, [bulkJobId, resultsPage, sortBy, sortOrder, searchQuery]);
+  }, []);
 
-  useEffect(() => {
-    if (phase === "results") {
-      fetchResults();
-    }
-  }, [phase, fetchResults]);
-
-  // Handle upload completion
+  // Handle upload completion — the backend now does everything inline
   const handleUploadComplete = useCallback(
-    (newBulkJobId: string) => {
+    async (newBulkJobId: string) => {
       setBulkJobId(newBulkJobId);
-      setPhase("processing");
-      setStage("extracting");
-      setProgress(DEFAULT_PROGRESS);
-      connectSSE(newBulkJobId);
+      setPhase("results");
+      toast.success("Screening pipeline completed!");
+      // Fetch the results
+      await fetchResults(newBulkJobId);
     },
-    [connectSSE]
+    [fetchResults]
   );
+
+  // When results phase params change, re-fetch
+  const handlePageChange = useCallback((page: number) => {
+    setResultsPage(page);
+    if (bulkJobId) fetchResults(bulkJobId, page, sortBy, sortOrder, searchQuery);
+  }, [bulkJobId, sortBy, sortOrder, searchQuery, fetchResults]);
+
+  const handleSort = useCallback((field: string, order: "asc" | "desc") => {
+    setSortBy(field);
+    setSortOrder(order);
+    setResultsPage(1);
+    if (bulkJobId) fetchResults(bulkJobId, 1, field, order, searchQuery);
+  }, [bulkJobId, searchQuery, fetchResults]);
+
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    setResultsPage(1);
+    if (bulkJobId) fetchResults(bulkJobId, 1, sortBy, sortOrder, query);
+  }, [bulkJobId, sortBy, sortOrder, fetchResults]);
 
   // Reset to upload phase
   const handleReset = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
     setPhase("upload");
     setBulkJobId(null);
-    setStage("uploading");
-    setProgress(DEFAULT_PROGRESS);
     setCandidates([]);
     setResultStats(null);
     setResultsPage(1);
@@ -318,15 +248,26 @@ export default function BulkScreeningDashboard({
 
       {/* ── Processing Phase ── */}
       {phase === "processing" && (
-        <div className="rounded-2xl border border-white/[0.06] bg-card/60 backdrop-blur-sm p-6">
-          <ScreeningProgressBar
-            stage={stage}
-            progress={progress}
-            totalResumes={totalResumes}
-            topN={topN}
-            message={progressMessage}
-            estimatedSecondsRemaining={eta}
-          />
+        <div className="rounded-2xl border border-white/[0.06] bg-card/60 backdrop-blur-sm p-10">
+          <div className="flex flex-col items-center justify-center space-y-6">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                <Loader2 className="w-10 h-10 text-primary animate-spin" />
+              </div>
+              <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-violet-500 flex items-center justify-center">
+                <Sparkles className="w-3.5 h-3.5 text-white" />
+              </div>
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-foreground mb-2">AI Screening in Progress</h3>
+              <p className="text-sm text-muted-foreground max-w-md">
+                {processingMessage}
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Extracting text → Scoring with AI → Shortlisting → Sending emails
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -338,16 +279,9 @@ export default function BulkScreeningDashboard({
           page={resultsPage}
           pageSize={50}
           totalPages={resultsTotalPages}
-          onPageChange={setResultsPage}
-          onSort={(field, order) => {
-            setSortBy(field);
-            setSortOrder(order);
-            setResultsPage(1);
-          }}
-          onSearch={(query) => {
-            setSearchQuery(query);
-            setResultsPage(1);
-          }}
+          onPageChange={handlePageChange}
+          onSort={handleSort}
+          onSearch={handleSearch}
           sortBy={sortBy}
           sortOrder={sortOrder}
           searchQuery={searchQuery}
