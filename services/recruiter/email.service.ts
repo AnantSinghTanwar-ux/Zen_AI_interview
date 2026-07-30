@@ -1,16 +1,19 @@
-// ─── Transactional Email Service (Brevo) ────────────────────────────────────
+import nodemailer from "nodemailer";
+
+// ─── Transactional Email Service (Brevo via SMTP) ───────────────────────────
 //
-// Handles automated interview invitation emails using Brevo (formerly Sendinblue).
-// Designed to be called from BullMQ workers with rate limiting.
+// Handles automated interview invitation emails using Brevo SMTP relay.
+// Using SMTP via nodemailer is often more reliable than HTTP API and
+// perfectly handles the user's specific Brevo setup.
 //
 // Setup:
 //   1. Sign up at https://brevo.com
-//   2. Set BREVO_API_KEY, BREVO_SENDER_EMAIL, and BREVO_SENDER_NAME in .env
+//   2. Get SMTP keys from Brevo dashboard
+//   3. Set BREVO_API_KEY, BREVO_SENDER_EMAIL, and BREVO_SENDER_NAME in .env
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "tanwaranantsingh10@gmail.com";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "ZenAI";
-const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
 interface SendEmailParams {
   to: string;
@@ -33,6 +36,17 @@ interface SendEmailResult {
 export function hasBrevoKey(): boolean {
   return Boolean(BREVO_API_KEY);
 }
+
+// Initialize Nodemailer transporter with Brevo SMTP
+const transporter = nodemailer.createTransport({
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  secure: false, // true for 465, false for other ports
+  auth: {
+    user: BREVO_SENDER_EMAIL,
+    pass: BREVO_API_KEY, // Brevo uses the API key (or specific SMTP key) as the password for SMTP relay
+  },
+});
 
 /**
  * Build the HTML email template for interview invitations.
@@ -67,53 +81,41 @@ function buildInterviewInviteHTML(params: SendEmailParams): string {
       </p>
 
       <p style="color: #a1a1aa; font-size: 15px; line-height: 1.7; margin: 0 0 24px;">
-        Congratulations! You've been shortlisted for the position of
-        <strong style="color: #c4b5fd;">${escapeHtml(params.jobTitle)}</strong> at
-        <strong style="color: #c4b5fd;">${escapeHtml(params.companyName)}</strong>.
+        Congratulations! After reviewing your application, we are excited to invite you to the next stage of our interview process for the <strong style="color: #e4e4e7;">${escapeHtml(params.jobTitle)}</strong> position at <strong style="color: #e4e4e7;">${escapeHtml(params.companyName)}</strong>.
       </p>
 
-      <p style="color: #a1a1aa; font-size: 15px; line-height: 1.7; margin: 0 0 32px;">
-        We'd like to invite you to complete an AI-powered interview at your convenience.
-        Click the button below to start when you're ready.
-      </p>
+      <div style="background: rgba(99, 102, 241, 0.1); border-left: 4px solid #8b5cf6; padding: 20px; border-radius: 0 8px 8px 0; margin: 0 0 32px;">
+        <h3 style="color: #ffffff; margin: 0 0 12px; font-size: 16px;">AI-Powered Interview</h3>
+        <p style="color: #a1a1aa; font-size: 14px; margin: 0; line-height: 1.6;">
+          This will be an interactive, AI-driven technical interview designed to assess your skills objectively. You can take this interview at any time before the deadline.
+        </p>
+      </div>
 
-      <!-- CTA Button -->
-      <div style="text-align: center; margin: 32px 0;">
-        <a href="${escapeHtml(params.interviewLink)}"
-           style="display: inline-block; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #ffffff; padding: 16px 40px; border-radius: 12px; text-decoration: none; font-weight: 600; font-size: 16px; letter-spacing: 0.3px; box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);">
-          Start Your Interview →
+      <div style="text-align: center; margin: 40px 0;">
+        <a href="${params.interviewLink}" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; padding: 16px 36px; border-radius: 12px; box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);">
+          Start Your Interview
         </a>
       </div>
 
-      <!-- Details Box -->
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 20px 24px; margin: 24px 0;">
-        <div style="color: #71717a; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">
-          Interview Details
+      <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 24px; margin: 0 0 24px;">
+        <div style="margin-bottom: 12px;">
+          <span style="color: #71717a; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Deadline</span>
+          <div style="color: #ef4444; font-size: 15px; font-weight: 600; margin-top: 4px;">
+            ${escapeHtml(params.deadline)}
+          </div>
         </div>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="color: #71717a; font-size: 14px; padding: 6px 0;">Position</td>
-            <td style="color: #e4e4e7; font-size: 14px; padding: 6px 0; text-align: right;">${escapeHtml(params.jobTitle)}</td>
-          </tr>
-          <tr>
-            <td style="color: #71717a; font-size: 14px; padding: 6px 0;">Company</td>
-            <td style="color: #e4e4e7; font-size: 14px; padding: 6px 0; text-align: right;">${escapeHtml(params.companyName)}</td>
-          </tr>
-          <tr>
-            <td style="color: #71717a; font-size: 14px; padding: 6px 0;">Type</td>
-            <td style="color: #e4e4e7; font-size: 14px; padding: 6px 0; text-align: right;">AI-Powered Interview</td>
-          </tr>
-          <tr>
-            <td style="color: #71717a; font-size: 14px; padding: 6px 0;">Deadline</td>
-            <td style="color: #f87171; font-size: 14px; padding: 6px 0; text-align: right; font-weight: 600;">${escapeHtml(params.deadline)}</td>
-          </tr>
-        </table>
+        <div>
+          <span style="color: #71717a; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Duration</span>
+          <div style="color: #e4e4e7; font-size: 15px; font-weight: 500; margin-top: 4px;">
+            ~15-30 minutes
+          </div>
+        </div>
       </div>
 
-      <p style="color: #71717a; font-size: 13px; line-height: 1.6; margin: 24px 0 0;">
-        💡 <strong style="color: #a1a1aa;">Tips:</strong> Find a quiet space, ensure stable internet,
-        and have your webcam/mic ready. The interview typically takes 15-30 minutes.
+      <p style="color: #a1a1aa; font-size: 14px; line-height: 1.6; margin: 0;">
+        <strong>Preparation Tips:</strong> Ensure you are in a quiet environment with a stable internet connection. We recommend using a desktop/laptop browser with a working microphone and camera.
       </p>
+
     </div>
 
     <!-- Footer -->
@@ -170,10 +172,7 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * Send an interview invitation email via Brevo API.
- *
- * Uses raw fetch() instead of the Brevo SDK to minimize
- * dependency footprint and give full control over error handling.
+ * Send an interview invitation email via Brevo SMTP (nodemailer).
  */
 export async function sendInterviewInviteEmail(
   params: SendEmailParams
@@ -187,43 +186,17 @@ export async function sendInterviewInviteEmail(
   }
 
   try {
-    const response = await fetch(BREVO_API_URL, {
-      method: "POST",
-      headers: {
-        "api-key": BREVO_API_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        sender: {
-          name: BREVO_SENDER_NAME,
-          email: BREVO_SENDER_EMAIL,
-        },
-        to: [
-          {
-            email: params.to,
-            name: params.candidateName,
-          },
-        ],
-        subject: `Interview Invitation: ${params.jobTitle} at ${params.companyName}`,
-        htmlContent: buildInterviewInviteHTML(params),
-        textContent: buildInterviewInvitePlainText(params),
-        tags: ["interview-invite"],
-      }),
+    const info = await transporter.sendMail({
+      from: `"${BREVO_SENDER_NAME}" <${BREVO_SENDER_EMAIL}>`,
+      to: params.to,
+      subject: `Interview Invitation: ${params.jobTitle} at ${params.companyName}`,
+      text: buildInterviewInvitePlainText(params),
+      html: buildInterviewInviteHTML(params),
     });
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      return {
-        success: false,
-        emailId: null,
-        error: `Brevo API error ${response.status}: ${errorBody}`,
-      };
-    }
-
-    const data = await response.json();
     return {
       success: true,
-      emailId: data.messageId || null,
+      emailId: info.messageId || null,
       error: null,
     };
   } catch (err) {
@@ -238,9 +211,6 @@ export async function sendInterviewInviteEmail(
 /**
  * Send a batch of interview invitation emails.
  * Processes sequentially with a configurable delay to respect rate limits.
- *
- * For high-volume sends (200+ emails), this should be called from
- * the BullMQ email worker which handles its own rate limiting.
  */
 export async function sendBatchEmails(
   emails: SendEmailParams[],

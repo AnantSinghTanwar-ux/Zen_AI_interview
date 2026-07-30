@@ -10,7 +10,13 @@ import {
 import {
   generateInterviewToken,
   buildInterviewLink,
+  getInterviewDeadline,
+  formatDeadline,
 } from "@/services/recruiter/interview-token.service";
+import {
+  sendInterviewInviteEmail,
+  hasBrevoKey,
+} from "@/services/recruiter/email.service";
 import {
   MAX_RESUME_FILE_SIZE,
   ACCEPTED_RESUME_EXTENSIONS,
@@ -23,33 +29,22 @@ import type { RecruitmentJob } from "@/types/recruiter";
 // ─── POST /api/v2/screening/bulk-upload ─────────────────────────────────────
 //
 // Serverless-compatible bulk screening pipeline.
-// Processes everything inline: extract → score → shortlist.
-// Emailing is done separately via a dedicated button/endpoint.
+// Processes everything inline: extract → score → shortlist → auto-email.
 
 export const maxDuration = 300; // Vercel Pro: 5 min timeout
 
 /**
  * Robust text extraction that handles PDF, DOCX, and TXT.
- * Each extractor is wrapped individually to prevent one failure from killing the whole pipeline.
+ * Uses pdf-parse for PDF (much better for serverless Node.js).
  */
 async function extractTextSafe(buffer: Buffer, fileName: string): Promise<string> {
   const ext = fileName.toLowerCase().split(".").pop() || "";
 
   try {
     if (ext === "pdf") {
-      const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-      const uint8 = new Uint8Array(buffer);
-      const doc = await pdfjs.getDocument({ data: uint8 }).promise;
-      const pages: string[] = [];
-      for (let i = 1; i <= doc.numPages; i++) {
-        const page = await doc.getPage(i);
-        const content = await page.getTextContent();
-        const text = content.items
-          .map((item: any) => ("str" in item ? item.str : ""))
-          .join(" ");
-        pages.push(text);
-      }
-      return pages.join("\n").trim().slice(0, MAX_RESUME_LENGTH);
+      const pdfParse = (await import("pdf-parse")).default;
+      const data = await pdfParse(buffer);
+      return (data.text || "").trim().slice(0, MAX_RESUME_LENGTH);
     }
 
     if (ext === "docx" || ext === "doc") {
@@ -312,30 +307,98 @@ export async function POST(req: NextRequest) {
       "progress.llmScored": scores.filter((s) => !s.error).length,
     });
 
-    // ── STAGE 3: Select top N and shortlist + generate interview links ──
+    // ── STAGE 3: Select top N and shortlist ──
     const topCandidateIds = selectTopNCandidates(scores, topN);
 
-    // Mark shortlisted candidates and generate interview tokens/links
-    for (let i = 0; i < topCandidateIds.length; i += BATCH_SIZE) {
-      const chunk = topCandidateIds.slice(i, i + BATCH_SIZE);
-      const batch = db.batch();
-      for (const candidateId of chunk) {
-        const token = generateInterviewToken(candidateId, jobId, bulkJobRef.id);
-        const interviewLink = buildInterviewLink(token);
-        const ref = db.collection(COLLECTION_BULK_CANDIDATES).doc(candidateId);
-        batch.update(ref, {
-          isShortlisted: true,
-          interviewToken: token,
-          interviewLink,
-        });
+    await bulkJobRef.update({
+      stage: "emailing",
+      "progress.shortlisted": topCandidateIds.length,
+    });
+
+    // ── STAGE 4: Auto-Email shortlisted candidates ──
+    let emailed = 0;
+    let emailFailed = 0;
+
+    if (hasBrevoKey()) {
+      const deadline = getInterviewDeadline();
+      const deadlineStr = formatDeadline(deadline);
+
+      for (let i = 0; i < topCandidateIds.length; i += BATCH_SIZE) {
+        const chunk = topCandidateIds.slice(i, i + BATCH_SIZE);
+        const batch = db.batch();
+
+        for (const candidateId of chunk) {
+          const candidate = extractedCandidates.find((c) => c.docId === candidateId);
+          if (!candidate) continue;
+
+          const token = generateInterviewToken(candidateId, jobId, bulkJobRef.id);
+          const interviewLink = buildInterviewLink(token);
+
+          const updates: any = {
+            isShortlisted: true,
+            interviewToken: token,
+            interviewLink,
+          };
+
+          if (candidate.email) {
+            try {
+              // Send email via Brevo SMTP
+              const emailResult = await sendInterviewInviteEmail({
+                to: candidate.email,
+                candidateName: candidate.name || "Candidate",
+                jobTitle: job.title,
+                companyName: job.companyName || "Our Company",
+                interviewLink,
+                deadline: deadlineStr,
+              });
+
+              if (emailResult.success) {
+                emailed++;
+                updates.emailSentAt = new Date().toISOString();
+                updates.emailId = emailResult.emailId;
+              } else {
+                emailFailed++;
+                console.error(`[BulkUpload] Email failed for ${candidate.email}: ${emailResult.error}`);
+              }
+
+              // Small delay to respect SMTP rate limits
+              await new Promise<void>((resolve) => setTimeout(resolve, 100));
+            } catch (err) {
+              emailFailed++;
+              console.error(`[BulkUpload] Email error for ${candidate.email}:`, err);
+            }
+          }
+
+          const ref = db.collection(COLLECTION_BULK_CANDIDATES).doc(candidateId);
+          batch.update(ref, updates);
+        }
+        await batch.commit();
       }
-      await batch.commit();
+    } else {
+      // No email service configured — just mark shortlisted and generate links
+      for (let i = 0; i < topCandidateIds.length; i += BATCH_SIZE) {
+        const chunk = topCandidateIds.slice(i, i + BATCH_SIZE);
+        const batch = db.batch();
+        for (const candidateId of chunk) {
+          const token = generateInterviewToken(candidateId, jobId, bulkJobRef.id);
+          const interviewLink = buildInterviewLink(token);
+          const ref = db.collection(COLLECTION_BULK_CANDIDATES).doc(candidateId);
+          batch.update(ref, {
+            isShortlisted: true,
+            interviewToken: token,
+            interviewLink,
+          });
+        }
+        await batch.commit();
+      }
     }
 
     // ── FINALIZE ──
     await bulkJobRef.update({
       stage: "completed",
       "progress.shortlisted": topCandidateIds.length,
+      "progress.emailed": emailed,
+      "progress.emailFailed": emailFailed,
       completedAt: new Date().toISOString(),
     });
 
@@ -348,9 +411,11 @@ export async function POST(req: NextRequest) {
       extractionErrors: extractionErrors.length > 0 ? extractionErrors : undefined,
       scored: scores.filter((s) => !s.error).length,
       shortlisted: topCandidateIds.length,
+      emailed,
+      emailFailed,
       skipped: skippedErrors.length,
       errors: skippedErrors.length > 0 ? skippedErrors.slice(0, 20) : undefined,
-      message: `Screening complete: ${extractedCandidates.length} extracted, ${topCandidateIds.length} shortlisted. Use "Send Invites" to email candidates.`,
+      message: `Screening complete: ${topCandidateIds.length} shortlisted, ${emailed} emails sent.`,
       stage: "completed",
     });
   } catch (err) {
