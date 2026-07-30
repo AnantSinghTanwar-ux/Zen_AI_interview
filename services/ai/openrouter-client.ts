@@ -2,7 +2,7 @@ type OpenRouterRole = "system" | "user" | "assistant";
 
 export interface OpenRouterMessage {
   role: OpenRouterRole;
-  content: string;
+  content: string | any[];
 }
 
 export interface OpenRouterRequestOptions {
@@ -172,7 +172,7 @@ export async function openRouterChatCompletion(
 }
 
 export async function generateOpenRouterJson<T>(params: {
-  prompt: string;
+  prompt: string | any[];
   systemPrompt?: string;
   modelCandidates?: Array<string | undefined | null>;
   temperature?: number;
