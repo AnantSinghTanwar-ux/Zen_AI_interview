@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
 
     // Initialize progress in Redis
     const redis = createClient({
-      url: process.env.REDIS_URL || "redis://localhost:6379",
+      url: process.env.REDIS_URL || process.env.KV_URL || "redis://localhost:6379",
     });
     await redis.connect();
     await redis.set(

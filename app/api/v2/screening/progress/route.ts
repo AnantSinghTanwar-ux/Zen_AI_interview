@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     async start(controller) {
       try {
         redisClient = createClient({
-          url: process.env.REDIS_URL || "redis://localhost:6379",
+          url: process.env.REDIS_URL || process.env.KV_URL || "redis://localhost:6379",
         });
         redisClient.on("error", () => {
           // Silently handle Redis errors — the SSE will just stop updating

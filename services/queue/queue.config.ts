@@ -29,7 +29,7 @@ export const QUEUE_NAMES = {
  * Falls back to localhost for development.
  */
 export function getRedisConnection(): ConnectionOptions {
-  const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+  const redisUrl = process.env.REDIS_URL || process.env.KV_URL || "redis://localhost:6379";
 
   try {
     const url = new URL(redisUrl);
