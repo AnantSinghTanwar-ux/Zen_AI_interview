@@ -13,7 +13,6 @@ import {
   getInterviewDeadline,
   formatDeadline,
 } from "@/services/recruiter/interview-token.service";
-import { FieldValue } from "firebase-admin/firestore";
 import {
   sendInterviewInviteEmail,
   hasBrevoKey,
@@ -328,7 +327,6 @@ export async function POST(req: NextRequest) {
       for (let i = 0; i < topCandidateIds.length; i += BATCH_SIZE) {
         const chunk = topCandidateIds.slice(i, i + BATCH_SIZE);
         const batch = db.batch();
-        const newApplicantIds: string[] = [];
 
         for (const candidateId of chunk) {
           const candidate = extractedCandidates.find((c) => c.docId === candidateId);
@@ -342,21 +340,6 @@ export async function POST(req: NextRequest) {
             interviewToken: token,
             interviewLink,
           };
-          
-          const appRef = db.collection("applicants").doc();
-          const applicantId = appRef.id;
-          newApplicantIds.push(applicantId);
-          
-          batch.set(appRef, {
-            jobId,
-            name: candidate.name || candidate.fileName || "Candidate",
-            email: candidate.email || "no-email@test.com",
-            resumeText: candidate.resumeText || "",
-            status: "shortlisted",
-            appliedAt: now,
-            interviewScore: null,
-            interviewRecommendation: null,
-          });
 
           if (candidate.email) {
             try {
@@ -391,25 +374,13 @@ export async function POST(req: NextRequest) {
           batch.update(ref, updates);
         }
         await batch.commit();
-        if (newApplicantIds.length > 0) {
-          const jobRef = db.collection("jobs").doc(jobId);
-          try {
-             await jobRef.update({
-               applicantIds: FieldValue.arrayUnion(...newApplicantIds)
-             });
-          } catch(e) { console.error(e); }
-        }
       }
     } else {
       // No email service configured — just mark shortlisted and generate links
       for (let i = 0; i < topCandidateIds.length; i += BATCH_SIZE) {
         const chunk = topCandidateIds.slice(i, i + BATCH_SIZE);
         const batch = db.batch();
-        const newApplicantIdsFallback: string[] = [];
         for (const candidateId of chunk) {
-          const candidate = extractedCandidates.find((c) => c.docId === candidateId);
-          if (!candidate) continue;
-
           const token = generateInterviewToken(candidateId, jobId, bulkJobRef.id);
           const interviewLink = buildInterviewLink(token);
           const ref = db.collection(COLLECTION_BULK_CANDIDATES).doc(candidateId);
@@ -418,30 +389,8 @@ export async function POST(req: NextRequest) {
             interviewToken: token,
             interviewLink,
           });
-          
-          const appRef = db.collection("applicants").doc();
-          const applicantId = appRef.id;
-          newApplicantIdsFallback.push(applicantId);
-          batch.set(appRef, {
-            jobId,
-            name: candidate.name || candidate.fileName || "Candidate",
-            email: candidate.email || "no-email@test.com",
-            resumeText: candidate.resumeText || "",
-            status: "shortlisted",
-            appliedAt: now,
-            interviewScore: null,
-            interviewRecommendation: null,
-          });
         }
         await batch.commit();
-        if (newApplicantIdsFallback.length > 0) {
-          const jobRef = db.collection("jobs").doc(jobId);
-          try {
-             await jobRef.update({
-               applicantIds: FieldValue.arrayUnion(...newApplicantIdsFallback)
-             });
-          } catch(e) { console.error(e); }
-        }
       }
     }
 
