@@ -203,7 +203,13 @@ export async function generateOpenRouterJson<T>(params: {
       try {
         const { GoogleGenerativeAI } = await import("@google/generative-ai");
         const genAI = new GoogleGenerativeAI(googleApiKey);
-        const modelName = process.env.GOOGLE_AI_FEEDBACK_MODEL?.includes("3") ? "gemini-1.5-flash" : (process.env.GOOGLE_AI_FEEDBACK_MODEL || "gemini-1.5-flash");
+        
+        // Use a known valid model from the API response
+        let modelName = process.env.GOOGLE_AI_FEEDBACK_MODEL || "gemini-3.5-flash";
+        if (modelName === "gemini-3-flash") {
+          modelName = "gemini-3.5-flash"; 
+        }
+
         const model = genAI.getGenerativeModel({
           model: modelName,
           systemInstruction: params.systemPrompt ? params.systemPrompt.trim() : undefined,

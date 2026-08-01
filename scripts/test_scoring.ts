@@ -1,5 +1,4 @@
-import { config } from "dotenv";
-config({ path: ".env" });
+
 
 import { RecruitmentJob } from "../types/recruiter";
 import { hasOpenRouterKey } from "../services/ai/openrouter-client";
