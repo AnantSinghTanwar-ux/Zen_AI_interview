@@ -186,12 +186,47 @@ export async function generateOpenRouterJson<T>(params: {
 
   messages.push({ role: "user", content: params.prompt });
 
-  const text = await openRouterChatCompletion({
-    messages,
-    modelCandidates: params.modelCandidates,
-    temperature: params.temperature,
-    maxTokens: params.maxTokens,
-  });
+  try {
+    const text = await openRouterChatCompletion({
+      messages,
+      modelCandidates: params.modelCandidates,
+      temperature: params.temperature,
+      maxTokens: params.maxTokens,
+    });
 
-  return parseJsonFromText<T>(text);
+    return parseJsonFromText<T>(text);
+  } catch (error) {
+    console.warn("[OpenRouter] Failed, attempting Gemini fallback...", error instanceof Error ? error.message : String(error));
+    
+    const googleApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GOOGLE_AI_API_KEY;
+    if (googleApiKey) {
+      try {
+        const { GoogleGenerativeAI } = await import("@google/generative-ai");
+        const genAI = new GoogleGenerativeAI(googleApiKey);
+        const modelName = process.env.GOOGLE_AI_FEEDBACK_MODEL?.includes("3") ? "gemini-1.5-flash" : (process.env.GOOGLE_AI_FEEDBACK_MODEL || "gemini-1.5-flash");
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          systemInstruction: params.systemPrompt ? params.systemPrompt.trim() : undefined,
+          generationConfig: {
+            temperature: params.temperature ?? 0.2,
+            maxOutputTokens: params.maxTokens ?? 2048,
+            responseMimeType: "application/json",
+          },
+        });
+        
+        const result = await model.generateContent(params.prompt as string);
+        const responseText = result.response.text();
+        try {
+          return JSON.parse(responseText) as T;
+        } catch (e) {
+          return parseJsonFromText<T>(responseText);
+        }
+      } catch (geminiError) {
+        console.error("[Gemini Fallback] Failed:", geminiError);
+        throw geminiError;
+      }
+    }
+    
+    throw error;
+  }
 }
