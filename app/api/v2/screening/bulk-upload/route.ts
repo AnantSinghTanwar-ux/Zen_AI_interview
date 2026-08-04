@@ -290,15 +290,15 @@ export async function POST(req: NextRequest) {
       const chunk = scores.slice(i, i + BATCH_SIZE);
       const batch = db.batch();
       for (const score of chunk) {
-        if (score.error) continue;
         const ref = db.collection(COLLECTION_BULK_CANDIDATES).doc(score.candidateId);
         batch.update(ref, {
-          llmScore: score.overallScore,
-          skillMatchPercent: score.skillMatchPercent,
-          matchedSkills: score.matchedSkills,
-          missingSkills: score.missingSkills,
-          recommendation: score.recommendation,
-          assessmentSummary: score.assessmentSummary,
+          resumeScoreBreakdown: score.scores || { projects: 0, skills: 0, experience: 0, education: 0 },
+          llmScore: score.overallScore || 0,
+          skillMatchPercent: score.skillMatchPercent || 0,
+          matchedSkills: score.matchedSkills || [],
+          missingSkills: score.missingSkills || [],
+          recommendation: score.recommendation || "reject",
+          assessmentSummary: score.error ? `Scoring failed: ${score.error}` : score.assessmentSummary,
         });
       }
       await batch.commit();
