@@ -6,6 +6,12 @@ import { generateOpenRouterJson } from "@/services/ai/openrouter-client";
 export const maxDuration = 300;
 
 interface ScoreResult {
+  scores: {
+    technical: number;
+    problemSolving: number;
+    communication: number;
+    roleFit: number;
+  };
   score: number;
   feedback: string;
 }
@@ -35,7 +41,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Generate Score using LLM
-    const systemPrompt = `You are an expert technical recruiter evaluating a candidate based on an AI interview transcript.
+    const systemPrompt = `You are an expert technical recruiter evaluating a candidate based on an AI interview transcript using a strict 100-point rubric.
 You must return your evaluation strictly in JSON format.
 
 JOB REQUIREMENTS:
@@ -43,15 +49,25 @@ Title: ${jobData.title}
 Skills: ${jobData.skills?.join(", ")}
 Description: ${jobData.description}
 
-EVALUATION CRITERIA:
-1. Did the candidate answer the technical questions correctly?
-2. Did they demonstrate the required skills?
-3. Was their communication clear?
+SCORING RUBRIC (100 Points Total):
+1. Technical Accuracy (40 points max): Did the candidate answer the technical questions correctly and demonstrate deep knowledge?
+2. Problem Solving (20 points max): How well did they approach complex scenarios and articulate their thought process?
+3. Communication (20 points max): Was their communication clear, concise, and professional?
+4. Role Fit (20 points max): How well do their answers align with the specific job description and required skills?
+
+INSTRUCTIONS:
+Calculate the score for each section based on the rubric. The overall score must be exactly the sum of the four section scores.
 
 OUTPUT FORMAT:
 {
-  "score": <number between 0 and 100>,
-  "feedback": "<A 2-3 sentence summary of their performance and why you gave this score>"
+  "scores": {
+    "technical": <number 0-40>,
+    "problemSolving": <number 0-20>,
+    "communication": <number 0-20>,
+    "roleFit": <number 0-20>
+  },
+  "score": <number 0-100, exactly the sum of the scores above>,
+  "feedback": "<A 3-5 sentence summary of their performance explaining the score breakdown>"
 }`;
 
     const userPrompt = `Here is the interview transcript:
@@ -69,6 +85,7 @@ Evaluate the candidate and provide the JSON output.`;
       console.error("[SubmitScore] LLM Error:", llmError);
       // Fallback if LLM fails
       scoreData = {
+        scores: { technical: 0, problemSolving: 0, communication: 0, roleFit: 0 },
         score: 0,
         feedback: "Failed to generate AI evaluation due to an error.",
       };
@@ -79,6 +96,7 @@ Evaluate the candidate and provide the JSON output.`;
 
     // 4. Save to Firestore
     await candidateRef.update({
+      interviewScoreBreakdown: scoreData.scores,
       interviewScore: finalScore,
       interviewFeedback: scoreData.feedback || "No feedback provided.",
       interviewCompletedAt: new Date().toISOString(),

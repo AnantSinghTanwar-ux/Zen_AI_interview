@@ -23,6 +23,12 @@ import {
 // LLM calls are concentrated on the most promising candidates.
 
 interface RawBatchScreeningResponse {
+  scores: {
+    projects: number;
+    skills: number;
+    experience: number;
+    education: number;
+  };
   overallScore: number;
   skillMatchPercent: number;
   matchedSkills: string[];
@@ -76,7 +82,7 @@ function buildBatchScreeningPrompt(
 ): string {
   const skillsList = job.requiredSkills.join(", ");
 
-  return `You are an expert recruitment AI screening assistant. Analyze the following resume against the job requirements and provide a detailed evaluation.
+  return `You are an expert recruitment AI screening assistant. Analyze the following resume against the job requirements using a strict 100-point rubric.
 
 JOB DETAILS:
 - Title: ${job.title}
@@ -88,21 +94,31 @@ JOB DETAILS:
 RESUME TEXT:
 ${resumeText.slice(0, MAX_RESUME_LENGTH)}
 
+SCORING RUBRIC (100 Points Total):
+1. Projects (30 points max): Evaluate strictly the top 3 most relevant or impressive projects. Give up to 10 points per project based on complexity, relevance to the job, and impact. Ignore all other projects.
+2. Skills Match (30 points max): Directly correlates with the percentage of required skills found. Be strict. If there's no concrete evidence for a skill, count it as missing.
+3. Experience Alignment (25 points max): Evaluate depth and relevance of work history against the required experience level.
+4. Education/Format (15 points max): Evaluate educational background and overall resume clarity.
+
 INSTRUCTIONS:
-1. Compare the resume against the job requirements objectively.
-2. Identify matched and missing skills from the required list.
-3. Be strict but fair in scoring.
-4. If the resume lacks concrete evidence for a skill, count it as missing.
-5. Consider experience level alignment.
+1. Identify matched and missing skills from the required list.
+2. Calculate the score for each section based on the rubric.
+3. The overallScore must be exactly the sum of the four section scores.
 
 Respond with ONLY a valid JSON object matching this exact schema:
 {
-  "overallScore": <number 0-100>,
+  "scores": {
+    "projects": <number 0-30>,
+    "skills": <number 0-30>,
+    "experience": <number 0-25>,
+    "education": <number 0-15>
+  },
+  "overallScore": <number 0-100, exactly the sum of the scores above>,
   "skillMatchPercent": <number 0-100, percentage of required skills matched>,
   "matchedSkills": ["<skill1>", "<skill2>"],
   "missingSkills": ["<skill1>", "<skill2>"],
   "recommendation": "<shortlist|review|reject>",
-  "summary": "<2-4 sentence assessment summary>"
+  "summary": "<2-4 sentence assessment summary explaining the scores>"
 }
 
 Return ONLY the JSON object, no markdown or extra text.`;
@@ -110,6 +126,12 @@ Return ONLY the JSON object, no markdown or extra text.`;
 
 export interface BatchScoredCandidate {
   candidateId: string;
+  scores: {
+    projects: number;
+    skills: number;
+    experience: number;
+    education: number;
+  };
   overallScore: number;
   skillMatchPercent: number;
   matchedSkills: string[];
@@ -147,6 +169,12 @@ async function scoreOneCandidate(
 
     return {
       candidateId: candidate.id,
+      scores: {
+        projects: clamp(raw.scores?.projects || 0, 0, 30),
+        skills: clamp(raw.scores?.skills || 0, 0, 30),
+        experience: clamp(raw.scores?.experience || 0, 0, 25),
+        education: clamp(raw.scores?.education || 0, 0, 15),
+      },
       overallScore,
       skillMatchPercent,
       matchedSkills: sanitizeStringArray(raw.matchedSkills, 20, 100),
@@ -161,6 +189,7 @@ async function scoreOneCandidate(
   } catch (err) {
     return {
       candidateId: candidate.id,
+      scores: { projects: 0, skills: 0, experience: 0, education: 0 },
       overallScore: 0,
       skillMatchPercent: 0,
       matchedSkills: [],
@@ -214,6 +243,7 @@ export async function batchScoreCandidates(
       } else {
         results[i + j] = {
           candidateId: batch[j].id,
+          scores: { projects: 0, skills: 0, experience: 0, education: 0 },
           overallScore: 0,
           skillMatchPercent: 0,
           matchedSkills: [],
@@ -261,6 +291,7 @@ export async function persistBatchScores(
 
       const ref = db.collection(COLLECTION_BULK_CANDIDATES).doc(score.candidateId);
       batch.update(ref, {
+        resumeScoreBreakdown: score.scores,
         llmScore: score.overallScore,
         skillMatchPercent: score.skillMatchPercent,
         matchedSkills: score.matchedSkills,
