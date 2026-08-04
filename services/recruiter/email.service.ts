@@ -85,8 +85,11 @@ function buildInterviewInviteHTML(params: SendEmailParams): string {
       </div>
 
       <div style="text-align: center; margin: 40px 0;">
-        <a href="${params.interviewLink}" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; padding: 16px 36px; border-radius: 12px; box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);">
-          Start Your Interview
+        <p style="color: #a1a1aa; font-size: 14px; line-height: 1.6; margin: 0 0 16px;">
+          Log in with this email address and visit your dashboard to start the interview.
+        </p>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://zen-ai-zeta.vercel.app"}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; padding: 16px 36px; border-radius: 12px; box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);">
+          Go to Dashboard
         </a>
       </div>
 
@@ -131,13 +134,15 @@ function buildInterviewInviteHTML(params: SendEmailParams): string {
  * Build a plain-text fallback for email clients that don't render HTML.
  */
 function buildInterviewInvitePlainText(params: SendEmailParams): string {
+  const dashboardLink = `${process.env.NEXT_PUBLIC_APP_URL || "https://zen-ai-zeta.vercel.app"}/dashboard`;
   return `Hi ${params.candidateName},
 
 Congratulations! You've been shortlisted for the position of ${params.jobTitle} at ${params.companyName}.
 
 We'd like to invite you to complete an AI-powered interview at your convenience.
 
-Start your interview here: ${params.interviewLink}
+To start your interview, please log in with this email address and visit your Candidate Dashboard:
+${dashboardLink}
 
 Interview Details:
 - Position: ${params.jobTitle}

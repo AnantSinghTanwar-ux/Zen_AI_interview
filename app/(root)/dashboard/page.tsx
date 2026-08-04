@@ -18,6 +18,7 @@ import {
   Loader2,
   TrendingUp,
   History,
+  CheckCircle2,
 } from "lucide-react";
 
 interface UserCredits {
@@ -38,8 +39,22 @@ interface CreditsResponse {
   email: string;
 }
 
+interface BulkInterview {
+  id: string;
+  bulkJobId: string;
+  jobId: string;
+  jobTitle: string;
+  companyName: string;
+  interviewToken: string;
+  interviewCompletedAt?: string;
+  interviewScore?: number;
+  createdAt: string;
+}
+
+
 export default function DashboardPage() {
   const [data, setData] = useState<CreditsResponse | null>(null);
+  const [bulkInterviews, setBulkInterviews] = useState<BulkInterview[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPaymentPopup, setShowPaymentPopup] = useState(false);
   const [suggestedProduct, setSuggestedProduct] = useState<
@@ -58,8 +73,6 @@ export default function DashboardPage() {
         }
       } catch (error) {
         console.error("Failed to fetch credits:", error);
-      } finally {
-        setLoading(false);
       }
     };
     
@@ -74,9 +87,22 @@ export default function DashboardPage() {
         // Silently fail health check
       }
     };
+
+    const fetchBulkInterviews = async () => {
+      try {
+        const res = await fetch("/api/v2/candidate/bulk-interviews");
+        if (res.ok) {
+          const data = await res.json();
+          setBulkInterviews(data.interviews || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch bulk interviews:", error);
+      }
+    };
     
-    fetchCredits();
-    fetchHealth();
+    Promise.all([fetchCredits(), fetchHealth(), fetchBulkInterviews()]).finally(() => {
+      setLoading(false);
+    });
   }, []);
 
   const credits = data?.credits || { interviews: 0, dsaSessions: 0 };
@@ -275,6 +301,52 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
+
+          {/* Scheduled Bulk Interviews */}
+          {bulkInterviews.length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+                <Target className="w-5 h-5 text-[#8B5CF6]" />
+                Scheduled Job Interviews
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {bulkInterviews.map((interview) => (
+                  <div key={interview.id} className="group relative glass-card p-6 rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:translate-y-[-2px]">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="w-12 h-12 rounded-xl bg-[#8B5CF6]/15 flex items-center justify-center text-[#8B5CF6]">
+                        <Mic className="w-6 h-6" />
+                      </div>
+                      {interview.interviewCompletedAt && (
+                        <div className="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-500/15 text-green-400 border border-green-500/30">
+                          Completed
+                        </div>
+                      )}
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground mb-1 line-clamp-1">
+                      {interview.jobTitle}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {interview.companyName}
+                    </p>
+                    
+                    {!interview.interviewCompletedAt ? (
+                      <Link href={`/interview/join?token=${interview.interviewToken}`}>
+                        <Button className="w-full rounded-xl bg-primary text-black hover:bg-primary/90 transition-all font-semibold">
+                          Start Interview
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button disabled variant="outline" className="w-full rounded-xl border-white/15 bg-white/[0.05]">
+                        <CheckCircle2 className="w-4 h-4 mr-2 text-green-400" />
+                        Scored & Submitted
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Feature Cards */}
           <div>
