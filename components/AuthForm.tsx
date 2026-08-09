@@ -88,17 +88,22 @@ function AuthForm({ type }: { type: FormType }) {
   // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      if (!captchaValue) {
-        toast.error("Please complete the captcha verification");
-        return;
-      }
+      const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+      const isCaptchaEnabled = !!siteKey && siteKey.length > 0;
 
-      const captchaRes = await verifyCaptcha(captchaValue);
-      if (!captchaRes.success) {
-        toast.error("Captcha verification failed. Please try again.");
-        recaptchaRef.current?.reset();
-        setCaptchaValue(null);
-        return;
+      if (isCaptchaEnabled) {
+        if (!captchaValue) {
+          toast.error("Please complete the captcha verification");
+          return;
+        }
+
+        const captchaRes = await verifyCaptcha(captchaValue);
+        if (!captchaRes.success) {
+          toast.error("Captcha verification failed. Please try again.");
+          recaptchaRef.current?.reset();
+          setCaptchaValue(null);
+          return;
+        }
       }
 
       const auth = getClientAuth();
@@ -254,14 +259,16 @@ function AuthForm({ type }: { type: FormType }) {
                 )}
                 />
 
-                <div className="flex justify-center pt-2 pb-2">
-                    <ReCAPTCHA
-                      ref={recaptchaRef}
-                      sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ""}
-                      onChange={(val) => setCaptchaValue(val)}
-                      theme="light"
-                    />
-                </div>
+                {process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && (
+                  <div className="flex justify-center pt-2 pb-2">
+                      <ReCAPTCHA
+                        ref={recaptchaRef}
+                        sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+                        onChange={(val) => setCaptchaValue(val)}
+                        theme="light"
+                      />
+                  </div>
+                )}
 
                 <div className="flex justify-center pt-4">
                     <Button className="btn btn-primary text-lg py-6 px-12" type="submit">
