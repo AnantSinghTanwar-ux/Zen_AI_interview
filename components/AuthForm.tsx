@@ -261,6 +261,32 @@ function AuthForm({ type }: { type: FormType }) {
                 )}
                 />
 
+                {isSignIn && (
+                    <div className="flex justify-end -mt-4">
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                const email = form.getValues("email");
+                                if (!email) {
+                                    toast.error("Please enter your email address first");
+                                    return;
+                                }
+                                try {
+                                    const { sendPasswordResetEmail } = await import("firebase/auth");
+                                    const auth = getClientAuth();
+                                    await sendPasswordResetEmail(auth, email);
+                                    toast.success("Password reset email sent! Check your inbox.");
+                                } catch (error) {
+                                    toast.error(`Error: ${(error as Error).message}`);
+                                }
+                            }}
+                            className="text-sm font-bold text-primary hover:underline"
+                        >
+                            Forgot Password?
+                        </button>
+                    </div>
+                )}
+
                 {(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY.trim().startsWith("6")) && (
                   <div className="flex justify-center pt-2 pb-2">
                       <ReCAPTCHA
