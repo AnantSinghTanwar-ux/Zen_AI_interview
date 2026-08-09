@@ -31,6 +31,11 @@ export default function CandidateAgent({ context }: { context: CandidateContext 
   const messagesRef = useRef<any[]>([]);
   const transcriptRef = useRef("");
 
+  // Use a ref to track callStatus for the cleanup function so it always
+  // reads the LATEST value, not the stale closure value.
+  const callStatusRef = useRef(callStatus);
+  callStatusRef.current = callStatus;
+
   useEffect(() => {
     if (!vapi) return;
 
@@ -94,7 +99,8 @@ export default function CandidateAgent({ context }: { context: CandidateContext 
 
     const onError = (e: any) => {
       console.error("[Vapi Error]", e);
-      if (callStatus === "CONNECTING") {
+      // Use the ref to read the CURRENT callStatus, not the stale closure value
+      if (callStatusRef.current === "CONNECTING") {
         setCallStatus("INACTIVE");
         toast.error("Failed to start the interview. Please try again or check microphone permissions.");
       }
@@ -110,12 +116,9 @@ export default function CandidateAgent({ context }: { context: CandidateContext 
       vapi.off("call-end", onCallEnd);
       vapi.off("message", onMessage);
       vapi.off("error", onError);
-      
-      if (callStatus === "ACTIVE" || callStatus === "CONNECTING") {
-        vapi.stop();
-      }
     };
-  }, [vapi, callStatus]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vapi]);
 
   const submitScore = async () => {
     setIsScoring(true);
