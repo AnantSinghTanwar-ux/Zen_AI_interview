@@ -78,6 +78,7 @@ export async function GET(
         status: status,
         appliedAt: data.createdAt || new Date().toISOString(),
         interviewScore: data.interviewScore || null,
+        interviewRecommendation: data.interviewRecommendation || null,
         notes: data.interviewFeedback || null,
         screening: {
           overallScore: data.llmScore || data.semanticScore || 0,
@@ -110,9 +111,12 @@ export async function GET(
     // Sort
     const sort = searchParams.get("sort");
     if (sort === "score") {
-      enriched.sort(
-        (a, b) => (b.screening?.overallScore || 0) - (a.screening?.overallScore || 0)
-      );
+      enriched.sort((a, b) => {
+        // Prioritize interview score, fallback to screening score
+        const scoreA = (a as any).interviewScore ?? a.screening?.overallScore ?? 0;
+        const scoreB = (b as any).interviewScore ?? b.screening?.overallScore ?? 0;
+        return scoreB - scoreA;
+      });
     } else if (sort === "name") {
       enriched.sort((a, b) => a.name.localeCompare(b.name));
     }

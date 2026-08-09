@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { RecruitmentJob } from "@/types/recruiter";
 import { Briefcase, Users, Clock, Edit2, Trash2, Eye, MapPin, Zap } from "lucide-react";
 import Link from "next/link";
@@ -25,12 +26,24 @@ const levelLabels: Record<string, string> = {
 
 export default function JobCard({ job, onEdit, onDelete }: JobCardProps) {
   const status = statusConfig[job.status] || statusConfig.draft;
-  const applicantCount = job.applicantIds?.length || 0;
+  const [applicantCount, setApplicantCount] = useState(job.applicantIds?.length || 0);
   const createdDate = new Date(job.createdAt).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
+
+  // Fetch real applicant count from API (includes bulk candidates)
+  useEffect(() => {
+    fetch(`/api/v2/recruiter/jobs/${job.id}/applicants`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.total !== undefined) {
+          setApplicantCount(data.total);
+        }
+      })
+      .catch(() => {});
+  }, [job.id]);
 
   return (
     <div className="group relative rounded-2xl border border-white/[0.06] bg-[#0A0A0A]/40 hover:bg-[#FAFAFA]/[0.03] hover:border-white/10 p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl">
@@ -131,3 +144,4 @@ export default function JobCard({ job, onEdit, onDelete }: JobCardProps) {
     </div>
   );
 }
+

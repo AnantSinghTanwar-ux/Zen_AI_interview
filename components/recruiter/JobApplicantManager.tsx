@@ -164,20 +164,33 @@ export default function JobApplicantManager({ jobId }: { jobId: string }) {
               >
                 <div className="p-4 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    {/* Score badge */}
-                    <div className="w-11 h-11 rounded-xl bg-white/[0.04] border border-white/5 flex flex-col items-center justify-center shrink-0">
+                    {/* Score badges */}
+                    <div className="flex gap-2 shrink-0">
+                      {/* Interview Score (Primary if exists) */}
+                      {applicant.interviewScore !== undefined && applicant.interviewScore !== null ? (
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex flex-col items-center justify-center shrink-0 shadow-[0_0_10px_rgba(163,230,53,0.1)]">
+                          <span className="text-sm font-bold text-primary">
+                            {applicant.interviewScore}
+                          </span>
+                          <span className="text-[8px] text-primary/70 uppercase font-semibold">Intv</span>
+                        </div>
+                      ) : null}
+                      
+                      {/* Resume Score */}
                       {hasScreening ? (
-                        <>
+                        <div className={`w-12 h-12 rounded-xl bg-white/[0.04] border border-white/5 flex flex-col items-center justify-center shrink-0 ${applicant.interviewScore ? 'hidden sm:flex' : ''}`}>
                           <span className={`text-sm font-bold ${
                             applicant.screening!.overallScore >= 70 ? "text-emerald-400" :
                             applicant.screening!.overallScore >= 50 ? "text-yellow-400" : "text-red-400"
                           }`}>
                             {applicant.screening!.overallScore}
                           </span>
-                          <span className="text-[8px] text-muted-foreground">score</span>
-                        </>
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground">—</span>
+                          <span className="text-[8px] text-muted-foreground uppercase font-semibold">Resume</span>
+                        </div>
+                      ) : !applicant.interviewScore && (
+                        <div className="w-12 h-12 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-center shrink-0">
+                           <span className="text-[10px] text-muted-foreground">—</span>
+                        </div>
                       )}
                     </div>
 
@@ -188,15 +201,25 @@ export default function JobApplicantManager({ jobId }: { jobId: string }) {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    {hasScreening && applicant.screening!.recommendation && (
-                      <span className={`hidden sm:inline text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
+                    {/* Recommendation Pill */}
+                    {applicant.interviewRecommendation ? (
+                      <span className={`hidden sm:inline text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${
+                        applicant.interviewRecommendation.toLowerCase().includes("strong") ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" :
+                        applicant.interviewRecommendation.toLowerCase().includes("hire") ? "bg-blue-500/15 text-blue-400 border-blue-500/30" :
+                        applicant.interviewRecommendation.toLowerCase().includes("maybe") ? "bg-amber-500/15 text-amber-400 border-amber-500/30" :
+                        "bg-red-500/15 text-red-400 border-red-500/30"
+                      }`}>
+                        {applicant.interviewRecommendation.replace("_", " ")}
+                      </span>
+                    ) : hasScreening && applicant.screening!.recommendation ? (
+                      <span className={`hidden sm:inline text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${
                         applicant.screening!.recommendation === "shortlist" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" :
                         applicant.screening!.recommendation === "review" ? "bg-amber-500/15 text-amber-400 border-amber-500/20" :
                         "bg-red-500/15 text-red-400 border-red-500/20"
                       }`}>
                         {applicant.screening!.recommendation}
                       </span>
-                    )}
+                    ) : null}
 
                     <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${status.className}`}>
                       {status.label}
