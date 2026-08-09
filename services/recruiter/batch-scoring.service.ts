@@ -223,14 +223,26 @@ export async function batchScoreCandidates(
     throw new Error("AI scoring is not configured (missing OPENROUTER_API_KEY)");
   }
 
-  const results: BatchScoredCandidate[] = new Array(candidates.length);
+  // Deduplicate by resumeText to avoid 429s and save cost on identical resumes
+  const uniqueResumes = new Map<string, { id: string; resumeText: string }>();
+  for (const c of candidates) {
+    if (c.resumeText && c.resumeText.trim()) {
+      // Use the first candidate id encountered for this unique text as the primary
+      if (!uniqueResumes.has(c.resumeText)) {
+        uniqueResumes.set(c.resumeText, { id: c.id, resumeText: c.resumeText });
+      }
+    }
+  }
+
+  const uniqueCandidates = Array.from(uniqueResumes.values());
+  const uniqueResultsMap = new Map<string, Omit<BatchScoredCandidate, "candidateId">>();
   let completed = 0;
 
-  // Process in concurrent batches
+  // Process unique candidates in concurrent batches
   const safeConcurrency = Math.max(1, Math.min(concurrency, 20));
 
-  for (let i = 0; i < candidates.length; i += safeConcurrency) {
-    const batch = candidates.slice(i, i + safeConcurrency);
+  for (let i = 0; i < uniqueCandidates.length; i += safeConcurrency) {
+    const batch = uniqueCandidates.slice(i, i + safeConcurrency);
 
     const batchResults = await Promise.allSettled(
       batch.map((candidate) => scoreOneCandidate(candidate, job))
@@ -238,11 +250,14 @@ export async function batchScoreCandidates(
 
     for (let j = 0; j < batchResults.length; j++) {
       const result = batchResults[j];
+      const primaryCandidate = batch[j];
+      let scoreData: Omit<BatchScoredCandidate, "candidateId">;
+
       if (result.status === "fulfilled") {
-        results[i + j] = result.value;
+        const { candidateId, ...rest } = result.value;
+        scoreData = rest;
       } else {
-        results[i + j] = {
-          candidateId: batch[j].id,
+        scoreData = {
           scores: { projects: 0, skills: 0, experience: 0, education: 0 },
           overallScore: 0,
           skillMatchPercent: 0,
@@ -253,18 +268,36 @@ export async function batchScoreCandidates(
           error: result.reason?.message || "Scoring failed",
         };
       }
+      uniqueResultsMap.set(primaryCandidate.resumeText, scoreData);
       completed++;
     }
 
-    onProgress?.(completed, candidates.length);
+    onProgress?.(completed, uniqueCandidates.length);
 
     // Small delay between batches to avoid rate limiting
-    if (i + safeConcurrency < candidates.length) {
-      await new Promise<void>((resolve) => setTimeout(resolve, 100));
+    if (i + safeConcurrency < uniqueCandidates.length) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 150));
     }
   }
 
-  return results;
+  // Map results back to all original candidates
+  return candidates.map((candidate) => {
+    const scoreData = uniqueResultsMap.get(candidate.resumeText) || {
+      scores: { projects: 0, skills: 0, experience: 0, education: 0 },
+      overallScore: 0,
+      skillMatchPercent: 0,
+      matchedSkills: [],
+      missingSkills: [],
+      recommendation: "reject",
+      assessmentSummary: "",
+      error: "Invalid or empty resume text",
+    };
+
+    return {
+      candidateId: candidate.id,
+      ...scoreData,
+    };
+  });
 }
 
 /**

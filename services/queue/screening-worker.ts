@@ -439,7 +439,7 @@ function createOrchestratorWorker(): Worker {
           const job = { id: jobDoc.id, ...jobDoc.data() } as any;
 
           // Build candidate data for batch scoring
-          const candidateMap = new Map(
+          const candidateMap = new Map<string, string>(
             candidatesWithEmbeddings.map((c) => [c.id, c.resumeText])
           );
           const candidatesToScore = topCandidates

@@ -111,7 +111,25 @@ export default function CandidateAgent({ context }: { context: CandidateContext 
     vapi.on("message", onMessage);
     vapi.on("error", onError);
 
+    const handleBeforeUnload = () => {
+      // If there's an active call and we have some transcript, try to submit it robustly
+      if (callStatusRef.current === "ACTIVE" || callStatusRef.current === "FINISHED") {
+        if (transcriptRef.current.includes("Candidate: ")) {
+          const payload = JSON.stringify({
+            candidateId: context.candidateId,
+            jobId: context.jobId,
+            transcript: transcriptRef.current,
+            callId: currentCallIdRef.current,
+          });
+          navigator.sendBeacon("/api/v2/screening/submit-score", payload);
+        }
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
     return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
       vapi.off("call-start", onCallStart);
       vapi.off("call-end", onCallEnd);
       vapi.off("message", onMessage);
