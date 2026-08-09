@@ -39,6 +39,14 @@ export function middleware(request: NextRequest) {
 
   // If trying to access sign-in/sign-up while ALREADY authenticated, redirect to /dashboard
   if (isAuthPath && session) {
+    // If the URL specifies to clear the session (because it was invalid/expired),
+    // delete the cookie and let the user access the auth page
+    if (request.nextUrl.searchParams.get('clear_session') === 'true') {
+      const response = NextResponse.next();
+      response.cookies.delete('session');
+      return response;
+    }
+    
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 

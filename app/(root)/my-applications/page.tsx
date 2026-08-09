@@ -14,7 +14,7 @@ export default async function MyApplicationsPage() {
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect("/sign-in?redirect=/my-applications");
+    redirect("/sign-in?clear_session=true&redirect=/my-applications");
   }
 
   return (

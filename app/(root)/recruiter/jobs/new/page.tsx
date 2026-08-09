@@ -9,7 +9,7 @@ export default async function NewJobPage() {
   const authStatus = await checkAuthStatus();
 
   if (!authStatus.isAuthenticated) {
-    redirect("/sign-in?redirect=/recruiter/jobs/new");
+    redirect("/sign-in?clear_session=true&redirect=/recruiter/jobs/new");
   }
 
   if (!authStatus.isRecruiter) {

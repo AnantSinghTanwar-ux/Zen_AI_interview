@@ -67,6 +67,10 @@ export default function DashboardPage() {
     const fetchCredits = async () => {
       try {
         const res = await fetch("/api/premium/credits");
+        if (res.status === 401) {
+          window.location.href = '/sign-in?clear_session=true';
+          return;
+        }
         if (res.ok) {
           const json = await res.json();
           setData(json);

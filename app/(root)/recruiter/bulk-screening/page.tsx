@@ -13,7 +13,7 @@ export default async function BulkScreeningPage({
   const authStatus = await checkAuthStatus();
 
   if (!authStatus.isAuthenticated) {
-    redirect("/sign-in?redirect=/recruiter/bulk-screening");
+    redirect("/sign-in?clear_session=true&redirect=/recruiter/bulk-screening");
   }
 
   if (!authStatus.isRecruiter) {

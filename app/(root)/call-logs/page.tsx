@@ -6,7 +6,7 @@ export default async function CallLogsPage() {
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect("/sign-in");
+    redirect("/sign-in?clear_session=true");
   }
 
   return (
