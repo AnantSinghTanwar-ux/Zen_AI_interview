@@ -85,6 +85,9 @@ export default function CandidateDashboard() {
           allSchedules = [...allSchedules, ...mappedBulk];
         }
         
+        // Sort all schedules by scheduledAt descending (newest first)
+        allSchedules.sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime());
+        
         setSchedules(allSchedules);
       } catch (err) {
         console.error("Error fetching dashboard data:", err);

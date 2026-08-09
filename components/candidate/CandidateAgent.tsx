@@ -39,6 +39,31 @@ export default function CandidateAgent({ context }: { context: CandidateContext 
       messagesRef.current = [];
       transcriptRef.current = "";
       setTranscript("");
+
+      // Build dynamic context for the AI
+      const jobContextJson = JSON.stringify({
+        title: context.jobTitle,
+        company: context.companyName,
+        description: context.jobDescription,
+        skills: context.requiredSkills,
+      });
+
+      try {
+        vapi.send({
+          type: "add-message",
+          message: {
+            role: "system",
+            content:
+              `You are a Technical Recruiter interviewing ${context.name}.\n` +
+              `Use this job details JSON to tailor the interview questions, follow-up depth, and evaluation rubric.\n` +
+              `Do not ask the candidate to restate role title, company, or skills if those fields already exist in JOB_DETAILS_JSON.\n\n` +
+              `JOB_DETAILS_JSON:\n${jobContextJson}\n\n` +
+              `CANDIDATE RESUME:\n${context.resumeText.slice(0, 3000)}`,
+          },
+        });
+      } catch (error) {
+        console.warn("Failed to inject job context at call start", error);
+      }
     };
 
     const onCallEnd = async () => {
@@ -125,22 +150,8 @@ export default function CandidateAgent({ context }: { context: CandidateContext 
     setCallStatus("CONNECTING");
 
     try {
-      // Build dynamic context for the AI
-      const jobContextJson = JSON.stringify({
-        title: context.jobTitle,
-        company: context.companyName,
-        description: context.jobDescription,
-        skills: context.requiredSkills,
-      });
-
-      const callData = await vapi.start(ASSISTANT, {
-        variableValues: {
-          username: context.name,
-          resumeContent: context.resumeText.slice(0, 5000), // Vapi var limit
-          jobContextJson: jobContextJson.slice(0, 5000),
-          role: "Technical Recruiter",
-        },
-      });
+      // Start call without variableValues to avoid crashing if template vars don't match
+      const callData = await vapi.start(ASSISTANT);
 
       // Try to extract call ID
       const callId = callData?.id || (callData as any)?.call?.id;
