@@ -48,10 +48,28 @@ export async function GET(
       }
     }
 
-    // Enrich applicants with screening data
-    let enriched = applicants.map((a) => ({
-      ...a,
-      screening: screeningMap.get(a.id) || null,
+    // Enrich applicants with screening data and fetch interview scores if applicable
+    const { getScoreByApplication } = await import("@/services/recruiter/application-score.service");
+    
+    let enriched = await Promise.all(applicants.map(async (a) => {
+      let interviewScore = a.interviewScore ?? null;
+      let interviewRecommendation = a.interviewRecommendation ?? null;
+
+      // For standard candidates that have completed interviews but missing scores on the document
+      if (a.status === "completed" && interviewScore === null) {
+        const score = await getScoreByApplication(a.id);
+        if (score) {
+          interviewScore = score.overallScore;
+          interviewRecommendation = score.recommendation;
+        }
+      }
+
+      return {
+        ...a,
+        interviewScore,
+        interviewRecommendation,
+        screening: screeningMap.get(a.id) || null,
+      };
     }));
 
     // Fetch Bulk Candidates and merge them
