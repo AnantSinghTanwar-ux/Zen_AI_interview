@@ -88,6 +88,167 @@ export default function JobApplicantManager({ jobId }: { jobId: string }) {
     );
   }
 
+  const renderApplicantRow = (applicant: EnrichedApplicant, isResumeOnly: boolean = false) => {
+    const status = statusConfig[applicant.status] || statusConfig.pending;
+    const hasScreening = !!applicant.screening;
+
+    return (
+      <div
+        key={applicant.id}
+        className="rounded-xl border border-white/[0.06] bg-[#0A0A0A]/40 hover:border-white/10 transition-all overflow-hidden"
+      >
+        <div className="p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            {/* Score badges */}
+            <div className="flex gap-2 shrink-0">
+              {/* Interview Score (Primary if exists) */}
+              {applicant.interviewScore !== undefined && applicant.interviewScore !== null ? (
+                <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex flex-col items-center justify-center shrink-0 shadow-[0_0_10px_rgba(163,230,53,0.1)]">
+                  <span className="text-sm font-bold text-primary">
+                    {applicant.interviewScore}
+                  </span>
+                  <span className="text-[8px] text-primary/70 uppercase font-semibold">Intv</span>
+                </div>
+              ) : null}
+              
+              {/* Resume Score */}
+              {hasScreening ? (
+                <div className={`w-12 h-12 rounded-xl bg-white/[0.04] border border-white/5 flex flex-col items-center justify-center shrink-0 ${applicant.interviewScore ? 'hidden sm:flex' : ''}`}>
+                  <span className={`text-sm font-bold ${
+                    applicant.screening!.overallScore >= 70 ? "text-emerald-400" :
+                    applicant.screening!.overallScore >= 50 ? "text-yellow-400" : "text-red-400"
+                  }`}>
+                    {applicant.screening!.overallScore}
+                  </span>
+                  <span className="text-[8px] text-muted-foreground uppercase font-semibold">Resume</span>
+                </div>
+              ) : !applicant.interviewScore && (
+                <div className="w-12 h-12 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-center shrink-0">
+                   <span className="text-[10px] text-muted-foreground">—</span>
+                </div>
+              )}
+            </div>
+
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground truncate">{applicant.name}</p>
+              <p className="text-xs text-muted-foreground truncate">{applicant.email}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Recommendation Pill */}
+            {applicant.interviewRecommendation ? (
+              <span className={`hidden sm:inline text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${
+                applicant.interviewRecommendation.toLowerCase().includes("strong") ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" :
+                applicant.interviewRecommendation.toLowerCase().includes("hire") ? "bg-blue-500/15 text-blue-400 border-blue-500/30" :
+                applicant.interviewRecommendation.toLowerCase().includes("maybe") ? "bg-amber-500/15 text-amber-400 border-amber-500/30" :
+                "bg-red-500/15 text-red-400 border-red-500/30"
+              }`}>
+                {applicant.interviewRecommendation.replace("_", " ")}
+              </span>
+            ) : hasScreening && applicant.screening!.recommendation ? (
+              <span className={`hidden sm:inline text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${
+                applicant.screening!.recommendation === "shortlist" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" :
+                applicant.screening!.recommendation === "review" ? "bg-amber-500/15 text-amber-400 border-amber-500/20" :
+                "bg-red-500/15 text-red-400 border-red-500/20"
+              }`}>
+                {applicant.screening!.recommendation}
+              </span>
+            ) : null}
+
+            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${status.className}`}>
+              {status.label}
+            </span>
+
+            <button
+              onClick={() => setSelectedApplicant(selectedApplicant?.id === applicant.id ? null : applicant)}
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+              title="View details"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Expanded Detail */}
+        {selectedApplicant?.id === applicant.id && (
+          <div className="border-t border-white/5 p-5 bg-white/[0.01] space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left: AI Screening */}
+              <div>
+                {applicant.screening ? (
+                  <ResumeScreeningPanel screening={applicant.screening} />
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    AI screening pending...
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Info + Actions */}
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Application Info</h4>
+                  <div className="space-y-1.5 text-sm">
+                    <p className="text-foreground/80">
+                      <span className="text-muted-foreground">Applied:</span>{" "}
+                      {new Date(applicant.appliedAt).toLocaleDateString("en-US", {
+                        month: "long", day: "numeric", year: "numeric",
+                      })}
+                    </p>
+                    {applicant.coverLetter && (
+                      <div>
+                        <p className="text-muted-foreground text-xs mb-1">Cover Letter:</p>
+                        <p className="text-xs text-foreground/70 bg-white/[0.03] p-3 rounded-lg border border-white/5 max-h-32 overflow-y-auto">
+                          {applicant.coverLetter}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="space-y-2 pt-2">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {applicant.status !== "shortlisted" && applicant.status !== "rejected" && (
+                      <>
+                        <button
+                          onClick={() => handleStatusChange(applicant.id, "shortlisted")}
+                          className="flex items-center gap-1.5 text-xs font-medium bg-emerald-500/15 text-emerald-400 px-3 py-2 rounded-lg hover:bg-emerald-500/25 transition-colors"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Shortlist
+                        </button>
+                        <button
+                          onClick={() => handleStatusChange(applicant.id, "rejected")}
+                          className="flex items-center gap-1.5 text-xs font-medium bg-red-500/15 text-red-400 px-3 py-2 rounded-lg hover:bg-red-500/25 transition-colors"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                          Reject
+                        </button>
+                      </>
+                    )}
+                    {(applicant.status === "shortlisted" || applicant.status === "screened") && (
+                      <button
+                        onClick={() => setScheduleTarget(applicant)}
+                        className="flex items-center gap-1.5 text-xs font-medium bg-primary/15 text-primary px-3 py-2 rounded-lg hover:bg-primary/25 transition-colors"
+                      >
+                        <Calendar className="w-3.5 h-3.5" />
+                        Schedule Interview
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -141,180 +302,62 @@ export default function JobApplicantManager({ jobId }: { jobId: string }) {
         </select>
       </div>
 
-      <TopInterviewedCandidates applicants={applicants} jobTitle={job?.title || "Job"} />
+      {/* Two distinct lists */}
+      <div className="space-y-12">
+        {/* Main Section: Interviewed Candidates */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4 border-b border-white/10 pb-2">
+            <h2 className="text-xl font-bold text-foreground">Interviewed Candidates</h2>
+            <span className="bg-primary/20 text-primary text-xs font-bold px-2 py-0.5 rounded-full">
+              {applicants.filter(a => a.interviewScore !== undefined && a.interviewScore !== null).length}
+            </span>
+          </div>
 
-      {/* Applicant List */}
-      {applicants.length === 0 ? (
-        <div className="text-center py-16 rounded-2xl border border-dashed border-white/10 bg-white/[0.02]">
-          <Users className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-40" />
-          <p className="text-sm text-muted-foreground">
-            {search || statusFilter ? "No applicants match your filters" : "No applicants yet"}
-          </p>
+          {applicants.filter(a => a.interviewScore !== undefined && a.interviewScore !== null).length === 0 ? (
+            <div className="text-center py-12 rounded-2xl border border-dashed border-white/10 bg-white/[0.02]">
+              <p className="text-sm text-muted-foreground">No interviewed candidates yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {applicants
+                .filter(a => a.interviewScore !== undefined && a.interviewScore !== null)
+                .sort((a, b) => {
+                  if (sortBy === "score") return (b.interviewScore || 0) - (a.interviewScore || 0);
+                  if (sortBy === "name") return a.name.localeCompare(b.name);
+                  return new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime();
+                })
+                .map((applicant) => renderApplicantRow(applicant))}
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="space-y-3">
-          {applicants.map((applicant) => {
-            const status = statusConfig[applicant.status] || statusConfig.pending;
-            const hasScreening = !!applicant.screening;
 
-            return (
-              <div
-                key={applicant.id}
-                className="rounded-xl border border-white/[0.06] bg-[#0A0A0A]/40 hover:border-white/10 transition-all overflow-hidden"
-              >
-                <div className="p-4 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    {/* Score badges */}
-                    <div className="flex gap-2 shrink-0">
-                      {/* Interview Score (Primary if exists) */}
-                      {applicant.interviewScore !== undefined && applicant.interviewScore !== null ? (
-                        <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex flex-col items-center justify-center shrink-0 shadow-[0_0_10px_rgba(163,230,53,0.1)]">
-                          <span className="text-sm font-bold text-primary">
-                            {applicant.interviewScore}
-                          </span>
-                          <span className="text-[8px] text-primary/70 uppercase font-semibold">Intv</span>
-                        </div>
-                      ) : null}
-                      
-                      {/* Resume Score */}
-                      {hasScreening ? (
-                        <div className={`w-12 h-12 rounded-xl bg-white/[0.04] border border-white/5 flex flex-col items-center justify-center shrink-0 ${applicant.interviewScore ? 'hidden sm:flex' : ''}`}>
-                          <span className={`text-sm font-bold ${
-                            applicant.screening!.overallScore >= 70 ? "text-emerald-400" :
-                            applicant.screening!.overallScore >= 50 ? "text-yellow-400" : "text-red-400"
-                          }`}>
-                            {applicant.screening!.overallScore}
-                          </span>
-                          <span className="text-[8px] text-muted-foreground uppercase font-semibold">Resume</span>
-                        </div>
-                      ) : !applicant.interviewScore && (
-                        <div className="w-12 h-12 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-center shrink-0">
-                           <span className="text-[10px] text-muted-foreground">—</span>
-                        </div>
-                      )}
-                    </div>
+        {/* Secondary Section: Resume Screened Candidates */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4 border-b border-white/10 pb-2">
+            <h2 className="text-lg font-bold text-muted-foreground">Resume Candidates</h2>
+            <span className="bg-white/10 text-muted-foreground text-xs font-bold px-2 py-0.5 rounded-full">
+              {applicants.filter(a => applicant.interviewScore === undefined || applicant.interviewScore === null).length}
+            </span>
+          </div>
 
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{applicant.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{applicant.email}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    {/* Recommendation Pill */}
-                    {applicant.interviewRecommendation ? (
-                      <span className={`hidden sm:inline text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${
-                        applicant.interviewRecommendation.toLowerCase().includes("strong") ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" :
-                        applicant.interviewRecommendation.toLowerCase().includes("hire") ? "bg-blue-500/15 text-blue-400 border-blue-500/30" :
-                        applicant.interviewRecommendation.toLowerCase().includes("maybe") ? "bg-amber-500/15 text-amber-400 border-amber-500/30" :
-                        "bg-red-500/15 text-red-400 border-red-500/30"
-                      }`}>
-                        {applicant.interviewRecommendation.replace("_", " ")}
-                      </span>
-                    ) : hasScreening && applicant.screening!.recommendation ? (
-                      <span className={`hidden sm:inline text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${
-                        applicant.screening!.recommendation === "shortlist" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" :
-                        applicant.screening!.recommendation === "review" ? "bg-amber-500/15 text-amber-400 border-amber-500/20" :
-                        "bg-red-500/15 text-red-400 border-red-500/20"
-                      }`}>
-                        {applicant.screening!.recommendation}
-                      </span>
-                    ) : null}
-
-                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${status.className}`}>
-                      {status.label}
-                    </span>
-
-                    <button
-                      onClick={() => setSelectedApplicant(selectedApplicant?.id === applicant.id ? null : applicant)}
-                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-                      title="View details"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Expanded Detail */}
-                {selectedApplicant?.id === applicant.id && (
-                  <div className="border-t border-white/5 p-5 bg-white/[0.01] space-y-5">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Left: AI Screening */}
-                      <div>
-                        {applicant.screening ? (
-                          <ResumeScreeningPanel screening={applicant.screening} />
-                        ) : (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            AI screening pending...
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Right: Info + Actions */}
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Application Info</h4>
-                          <div className="space-y-1.5 text-sm">
-                            <p className="text-foreground/80">
-                              <span className="text-muted-foreground">Applied:</span>{" "}
-                              {new Date(applicant.appliedAt).toLocaleDateString("en-US", {
-                                month: "long", day: "numeric", year: "numeric",
-                              })}
-                            </p>
-                            {applicant.coverLetter && (
-                              <div>
-                                <p className="text-muted-foreground text-xs mb-1">Cover Letter:</p>
-                                <p className="text-xs text-foreground/70 bg-white/[0.03] p-3 rounded-lg border border-white/5 max-h-32 overflow-y-auto">
-                                  {applicant.coverLetter}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="space-y-2 pt-2">
-                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {applicant.status !== "shortlisted" && applicant.status !== "rejected" && (
-                              <>
-                                <button
-                                  onClick={() => handleStatusChange(applicant.id, "shortlisted")}
-                                  className="flex items-center gap-1.5 text-xs font-medium bg-emerald-500/15 text-emerald-400 px-3 py-2 rounded-lg hover:bg-emerald-500/25 transition-colors"
-                                >
-                                  <CheckCircle2 className="w-3.5 h-3.5" />
-                                  Shortlist
-                                </button>
-                                <button
-                                  onClick={() => handleStatusChange(applicant.id, "rejected")}
-                                  className="flex items-center gap-1.5 text-xs font-medium bg-red-500/15 text-red-400 px-3 py-2 rounded-lg hover:bg-red-500/25 transition-colors"
-                                >
-                                  <XCircle className="w-3.5 h-3.5" />
-                                  Reject
-                                </button>
-                              </>
-                            )}
-                            {(applicant.status === "shortlisted" || applicant.status === "screened") && (
-                              <button
-                                onClick={() => setScheduleTarget(applicant)}
-                                className="flex items-center gap-1.5 text-xs font-medium bg-primary/15 text-primary px-3 py-2 rounded-lg hover:bg-primary/25 transition-colors"
-                              >
-                                <Calendar className="w-3.5 h-3.5" />
-                                Schedule Interview
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {applicants.filter(a => applicant.interviewScore === undefined || applicant.interviewScore === null).length === 0 ? (
+            <div className="text-center py-8 rounded-2xl border border-dashed border-white/5 bg-white/[0.01]">
+              <p className="text-sm text-muted-foreground">No resume candidates.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {applicants
+                .filter(a => a.interviewScore === undefined || a.interviewScore === null)
+                .sort((a, b) => {
+                  if (sortBy === "score") return (b.screening?.overallScore || 0) - (a.screening?.overallScore || 0);
+                  if (sortBy === "name") return a.name.localeCompare(b.name);
+                  return new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime();
+                })
+                .map((applicant) => renderApplicantRow(applicant, true))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Schedule Modal */}
       {scheduleTarget && job && (
