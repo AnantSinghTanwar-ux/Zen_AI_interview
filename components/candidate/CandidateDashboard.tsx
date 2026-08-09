@@ -51,10 +51,13 @@ export default function CandidateDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [appsRes, schedRes] = await Promise.all([
+        const [appsRes, schedRes, bulkRes] = await Promise.all([
           fetch("/api/v2/candidate/applications"),
           fetch("/api/v2/candidate/schedule"),
+          fetch("/api/v2/candidate/bulk-interviews"),
         ]);
+
+        let allSchedules: ScheduledInterview[] = [];
 
         if (appsRes.ok) {
           const data = await appsRes.json();
@@ -62,8 +65,27 @@ export default function CandidateDashboard() {
         }
         if (schedRes.ok) {
           const data = await schedRes.json();
-          setSchedules(data.schedules || []);
+          allSchedules = [...allSchedules, ...(data.schedules || [])];
         }
+        if (bulkRes.ok) {
+          const bulkData = await bulkRes.json();
+          const mappedBulk = (bulkData.interviews || []).map((bi: any) => ({
+            id: bi.id,
+            candidateId: bi.id,
+            jobId: bi.jobId,
+            jobTitle: bi.jobTitle,
+            scheduledAt: bi.createdAt || new Date().toISOString(),
+            duration: 15,
+            meetingLink: `/interview/join?token=${bi.interviewToken}`,
+            status: bi.interviewCompletedAt ? "completed" : "scheduled",
+            notes: "AI Bulk Screening Interview",
+            createdAt: bi.createdAt || new Date().toISOString(),
+            updatedAt: bi.createdAt || new Date().toISOString(),
+          }));
+          allSchedules = [...allSchedules, ...mappedBulk];
+        }
+        
+        setSchedules(allSchedules);
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
       } finally {

@@ -187,6 +187,7 @@ export default function CandidateVerificationTable({
                     width: "w-24",
                   },
                   { key: "recommendation", label: "Verdict", width: "w-28" },
+                  { key: "interviewScore", label: "Interview Score", width: "w-24" },
                   { key: "email_status", label: "Email", width: "w-20" },
                   { key: "actions", label: "", width: "w-16" },
                 ].map(({ key, label, width }) => (
