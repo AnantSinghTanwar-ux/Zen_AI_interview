@@ -336,11 +336,11 @@ export default function JobApplicantManager({ jobId }: { jobId: string }) {
           <div className="flex items-center gap-2 mb-4 border-b border-white/10 pb-2">
             <h2 className="text-lg font-bold text-muted-foreground">Resume Candidates</h2>
             <span className="bg-white/10 text-muted-foreground text-xs font-bold px-2 py-0.5 rounded-full">
-              {applicants.filter(a => applicant.interviewScore === undefined || applicant.interviewScore === null).length}
+              {applicants.filter(a => a.interviewScore === undefined || a.interviewScore === null).length}
             </span>
           </div>
 
-          {applicants.filter(a => applicant.interviewScore === undefined || applicant.interviewScore === null).length === 0 ? (
+          {applicants.filter(a => a.interviewScore === undefined || a.interviewScore === null).length === 0 ? (
             <div className="text-center py-8 rounded-2xl border border-dashed border-white/5 bg-white/[0.01]">
               <p className="text-sm text-muted-foreground">No resume candidates.</p>
             </div>
