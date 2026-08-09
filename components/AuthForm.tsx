@@ -89,7 +89,9 @@ function AuthForm({ type }: { type: FormType }) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-      const isCaptchaEnabled = !!siteKey && siteKey.length > 0;
+      // Google ReCAPTCHA keys typically start with "6L" or "6M". 
+      // If the user accidentally pasted a Stripe/Razorpay key (e.g. sk_live_...), we ignore it.
+      const isCaptchaEnabled = !!siteKey && siteKey.trim().length > 10 && siteKey.trim().startsWith("6");
 
       if (isCaptchaEnabled) {
         if (!captchaValue) {
@@ -259,7 +261,7 @@ function AuthForm({ type }: { type: FormType }) {
                 )}
                 />
 
-                {process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && (
+                {(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY.trim().startsWith("6")) && (
                   <div className="flex justify-center pt-2 pb-2">
                       <ReCAPTCHA
                         ref={recaptchaRef}
