@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   BarChart3,
@@ -49,7 +50,18 @@ type Tab =
 const TEMP_RESCORE_BUTTON_ENABLED = true;
 
 export default function RecruiterDashboard() {
-  const [tab, setTab] = useState<Tab>("overview");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [tab, setTab] = useState<Tab>(
+    () => (searchParams.get("tab") as Tab) || "overview",
+  );
+
+  const handleTabChange = (newTab: Tab) => {
+    setTab(newTab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", newTab);
+    router.replace("?" + params.toString(), { scroll: false });
+  };
   const [stats, setStats] = useState<any>(null);
   const [applications, setApplications] = useState<
     (ExternalApplication & { score?: ApplicationScore | null })[]
@@ -492,7 +504,7 @@ export default function RecruiterDashboard() {
               if (key === "bulk-screening") {
                 window.location.href = "/recruiter/bulk-screening";
               } else {
-                setTab(key as Tab);
+                handleTabChange(key as Tab);
               }
             }}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
@@ -537,7 +549,7 @@ export default function RecruiterDashboard() {
                 if (key === "bulk-screening") {
                   window.location.href = "/recruiter/bulk-screening";
                 } else {
-                  setTab(key as Tab);
+                  handleTabChange(key as Tab);
                 }
               }}
               className={`p-4 rounded-xl transition-all duration-300 ${
@@ -1707,12 +1719,6 @@ export default function RecruiterDashboard() {
           </div>
         </div>
       )}
-
-      {/* Jobs Tab */}
-      {tab === "jobs" && <JobManagementDashboard />}
-
-      {/* Schedule Tab */}
-      {tab === "schedule" && <ScheduleTab />}
     </>
   );
 }
