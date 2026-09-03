@@ -95,9 +95,9 @@ export async function GET(
         email: data.email || "",
         status: status,
         appliedAt: data.createdAt || new Date().toISOString(),
-        interviewScore: data.interviewScore || null,
-        interviewRecommendation: data.interviewRecommendation || null,
-        notes: data.interviewFeedback || null,
+        interviewScore: data.interviewScore ?? null,
+        interviewRecommendation: data.interviewRecommendation ?? null,
+        notes: data.interviewFeedback ?? null,
         screening: {
           overallScore: data.llmScore || data.semanticScore || 0,
           skillMatchPercent: data.skillMatchPercent || 0,

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ResumeScreeningPanel from "./ResumeScreeningPanel";
 import ScheduleInterviewModal from "./ScheduleInterviewModal";
@@ -37,6 +38,7 @@ export default function JobApplicantManager({ jobId }: { jobId: string }) {
   const [sortBy, setSortBy] = useState<"date" | "score" | "name">("date");
   const [selectedApplicant, setSelectedApplicant] = useState<EnrichedApplicant | null>(null);
   const [scheduleTarget, setScheduleTarget] = useState<EnrichedApplicant | null>(null);
+  const router = useRouter();
 
   const fetchApplicants = useCallback(async () => {
     try {
@@ -253,12 +255,12 @@ export default function JobApplicantManager({ jobId }: { jobId: string }) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link
-          href="/recruiter"
+        <button
+          onClick={() => router.back()}
           className="p-2 rounded-xl hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
-        </Link>
+        </button>
         <div>
           <h1 className="text-2xl font-bold text-foreground">{job?.title || "Job Applicants"}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">

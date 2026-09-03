@@ -5,7 +5,7 @@ import { checkAuthStatus } from "@/lib/actions/check-auth";
 import { redirect } from "next/navigation";
 import JobApplicantManager from "@/components/recruiter/JobApplicantManager";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 
 export default async function RecruiterJobPage({
   params,

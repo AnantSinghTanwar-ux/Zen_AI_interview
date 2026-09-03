@@ -95,6 +95,7 @@ export default function CandidateVerificationTable({
   loading = false,
   stats,
 }: CandidateVerificationTableProps) {
+  const safeCandidates = candidates || [];
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   const handleSortClick = (field: string) => {
@@ -227,7 +228,7 @@ export default function CandidateVerificationTable({
                     </div>
                   </td>
                 </tr>
-              ) : candidates.length === 0 ? (
+              ) : safeCandidates.length === 0 ? (
                 <tr>
                   <td
                     colSpan={8}
@@ -237,7 +238,7 @@ export default function CandidateVerificationTable({
                   </td>
                 </tr>
               ) : (
-                candidates.map((candidate) => {
+                safeCandidates.map((candidate) => {
                   const rec = recConfig[candidate.recommendation || ""] || null;
                   const RecIcon = rec?.icon || AlertCircle;
                   const isExpanded = expandedRow === candidate.id;
@@ -415,13 +416,13 @@ export default function CandidateVerificationTable({
 
                               {/* Skills */}
                               <div className="space-y-3">
-                                {candidate.matchedSkills.length > 0 && (
+                                {(candidate.matchedSkills || []).length > 0 && (
                                   <div>
                                     <h4 className="text-[11px] font-semibold text-emerald-400 mb-1.5">
                                       Matched Skills
                                     </h4>
                                     <div className="flex flex-wrap gap-1.5">
-                                      {candidate.matchedSkills.map((s) => (
+                                      {(candidate.matchedSkills || []).map((s) => (
                                         <span
                                           key={s}
                                           className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
@@ -432,13 +433,13 @@ export default function CandidateVerificationTable({
                                     </div>
                                   </div>
                                 )}
-                                {candidate.missingSkills.length > 0 && (
+                                {(candidate.missingSkills || []).length > 0 && (
                                   <div>
                                     <h4 className="text-[11px] font-semibold text-red-400 mb-1.5">
                                       Missing Skills
                                     </h4>
                                     <div className="flex flex-wrap gap-1.5">
-                                      {candidate.missingSkills.map((s) => (
+                                      {(candidate.missingSkills || []).map((s) => (
                                         <span
                                           key={s}
                                           className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20"

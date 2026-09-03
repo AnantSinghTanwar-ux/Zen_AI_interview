@@ -26,6 +26,7 @@ const levelLabels: Record<string, string> = {
 
 export default function JobCard({ job, onEdit, onDelete }: JobCardProps) {
   const status = statusConfig[job.status] || statusConfig.draft;
+  const skills = job.requiredSkills || [];
   const [applicantCount, setApplicantCount] = useState(job.applicantIds?.length || 0);
   const createdDate = new Date(job.createdAt).toLocaleDateString("en-US", {
     month: "short",
@@ -75,7 +76,7 @@ export default function JobCard({ job, onEdit, onDelete }: JobCardProps) {
 
       {/* Skills */}
       <div className="flex flex-wrap gap-1.5 mb-3">
-        {job.requiredSkills.slice(0, 5).map((skill) => (
+        {skills.slice(0, 5).map((skill) => (
           <span
             key={skill}
             className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.04] text-muted-foreground border border-white/5"
@@ -83,9 +84,9 @@ export default function JobCard({ job, onEdit, onDelete }: JobCardProps) {
             {skill}
           </span>
         ))}
-        {job.requiredSkills.length > 5 && (
+        {skills.length > 5 && (
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.04] text-primary border border-primary/20">
-            +{job.requiredSkills.length - 5} more
+            +{skills.length - 5} more
           </span>
         )}
       </div>
