@@ -14,7 +14,7 @@
 // in your Brevo account here: https://app.brevo.com/security/authorised_ips
 // Otherwise, emails will fail to send with an "unrecognised IP address" error.
 
-const BREVO_API_KEY = process.env.BREVO_API_KEY || "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";
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "tanwaranantsingh10@gmail.com";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "ZenAI";
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";

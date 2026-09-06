@@ -220,7 +220,27 @@ export async function generateOpenRouterJson<T>(params: {
           },
         });
         
-        const result = await model.generateContent(params.prompt as string);
+        let geminiPrompt: any = params.prompt;
+        if (Array.isArray(params.prompt)) {
+          geminiPrompt = params.prompt.map((part) => {
+            if (part.type === "text") {
+              return { text: part.text };
+            } else if (part.type === "image_url" && part.image_url?.url) {
+              const match = part.image_url.url.match(/^data:(.*?);base64,(.*)$/);
+              if (match) {
+                return {
+                  inlineData: {
+                    mimeType: match[1],
+                    data: match[2]
+                  }
+                };
+              }
+            }
+            return part;
+          });
+        }
+        
+        const result = await model.generateContent(geminiPrompt);
         const responseText = result.response.text();
         try {
           return JSON.parse(responseText) as T;
